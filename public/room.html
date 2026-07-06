@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Three Kingdoms Room</title>
+  <link rel="stylesheet" href="/style.css?v=4">
+</head>
+<body>
+
+  <!-- ==========================================
+       WAITING LOBBY SCREEN (Before game starts)
+       ========================================== -->
+  <div id="lobby-screen">
+    <div class="lobby-container glass-panel">
+      <span class="lobby-icon">⏳</span>
+      <h1 class="lobby-title">ห้องพักผู้เล่น</h1>
+      <p class="lobby-subtitle" id="lobby-room-mode-text">โหมดเกม: ...</p>
+
+      <div class="menu-panel">
+        <div class="lobby-room-code-badge">
+          <span>รหัสห้อง:</span>
+          <strong id="display-lobby-room-code">ROOM_XXXX</strong>
+        </div>
+        
+        <div class="lobby-players-list-container">
+          <h3>รายชื่อผู้เข้าร่วม (<span id="lobby-players-count">0</span>/8)</h3>
+          <ul class="lobby-players-list" id="lobby-players-list">
+            <!-- Dynamically populated -->
+          </ul>
+        </div>
+
+        <div class="menu-actions">
+          <div id="host-bot-controls" class="hidden" style="display: flex; gap: 10px; width: 100%; margin-bottom: 12px;">
+            <button class="btn-action btn-play" id="btn-lobby-add-bot" style="background: var(--accent-cyan); color: #000; flex: 1;">🤖 เพิ่มบอท (Add Bot)</button>
+            <button class="btn-action btn-back" id="btn-lobby-remove-bot" style="flex: 1; margin: 0; min-height: unset; height: unset;">❌ ลบบอท</button>
+          </div>
+          <button class="btn-menu btn-accent hidden" id="btn-lobby-start-game">⚔️ เริ่มเกมการ์ด</button>
+          <p class="lobby-waiting-text" id="lobby-waiting-text">รอหัวหน้าห้องกดเริ่มเกม...</p>
+          <button class="btn-back" id="btn-lobby-leave">❌ ออกจากห้อง</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       CHARACTER DRAFT SCREEN
+       ========================================== -->
+  <div id="draft-screen" class="hidden">
+    <div class="draft-container glass-panel">
+      <h1 class="draft-title">เลือกขุนพลของคุณ (Choose General)</h1>
+      <p class="draft-subtitle">ระบบสุ่มขุนพล 3 คนมาให้คุณเลือกตามกติกาจริง คลิกที่การ์ดเพื่อสวมบทบาทขุนพลคนนั้น</p>
+      
+      <div class="draft-cards-grid" id="draft-cards-grid">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       GAME BOARD SCREEN
+       ========================================== -->
+  <div id="game-screen" class="hidden">
+
+    <!-- Top Bar -->
+    <div class="top-bar glass-panel">
+      <span class="game-title">⚔️ Three Kingdoms Board</span>
+      <div class="phase-badge" id="phase-badge">
+        <span>⏳</span>
+        <span id="phase-text">PLAY</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="room-id" id="display-room-id">ROOM_TEST</span>
+        <button class="btn-back" id="btn-game-leave" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset;">🚪 ออกจากห้อง</button>
+      </div>
+    </div>
+
+    <!-- Main Board -->
+    <div class="board-layout">
+
+      <!-- Opponents Zone -->
+      <div class="opponents-zone" id="opponents-zone">
+        <!-- Dynamically populated -->
+      </div>
+
+      <!-- Player Zone -->
+      <div class="player-zone" id="player-zone">
+        <!-- Player Status Bar -->
+        <div class="player-status-bar glass-panel" id="player-status-bar">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Target Selection Hint -->
+        <div class="target-hint hidden" id="target-hint">
+          <span class="hint-icon">🎯</span>
+          <span id="target-hint-text">เลือกเป้าหมายจากผู้เล่นด้านบน</span>
+        </div>
+
+        <!-- Hand Zone Wrapper -->
+        <div style="display: flex; gap: 16px; width: 100%; align-items: stretch; margin-top: 10px; flex-wrap: wrap;">
+          <!-- Hand Cards -->
+          <div class="hand-zone glass-panel" style="flex: 2; min-width: 320px; margin: 0;">
+            <div class="hand-title-row">
+              <span class="panel-title">🃏 การ์ดบนมือ</span>
+              <span class="mono" id="hand-count" style="font-size:12px; color: var(--text-muted);">0 ใบ</span>
+            </div>
+
+            <div class="discard-instruction hidden" id="discard-instruction">
+              <span>⚠️ กรุณาเลือกการ์ดทิ้งอีก <strong id="discard-needed-count">0</strong> ใบ (ขีดจำกัดเท่ากับพลังชีวิตปัจจุบัน)</span>
+            </div>
+
+            <div class="hand-cards" id="hand-cards">
+              <!-- Dynamically populated -->
+            </div>
+
+            <div class="hand-actions" id="hand-actions">
+              <button class="btn-action btn-play" id="btn-play-card" disabled>ใช้การ์ด</button>
+              <button class="btn-action btn-primary hidden" id="btn-preview-card" style="background: var(--accent-cyan);">🔍 ดูการ์ดจาก PDF</button>
+              <button class="btn-action btn-primary hidden" id="btn-sun-quan-skill" style="background: var(--accent-gold); color: #000;">👑 สกิล: ผลัดการ์ด</button>
+              <button class="btn-action btn-primary hidden" id="btn-liu-bei-skill" style="background: var(--hp-full); color: #000;">💝 สกิล: ปันสุข</button>
+              <button class="btn-action btn-primary hidden" id="btn-diao-chan-skill" style="background: #ec4899; color: #fff;">🌸 สกิล: บ่วงเสน่หา</button>
+              <button class="btn-action btn-primary hidden" id="btn-zhou-yu-skill" style="background: #3b82f6; color: #fff;">🔥 สกิล: บ่มเพลิง</button>
+              <button class="btn-action btn-end-turn" id="btn-end-turn" disabled>จบช่วงร่าย</button>
+              <button class="btn-action btn-discard hidden" id="btn-discard-confirm">ยืนยันการทิ้งการ์ด</button>
+            </div>
+          </div>
+
+          <!-- General Skill Info Side Panel -->
+          <div class="glass-panel" id="general-skills-panel" style="flex: 1; min-width: 250px; padding: 16px; display: flex; flex-direction: column; gap: 12px; border-color: var(--accent-cyan); margin: 0;">
+            <div style="display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
+              <span style="font-size: 24px;">🛡️</span>
+              <div>
+                <h3 id="skill-box-hero-name" style="color: var(--accent-gold); font-size: 15px; margin: 0;">ความสามารถขุนพล</h3>
+                <span id="skill-box-hero-sub" style="font-size: 11px; color: var(--text-muted);">เลือกขุนพลแล้ว</span>
+              </div>
+            </div>
+            <div id="skill-box-desc" style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; white-space: pre-line;">
+              รายละเอียดสกิลและกติกาพิเศษของคุณจะปรากฏที่นี่...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action / Log Panel -->
+      <div class="action-panel glass-panel">
+        <span class="panel-title">📜 บันทึกเหตุการณ์</span>
+        <div class="event-log" id="event-log">
+          <div class="log-entry log-system">เชื่อมต่อห้องสำเร็จ พร้อมรบ!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       PENDING ACTION OVERLAY (Attacked)
+       ========================================== -->
+  <div class="pending-overlay hidden" id="pending-overlay">
+    <div class="pending-modal glass-panel">
+      <span class="pending-icon">⚔️</span>
+      <h2 class="pending-title">คุณถูกโจมตี!</h2>
+      <p class="pending-subtitle">
+        <span class="pending-attacker" id="pending-attacker-name">???</span> ใช้ SLASH โจมตีคุณ!<br>
+        เลือกป้องกันหรือรับความเสียหาย
+      </p>
+
+      <div class="countdown-container">
+        <div class="countdown-label">เวลาที่เหลือ</div>
+        <div class="countdown-bar-track">
+          <div class="countdown-bar-fill" id="countdown-bar-fill" style="width: 100%"></div>
+        </div>
+        <div class="countdown-seconds" id="countdown-seconds">15</div>
+      </div>
+
+      <div class="pending-actions">
+        <button class="btn-dodge" id="btn-dodge">🛡️ หลบ (DODGE)</button>
+        <button class="btn-take-damage" id="btn-take-damage">💔 รับดาเมจ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       CHARACTER DESCRIPTION MODAL
+       ========================================== -->
+  <div class="pending-overlay hidden" id="hero-info-modal">
+    <div class="pending-modal glass-panel" style="max-width: 550px; text-align: left; border-color: var(--accent-gold);">
+      <h2 id="modal-hero-name" style="color: var(--accent-gold); font-size: 24px; font-weight: 800; margin-bottom: 4px;">General Name</h2>
+      <p id="modal-hero-sub" style="color: var(--text-secondary); font-size: 13px; margin-bottom: 20px;">Subtitle</p>
+      
+      <div style="display: flex; gap: 16px; margin-bottom: 20px;">
+        <div id="modal-hero-avatar" style="width: 100px; height: 120px; border-radius: var(--radius-md); background-size: cover; background-position: center; border: 1.5px solid var(--border-glass); flex-shrink: 0;"></div>
+        <div style="flex: 1;">
+          <h3 style="color: var(--accent-cyan); font-size: 14px; margin-bottom: 6px;">⚔️ ข้อมูลความสามารถขุนพล</h3>
+          <div id="modal-hero-skill" style="font-size: 13px; line-height: 1.5; color: var(--text-primary); background: rgba(255,255,255,0.03); border: 1.5px solid var(--border-glass); padding: 10px; border-radius: var(--radius-sm);">
+            -
+          </div>
+        </div>
+      </div>
+
+      <h3 style="color: var(--accent-primary); font-size: 14px; margin-bottom: 8px;">📜 ประวัติขุนพลและตำนานสามก๊ก</h3>
+      <div id="modal-hero-desc" style="font-size: 12px; line-height: 1.6; color: var(--text-secondary); max-height: 160px; overflow-y: auto; background: rgba(0,0,0,0.15); padding: 12px; border-radius: var(--radius-md); border: 1.5px solid var(--border-glass); margin-bottom: 24px;">
+        ประวัติย่อ...
+      </div>
+
+      <button class="btn-back" id="btn-close-hero-modal">❌ ปิดหน้าต่าง</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       GAME OVER OVERLAY
+       ========================================== -->
+  <div class="pending-overlay hidden" id="game-over-overlay">
+    <div class="pending-modal glass-panel" style="max-width: 480px; border-color: var(--accent-cyan);">
+      <span class="pending-icon" style="font-size: 64px;">🏆</span>
+      <h1 style="font-size: 32px; font-weight: 800; background: linear-gradient(135deg, var(--accent-gold), var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px;">จบสิ้นการศึก!</h1>
+      <h2 id="game-over-winner-role" style="font-size: 20px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 12px;">ฝ่ายกบฏชนะ</h2>
+      <p id="game-over-winner-text" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; line-height: 1.6;">
+        คำอธิบายผลแพ้ชนะ...
+      </p>
+
+      <button class="btn-menu btn-accent" id="btn-return-lobby">🏠 กลับสู่ล็อบบี้หลัก</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       CARD PREVIEW OVERLAY
+       ========================================== -->
+  <div class="pending-overlay hidden" id="card-preview-modal">
+    <div class="pending-modal glass-panel" style="max-width: 320px; text-align: center; border-color: var(--accent-cyan);">
+      <h2 id="preview-card-name" style="color: var(--accent-gold); font-size: 20px; margin-bottom: 12px;">Card Name</h2>
+      <img id="preview-card-img" src="" style="width: 100%; max-height: 400px; object-fit: contain; border-radius: var(--radius-md); border: 2px solid var(--border-glass); margin-bottom: 20px;">
+      <button class="btn-back" id="btn-close-preview">❌ ปิดแสดงรูปภาพ</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       LUO RIVER DECISION OVERLAY
+       ========================================== -->
+  <div class="pending-overlay hidden" id="luo-river-overlay">
+    <div class="pending-modal glass-panel" style="max-width: 360px; text-align: center; border-color: var(--accent-gold);">
+      <span class="pending-icon" style="font-size: 48px; color: var(--accent-gold);">🔮</span>
+      <h2 style="font-size: 22px; font-weight: 700; color: var(--accent-gold); margin-bottom: 8px;">เทพธิดาแห่งแม่น้ำลั่ว</h2>
+      <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; line-height: 1.5;">
+        คุณกำลังสวมบทบาท Zhen Ji. สามารถทำการทำนายการ์ด (Judgement) เพื่อจั่วการ์ดดำฟรีเข้ามือเรื่อยๆ จนกว่าจะได้การ์ดสีแดง!
+      </p>
+
+      <div class="pending-actions" style="display: flex; flex-direction: column; gap: 10px;">
+        <button class="btn-dodge" id="btn-luo-trigger" style="background: var(--accent-gold); color: #000; width: 100%;">🎰 ทำนายปัญญา (Judgement)</button>
+        <button class="btn-take-damage" id="btn-luo-skip" style="width: 100%;">⏭️ ข้ามไปช่วงจั่วปกติ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       DYING OVERLAY
+       ========================================== -->
+  <div class="pending-overlay hidden" id="dying-overlay">
+    <div class="pending-modal glass-panel" style="max-width: 380px; text-align: center; border-color: var(--hp-low);">
+      <span class="pending-icon" style="font-size: 54px;">💔</span>
+      <h2 style="font-size: 22px; font-weight: 700; color: var(--hp-low); margin-bottom: 8px;">สถานะใกล้ตาย (Dying State)</h2>
+      <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; line-height: 1.5;">
+        <strong id="dying-player-name" style="color: var(--accent-gold);">PlayerName</strong> กำลังจะเสียชีวิต (เลือดเหลือ <= 0)!<br>
+        ผู้ที่ถูกถามช่วยเหลือขณะนี้: <strong id="dying-asker-name" style="color: var(--accent-cyan);">AskerName</strong>
+      </p>
+
+      <div id="dying-help-actions" class="hidden" style="margin-top: 24px;">
+        <p style="font-size: 13px; color: var(--text-primary); margin-bottom: 12px;">คุณมีโอกาสช่วยเหลือ ต้องการใช้ PEACH หรือไม่?</p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button class="btn-dodge" id="btn-dying-use-peach" style="background: var(--hp-full); color: #000;">🍑 ใช้ PEACH ช่วยเหลือ</button>
+          <button class="btn-take-damage" id="btn-dying-pass">❌ ผ่าน (Pass)</button>
+        </div>
+      </div>
+      
+      <div id="dying-wait-message" style="font-size: 13px; color: var(--text-muted); margin-top: 20px;">
+        กรุณารอผู้เล่นตัดสินใจ...
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       STEAL CHOICE OVERLAY
+       ========================================== -->
+  <div class="pending-overlay hidden" id="steal-choice-overlay">
+    <div class="pending-modal glass-panel" style="max-width: 360px; text-align: center; border-color: var(--accent-cyan);">
+      <span class="pending-icon" style="font-size: 48px; color: var(--accent-cyan);">🧤</span>
+      <h2 style="font-size: 20px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 8px;">เลือกสิ่งที่จะขโมย (Steal Target)</h2>
+      <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 20px;">
+        คุณกำลังใช้การ์ด STEAL กับ <strong id="steal-choice-target-name">...</strong> โปรดเลือกสิ่งที่ต้องการขโมย:
+      </p>
+
+      <div class="pending-actions" id="steal-choice-options" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Dynamically populated buttons -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Socket.io Client (served by the Express server) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/room_app.js?v=4"></script>
+</body>
+</html>
