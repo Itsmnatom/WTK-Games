@@ -26,17 +26,20 @@ document.addEventListener('DOMContentLoaded', () => {
     panelMenu.classList.remove('hidden');
   });
 
-  btnModeBot.addEventListener('click', () => {
-    const name = inputNickname.value.trim() || 'Player';
-    localStorage.setItem('savedPlayerName', name);
-    const rId = 'BOT_' + Math.random().toString(36).substr(2, 4).toUpperCase();
-    const count = document.getElementById('select-bot-count').value;
-    sessionStorage.setItem('playerName', name);
-    sessionStorage.setItem('gameMode', 'BOT');
-    sessionStorage.setItem('botCount', count);
-    sessionStorage.setItem('roomAction', 'create');
-    window.location.href = `/app/${rId}`;
-  });
+  if (btnModeBot) {
+    btnModeBot.addEventListener('click', () => {
+      const name = inputNickname.value.trim() || 'Player';
+      localStorage.setItem('savedPlayerName', name);
+      const rId = 'BOT_' + Math.random().toString(36).substr(2, 4).toUpperCase();
+      const countElement = document.getElementById('select-bot-count');
+      const count = countElement ? countElement.value : 4;
+      sessionStorage.setItem('playerName', name);
+      sessionStorage.setItem('gameMode', 'BOT');
+      sessionStorage.setItem('botCount', count);
+      sessionStorage.setItem('roomAction', 'create');
+      window.location.href = `/app/${rId}`;
+    });
+  }
 
   btnCreateOnline.addEventListener('click', () => {
     const name = inputNickname.value.trim() || 'Player';

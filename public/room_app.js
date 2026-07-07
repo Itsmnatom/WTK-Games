@@ -1,7 +1,4 @@
 (function() {
-  // --- SOCKET.IO ---
-  const socket = io();
-
   // --- UTILS ---
   function calculateDistance(state, fromId, toId) {
     const order = state.turnOrder.filter(pid => state.players[pid] && state.players[pid].isAlive);
@@ -110,6 +107,7 @@
   }
 
   // --- STATE ---
+  let socket = null;
   let myPlayerId = null;
   let myRoomId = null;
   let gameState = null;
@@ -293,9 +291,55 @@
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    toastContainer.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    document.getElementById('toast-container').appendChild(toast);
+    setTimeout(() => {
+      toast.style.animation = 'fadeOut 0.3s forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
   }
+
+  function showSystemAlert(message, duration = 3000) {
+    const banner = document.createElement('div');
+    banner.className = 'system-alert-banner';
+    banner.textContent = message;
+    document.body.appendChild(banner);
+    setTimeout(() => {
+      if (banner.parentElement) banner.remove();
+    }, duration);
+  }
+
+  function triggerDrawAnimation(playerId, count) {
+    const avatarEl = playerId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${playerId}`);
+    if (!avatarEl) return;
+    
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const card = document.createElement('div');
+        card.className = 'draw-animation-card';
+        document.body.appendChild(card);
+        
+        const rect = avatarEl.getBoundingClientRect();
+        const startX = window.innerWidth / 2;
+        const startY = window.innerHeight / 2;
+        const endX = rect.left + rect.width / 2;
+        const endY = rect.top + rect.height / 2;
+        
+        card.style.left = `${startX}px`;
+        card.style.top = `${startY}px`;
+        
+        requestAnimationFrame(() => {
+          card.style.transform = `translate(${endX - startX}px, ${endY - startY}px) scale(0.2)`;
+          card.style.opacity = '0';
+        });
+        
+        setTimeout(() => {
+          if (card.parentElement) card.remove();
+        }, 600);
+      }, i * 200);
+    }
+  }
+
+  // --- AUDIO & EFFECTS ---
 
   function addLog(message, type = 'system') {
     const entry = document.createElement('div');
@@ -941,15 +985,15 @@
     }
 
     const me = gameState.players[myPlayerId];
-    btnPreviewCard.classList.add('hidden');
+    if (btnPreviewCard) btnPreviewCard.classList.add('hidden');
     const actualCardId = selectedCardId || (selectedDiscardIds.length === 1 ? selectedDiscardIds[0] : null);
     if (actualCardId && me && me.hand) {
       const card = me.hand.find(c => c.id === actualCardId);
       if (card && CARD_IMAGES[card.name]) {
-        btnPreviewCard.classList.remove('hidden');
+        if (btnPreviewCard) btnPreviewCard.classList.remove('hidden');
       }
     } else {
-      btnPreviewCard.classList.add('hidden');
+      if (btnPreviewCard) btnPreviewCard.classList.add('hidden');
     }
 
     if (awaitingTarget) {
@@ -1257,18 +1301,20 @@
     socket.emit('end_turn', { roomId: myRoomId });
   });
 
-  btnPreviewCard.addEventListener('click', () => {
-    const me = gameState.players[myPlayerId];
-    const actualCardId = selectedCardId || (selectedDiscardIds.length === 1 ? selectedDiscardIds[0] : null);
-    if (!actualCardId || !me || !me.hand) return;
-    const card = me.hand.find(c => c.id === actualCardId);
-    if (!card || !CARD_IMAGES[card.name]) return;
+  if (btnPreviewCard) {
+    btnPreviewCard.addEventListener('click', () => {
+      const me = gameState.players[myPlayerId];
+      const actualCardId = selectedCardId || (selectedDiscardIds.length === 1 ? selectedDiscardIds[0] : null);
+      if (!actualCardId || !me || !me.hand) return;
+      const card = me.hand.find(c => c.id === actualCardId);
+      if (!card || !CARD_IMAGES[card.name]) return;
 
 
     previewCardName.textContent = card.name;
     previewCardImg.src = CARD_IMAGES[card.name];
     cardPreviewModal.classList.remove('hidden');
-  });
+    });
+  }
 
   btnClosePreview.addEventListener('click', () => {
     cardPreviewModal.classList.add('hidden');
@@ -1614,7 +1660,16 @@
 
     if (prev.currentTurnPlayerId !== next.currentTurnPlayerId) {
       const nextP = next.players[next.currentTurnPlayerId];
-      addLog(`🚩 เริ่มเทิร์นใหม่ของ ${nextP?.name || next.currentTurnPlayerId} (เฟส: ${next.currentPhase})`, 'system');
+      addLog(`== เริ่มเทิร์นใหม่ของ ${nextP?.name || next.currentTurnPlayerId} (เฟส: ${next.currentPhase}) ==`, 'system');
+    }
+
+    if (next.pendingAction && (!prev.pendingAction || prev.pendingAction.type !== next.pendingAction.type || prev.pendingAction.targetPlayerId !== next.pendingAction.targetPlayerId || prev.pendingAction.actionId !== next.pendingAction.actionId)) {
+      if (next.pendingAction.type === 'WAITING_FOR_AOE') {
+        const aoeName = next.pendingAction.aoeType === 'BARBARIAN_INVASION' ? 'คนเถื่อนบุกรุก!' : 'ธนูหมื่นดอก!';
+        showSystemAlert(`🚨 สัญญาณเตือน: ${aoeName}`, 4000);
+      } else if (next.pendingAction.type === 'WAITING_FOR_SLASH_DUEL') {
+        showSystemAlert('⚔️ การดวลเริ่มต้นขึ้น!', 3000);
+      }
     }
   }
 

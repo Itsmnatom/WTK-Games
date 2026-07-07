@@ -1350,3 +1350,40 @@ body::before {
   display: block;
 }
 
+.system-alert-banner {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(220, 38, 38, 0.95);
+  color: #fff;
+  padding: 20px 40px;
+  font-size: 32px;
+  font-weight: 800;
+  text-shadow: 2px 2px 10px #000;
+  border: 2px solid #ff4444;
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+  z-index: 9999;
+  pointer-events: none;
+  animation: pulseAlert 0.5s ease-in-out infinite alternate, fadeOut 0.5s 2.5s forwards;
+}
+
+@keyframes pulseAlert {
+  from { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 20px rgba(255, 0, 0, 0.5); }
+  to { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 40px rgba(255, 0, 0, 0.8); }
+}
+
+.draw-animation-card {
+  position: fixed;
+  width: 100px;
+  height: 140px;
+  background-image: url('https://static.wtkgames.com/images/cardback/cardback_wtk.png');
+  background-size: cover;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  z-index: 10000;
+  pointer-events: none;
+  transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
