@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputNickname = document.getElementById('input-nickname');
   const inputOnlineRoomId = document.getElementById('input-online-room-id');
 
+  // Load cached name if exists
+  const cachedName = localStorage.getItem('savedPlayerName');
+  if (cachedName) {
+    inputNickname.value = cachedName;
+  }
+
   btnModeOnlineMenu.addEventListener('click', () => {
     panelMenu.classList.add('hidden');
     panelOnlineSetup.classList.remove('hidden');
@@ -22,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnModeBot.addEventListener('click', () => {
     const name = inputNickname.value.trim() || 'Player';
+    localStorage.setItem('savedPlayerName', name);
     const rId = 'BOT_' + Math.random().toString(36).substr(2, 4).toUpperCase();
     const count = document.getElementById('select-bot-count').value;
     sessionStorage.setItem('playerName', name);
@@ -33,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnCreateOnline.addEventListener('click', () => {
     const name = inputNickname.value.trim() || 'Player';
+    localStorage.setItem('savedPlayerName', name);
     const rId = 'ROOM_' + Math.random().toString(36).substr(2, 4).toUpperCase();
     sessionStorage.setItem('playerName', name);
     sessionStorage.setItem('gameMode', 'ONLINE');
@@ -43,7 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
   btnJoinOnline.addEventListener('click', () => {
     const name = inputNickname.value.trim() || 'Player';
     const rId = inputOnlineRoomId.value.trim().toUpperCase();
-    if (!rId) return alert('กรุณาระบุรหัสห้อง!');
+    if (!rId) return alert('กรุณาระบุรหัสห้องให้ถูกต้อง!');
+    localStorage.setItem('savedPlayerName', name);
     sessionStorage.setItem('playerName', name);
     sessionStorage.setItem('gameMode', 'ONLINE');
     sessionStorage.setItem('roomAction', 'join');

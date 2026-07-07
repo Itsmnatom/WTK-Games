@@ -1286,3 +1286,67 @@ body::before {
 .game-card:hover .card-tooltip {
   display: block;
 }
+/* --- ACTION & REACTION ANIMATIONS --- */
+
+@keyframes drawCardAnimation {
+  0% {
+    transform: translate(-50vw, -50vh) scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-25vw, -25vh) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+}
+.draw-animation {
+  animation: drawCardAnimation 0.5s ease-out;
+}
+
+@keyframes evadeAnimation {
+  0% { transform: translateY(20px); opacity: 0; }
+  20% { transform: translateY(0); opacity: 1; }
+  80% { transform: translateY(-10px); opacity: 1; }
+  100% { transform: translateY(-30px); opacity: 0; }
+}
+.evade-popup {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #00ff00;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 0 0 10px #000;
+  animation: evadeAnimation 1.2s forwards;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.equipment-overlay {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-gold);
+  font-size: 14px;
+  width: max-content;
+  max-width: 200px;
+  text-align: center;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+.equipment-slot:hover .equipment-overlay {
+  display: block;
+}
+

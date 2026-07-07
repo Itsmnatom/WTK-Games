@@ -24,7 +24,7 @@
         </div>
         
         <div class="lobby-players-list-container">
-          <h3>รายชื่อผู้เข้าร่วม (<span id="lobby-players-count">0</span>/8)</h3>
+          <h3>ผู้เล่นที่รออยู่ในห้อง (<span id="lobby-players-count">0</span>/10)</h3>
           <ul class="lobby-players-list" id="lobby-players-list">
             <!-- Dynamically populated -->
           </ul>
@@ -32,12 +32,10 @@
 
         <div class="menu-actions">
           <div id="host-bot-controls" class="hidden" style="display: flex; gap: 10px; width: 100%; margin-bottom: 12px;">
-            <button class="btn-action btn-play" id="btn-lobby-add-bot" style="background: var(--accent-cyan); color: #000; flex: 1;">🤖 เพิ่มบอท (Add Bot)</button>
-            <button class="btn-action btn-back" id="btn-lobby-remove-bot" style="flex: 1; margin: 0; min-height: unset; height: unset;">❌ ลบบอท</button>
+            <button class="btn-action btn-play" id="btn-lobby-add-bot" style="background: var(--accent-cyan); color: #000; flex: 1;">เพิ่มบอท (Add Bot)</button>
           </div>
-          <button class="btn-menu btn-accent hidden" id="btn-lobby-start-game">⚔️ เริ่มเกมการ์ด</button>
-          <p class="lobby-waiting-text" id="lobby-waiting-text">รอหัวหน้าห้องกดเริ่มเกม...</p>
-          <button class="btn-back" id="btn-lobby-leave">❌ ออกจากห้อง</button>
+          <button class="btn-menu btn-accent hidden" id="btn-lobby-start-game">▶ เริ่มเกม (Start Game)</button>
+          <p class="lobby-waiting-text" id="lobby-waiting-text">รอโฮสต์เริ่มเกม...</p>
         </div>
       </div>
     </div>

@@ -416,6 +416,7 @@ function advanceDyingAsker(room) {
   if (pending.currentAskerIdx === startingIdx) {
     const dyingPlayer = room.players[pending.targetPlayerId];
     dyingPlayer.isAlive = false;
+    dyingPlayer.hp = 0; // Fix negative HP display
     
     // Discard all cards from dying player
     if (dyingPlayer.hand) { room.discardPile.push(...dyingPlayer.hand); dyingPlayer.hand = []; }
@@ -452,7 +453,11 @@ function advanceDyingAsker(room) {
     const isGameOver = checkGameOver(room);
     broadcastRoomState(room);
     if (!isGameOver) {
-      resumeAfterAttack(room);
+      if (room.currentTurnPlayerId === pending.targetPlayerId) {
+        nextTurn(room);
+      } else {
+        resumeAfterAttack(room);
+      }
     }
   } else {
     const nextAskerId = room.turnOrder[pending.currentAskerIdx];
@@ -2343,6 +2348,46 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
+    
+    let foundRoom = null;
+    let foundPlayerId = null;
+    for (const rId in gameRooms) {
+      const room = gameRooms[rId];
+      const pid = getPlayerIdBySocket(room, socket.id);
+      if (pid) {
+        foundRoom = room;
+        foundPlayerId = pid;
+        break;
+      }
+    }
+    
+    if (foundRoom && foundRoom.status !== 'LOBBY') {
+      const player = foundRoom.players[foundPlayerId];
+      if (player && player.isAlive) {
+        console.log(`[INSTANT DEATH] Player ${player.name} disconnected during game!`);
+        player.hp = 0;
+        player.isAlive = false;
+        
+        if (player.hand) { foundRoom.discardPile.push(...player.hand); player.hand = []; }
+        if (player.delayedKitZone) { foundRoom.discardPile.push(...player.delayedKitZone); player.delayedKitZone = []; }
+        if (player.equipment) {
+          if (player.equipment.weapon) { foundRoom.discardPile.push(player.equipment.weapon); player.equipment.weapon = null; }
+          if (player.equipment.armor) { foundRoom.discardPile.push(player.equipment.armor); player.equipment.armor = null; }
+          if (player.equipment.defensiveHorse) { foundRoom.discardPile.push(player.equipment.defensiveHorse); player.equipment.defensiveHorse = null; }
+          if (player.equipment.offensiveHorse) { foundRoom.discardPile.push(player.equipment.offensiveHorse); player.equipment.offensiveHorse = null; }
+        }
+        
+        const isGameOver = checkGameOver(foundRoom);
+        if (!isGameOver) {
+          if (foundRoom.turnOrder[foundRoom.currentTurnIndex] === foundPlayerId) {
+            foundRoom.currentPhase = 'DISCARD';
+            checkDiscardRequirement(foundRoom);
+          } else {
+            broadcastRoomState(foundRoom);
+          }
+        }
+      }
+    }
   });
 });
 

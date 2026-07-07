@@ -1,6 +1,115 @@
 (function() {
+  // --- SOCKET.IO ---
+  const socket = io();
+
+  // --- UTILS ---
+  function calculateDistance(state, fromId, toId) {
+    const order = state.turnOrder.filter(pid => state.players[pid] && state.players[pid].isAlive);
+    const idxFrom = order.indexOf(fromId);
+    const idxTo = order.indexOf(toId);
+    
+    if (idxFrom === -1 || idxTo === -1) return 999;
+    
+    const directDiff = Math.abs(idxFrom - idxTo);
+    const circularDiff = order.length - directDiff;
+    let baseDistance = Math.min(directDiff, circularDiff);
+    
+    const attacker = state.players[fromId];
+    const defender = state.players[toId];
+    
+    if (attacker.equipment && attacker.equipment.offensiveHorse) baseDistance -= 1;
+    if (defender.equipment && defender.equipment.defensiveHorse) baseDistance += 1;
+    
+    return Math.max(1, baseDistance);
+  }
+
+  function drawTargetLine(fromId, toId, isValid) {
+    const fromEl = fromId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${fromId}`);
+    const toEl = toId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${toId}`);
+    
+    if (!fromEl || !toEl) return;
+    
+    const fromRect = fromEl.getBoundingClientRect();
+    const toRect = toEl.getBoundingClientRect();
+    
+    const x1 = fromRect.left + fromRect.width / 2;
+    const y1 = fromRect.top + fromRect.height / 2;
+    const x2 = toRect.left + toRect.width / 2;
+    const y2 = toRect.top + toRect.height / 2;
+    
+    const length = Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+    const angle = Math.atan2(y2-y1, x2-x1) * 180 / Math.PI;
+    
+    const line = document.createElement('div');
+    line.style.position = 'fixed';
+    line.style.left = `${x1}px`;
+    line.style.top = `${y1}px`;
+    line.style.width = '0px';
+    line.style.height = '6px';
+    line.style.backgroundColor = isValid ? '#00ff00' : '#ff0000';
+    line.style.transformOrigin = '0 50%';
+    line.style.transform = `rotate(${angle}deg)`;
+    line.style.zIndex = '9999';
+    line.style.pointerEvents = 'none';
+    line.style.boxShadow = `0 0 15px ${isValid ? '#00ff00' : '#ff0000'}`;
+    line.style.transition = 'width 0.3s ease-out, opacity 0.5s ease-in-out';
+    line.style.borderRadius = '3px';
+    
+    document.body.appendChild(line);
+    
+    // Trigger animation
+    setTimeout(() => {
+      line.style.width = `${length}px`;
+    }, 10);
+    
+    setTimeout(() => {
+      line.style.opacity = '0';
+      setTimeout(() => line.remove(), 500);
+    }, 800);
+  }
+
+  function triggerDrawAnimation(playerId, count) {
+    const avatarEl = playerId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${playerId}`);
+    if (!avatarEl) return;
+    const targetRect = avatarEl.getBoundingClientRect();
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const flyingCard = document.createElement('div');
+        flyingCard.className = 'card';
+        flyingCard.style.position = 'fixed';
+        flyingCard.style.left = `${centerX}px`;
+        flyingCard.style.top = `${centerY}px`;
+        flyingCard.style.width = '60px';
+        flyingCard.style.height = '90px';
+        flyingCard.style.backgroundColor = '#555';
+        flyingCard.style.border = '2px solid #fff';
+        flyingCard.style.borderRadius = '6px';
+        flyingCard.style.zIndex = '10000';
+        flyingCard.style.pointerEvents = 'none';
+        flyingCard.style.transition = 'all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+        flyingCard.style.transform = 'translate(-50%, -50%) scale(0.1)';
+        document.body.appendChild(flyingCard);
+        
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            flyingCard.style.left = `${targetRect.left + targetRect.width/2}px`;
+            flyingCard.style.top = `${targetRect.top + targetRect.height/2}px`;
+            flyingCard.style.transform = 'translate(-50%, -50%) scale(0.8)';
+            flyingCard.style.opacity = '0';
+          });
+        });
+        
+        setTimeout(() => {
+          flyingCard.remove();
+        }, 500);
+      }, i * 150);
+    }
+  }
+
   // --- STATE ---
-  let socket = null;
   let myPlayerId = null;
   let myRoomId = null;
   let gameState = null;
@@ -214,7 +323,7 @@
   }
 
   function isMyTurn() {
-    return gameState && gameState.currentTurnPlayerId === myPlayerId;
+    return gameState && gameState.currentTurnPlayerId === myPlayerId && gameState.players[myPlayerId] && gameState.players[myPlayerId].isAlive;
   }
 
   function isDiscardPhase() {
@@ -308,9 +417,11 @@
     showToast('ขาดการเชื่อมต่อ!', 'error');
   });
 
-  btnLobbyLeave.addEventListener('click', () => {
-    window.location.href = '/lobby';
-  });
+  if (btnLobbyLeave) {
+    btnLobbyLeave.addEventListener('click', () => {
+      window.location.href = '/lobby';
+    });
+  }
 
   btnLobbyStartGame.addEventListener('click', () => {
     socket.emit('start_game', { roomId: myRoomId, botCount: parseInt(botCountParam) });
@@ -962,6 +1073,27 @@
       playAs = 'SLASH';
     }
 
+    const effectiveName = playAs || card.name;
+    const distance = calculateDistance(gameState, myPlayerId, targetPlayerId);
+    let maxRange = 999;
+    
+    if (effectiveName === 'SLASH') {
+      maxRange = me.equipment && me.equipment.weapon ? me.equipment.weapon.range : 1;
+    } else if (effectiveName === 'STEAL') {
+      maxRange = 1; 
+    } else if (effectiveName === 'SABOTAGE' || effectiveName === 'DUEL') {
+      maxRange = 999;
+    }
+    
+    // Draw SVG/CSS line animation
+    const isValidTarget = distance <= maxRange;
+    drawTargetLine(myPlayerId, targetPlayerId, isValidTarget);
+
+    if (!isValidTarget) {
+      showToast('Target out of range!', true);
+      return;
+    }
+
     if (card.name === 'STEAL') {
       const targetPlayer = gameState.players[targetPlayerId];
       const hasWeapon = targetPlayer.equipment && targetPlayer.equipment.weapon;
@@ -1450,7 +1582,32 @@
           addLog(`🐴 ${nextP.name} สวมใส่ม้าหมอบ ${nextP.equipment.defensiveHorse.name}`, 'system');
         }
         if (!prevP.equipment?.offensiveHorse && nextP.equipment?.offensiveHorse) {
-          addLog(`🏇 ${nextP.name} สวมใส่ม้าบุก ${nextP.equipment.offensiveHorse.name}`, 'system');
+          addLog(`ม้า ${nextP.name} สวมใส่ม้าโจมตี ${nextP.equipment.offensiveHorse.name}`, 'system');
+        }
+        
+        // Draw card animation
+        const prevHandCount = prevP.handCount !== undefined ? prevP.handCount : (prevP.hand ? prevP.hand.length : 0);
+        const nextHandCount = nextP.handCount !== undefined ? nextP.handCount : (nextP.hand ? nextP.hand.length : 0);
+        if (nextHandCount > prevHandCount) {
+          triggerDrawAnimation(pId, nextHandCount - prevHandCount);
+        }
+        
+        // Evasion animation logic
+        if (prev.pendingAction && 
+            (prev.pendingAction.type === 'WAITING_FOR_DODGE' || (prev.pendingAction.type === 'WAITING_FOR_AOE' && prev.pendingAction.aoeType === 'ARROW_BARRAGE')) &&
+            ((prev.pendingAction.type === 'WAITING_FOR_DODGE' && prev.pendingAction.targetPlayerId === pId) || 
+             (prev.pendingAction.type === 'WAITING_FOR_AOE' && prev.pendingAction.targets && prev.pendingAction.targets[prev.pendingAction.currentTargetIndex] === pId)) &&
+            (!next.pendingAction || next.pendingAction.targetPlayerId !== pId || next.pendingAction.type !== prev.pendingAction.type || (next.pendingAction.type === 'WAITING_FOR_AOE' && next.pendingAction.currentTargetIndex !== prev.pendingAction.currentTargetIndex)) &&
+            nextP.hp >= prevP.hp) {
+          const avatarEl = pId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${pId}`);
+          if (avatarEl) {
+            const popup = document.createElement('div');
+            popup.className = 'evade-popup';
+            popup.textContent = 'หลบสำเร็จ!';
+            avatarEl.style.position = 'relative';
+            avatarEl.appendChild(popup);
+            setTimeout(() => popup.remove(), 1200);
+          }
         }
       }
     });
