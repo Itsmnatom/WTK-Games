@@ -1387,3 +1387,218 @@ body::before {
   transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
+.card-play-overlay {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-play-img {
+  width: 200px;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+}
+
+
+
+/* Equipment Tooltips */
+.equip-container {
+  position: relative;
+  display: inline-block;
+}
+.equip-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 30, 0.95);
+  color: #fff;
+  padding: 10px 14px;
+  border: 1px solid var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  width: 240px;
+  z-index: 1000;
+  font-size: 13px;
+  pointer-events: none;
+  white-space: pre-wrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  text-align: left;
+  line-height: 1.5;
+}
+.equip-container:hover .equip-tooltip {
+  display: block;
+}
+
+
+
+/* --- Tabletop Mode Layout --- */
+.table-mode {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 70px);
+  overflow: hidden;
+  gap: 15px;
+  padding: 10px;
+}
+.main-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-width: 0;
+}
+.table-area {
+  flex: 1;
+  position: relative;
+  background: radial-gradient(ellipse at center, rgba(30, 40, 50, 0.4) 0%, rgba(10, 15, 20, 0.6) 100%);
+  border-radius: 20px;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,215,0, 0.1);
+  overflow: hidden;
+}
+.sidebar-log {
+  width: 280px;
+  max-width: 280px;
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0 !important;
+}
+
+/* Center Table Elements */
+.table-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  z-index: 10;
+}
+.deck-pile, .discard-pile {
+  width: 75px;
+  height: 105px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  position: relative;
+}
+.deck-pile {
+  background: #2a0800;
+  border: 1px solid var(--accent-gold);
+}
+.card-back-img {
+  width: 100%;
+  height: 100%;
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Card_back_01.svg/200px-Card_back_01.svg.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: 5px;
+}
+.deck-count {
+  position: absolute;
+  bottom: -22px;
+  font-size: 11px;
+  color: var(--accent-gold);
+  white-space: nowrap;
+}
+.discard-pile {
+  background: rgba(255,255,255,0.03);
+  border: 1.5px dashed rgba(255,255,255,0.2);
+}
+.discard-text {
+  color: rgba(255,255,255,0.3);
+  font-size: 11px;
+}
+
+/* Opponents Zone - Absolute placement inside table-area */
+.table-mode .opponents-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.table-mode .opponent-card {
+  pointer-events: auto;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  transition: all 0.5s ease;
+  z-index: 20;
+  margin: 0 !important;
+}
+
+/* Player Zone fixes */
+.table-mode .player-zone {
+  flex-shrink: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.table-mode .player-status-bar {
+  margin: 0 !important;
+}
+.table-mode .hand-zone, .table-mode #general-skills-panel {
+  margin: 0 !important;
+}
+
+/* Animations */
+@keyframes flyCard {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  100% {
+    transform: translate(var(--endX), var(--endY)) scale(1);
+    opacity: 1;
+  }
+}
+.flying-card-anim {
+  position: fixed;
+  width: 80px;
+  height: 112px;
+  background-size: cover;
+  border-radius: 6px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+
+/* Ensure table-mode overrides all grid settings */
+.board-layout.table-mode {
+  display: flex !important;
+  flex-direction: row !important;
+}
+.board-layout.table-mode .main-column {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 15px !important;
+  min-width: 0 !important;
+}
+.board-layout.table-mode .player-zone {
+  grid-column: auto !important;
+  grid-row: auto !important;
+}
+.board-layout.table-mode .action-panel {
+  grid-column: auto !important;
+  grid-row: auto !important;
+}

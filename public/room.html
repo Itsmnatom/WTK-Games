@@ -2,9 +2,24 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
+  <script>
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      const errDiv = document.createElement("div");
+      errDiv.style.position = "fixed";
+      errDiv.style.top = "0";
+      errDiv.style.left = "0";
+      errDiv.style.zIndex = "9999";
+      errDiv.style.background = "red";
+      errDiv.style.color = "white";
+      errDiv.style.padding = "10px";
+      errDiv.innerHTML = "JS ERROR: " + msg + "<br>Line: " + lineNo + "<br>Col: " + columnNo;
+      document.body.appendChild(errDiv);
+      return false;
+    };
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Three Kingdoms Room</title>
-  <link rel="stylesheet" href="/style.css?v=4">
+  <link rel="stylesheet" href="/style.css?v=5">
 </head>
 <body>
 
@@ -74,12 +89,23 @@
     </div>
 
     <!-- Main Board -->
-    <div class="board-layout">
-
-      <!-- Opponents Zone -->
-      <div class="opponents-zone" id="opponents-zone">
-        <!-- Dynamically populated -->
-      </div>
+    <div class="board-layout table-mode">
+      <div class="main-column">
+        <div class="table-area">
+        <div class="opponents-zone" id="opponents-zone">
+          <!-- Dynamically populated -->
+        </div>
+        
+        <div class="table-center" id="table-center">
+           <div class="deck-pile" id="deck-pile">
+             <div class="card-back-img"></div>
+             <span class="deck-count">กองการ์ด</span>
+           </div>
+           <div class="discard-pile" id="discard-pile">
+             <span class="discard-text">กองทิ้ง</span>
+           </div>
+        </div>
+      </div> <!-- End table-area -->
 
       <!-- Player Zone -->
       <div class="player-zone" id="player-zone">
@@ -138,8 +164,10 @@
         </div>
       </div>
 
+      </div> <!-- End main-column -->
+      </div> <!-- End main-column -->
       <!-- Action / Log Panel -->
-      <div class="action-panel glass-panel">
+      <div class="action-panel glass-panel sidebar-log">
         <span class="panel-title">📜 บันทึกเหตุการณ์</span>
         <div class="event-log" id="event-log">
           <div class="log-entry log-system">เชื่อมต่อห้องสำเร็จ พร้อมรบ!</div>
@@ -293,8 +321,9 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Socket.io Client (served by the Express server) -->
+  <!-- Socket.io -->
+  <link rel="stylesheet" href="/style.css?v=8">
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/room_app.js?v=4"></script>
+  <script src="/room_app.js?v=8"></script>
 </body>
 </html>

@@ -1,0 +1,380 @@
+[
+  {
+    "card_name": "Attack",
+    "main_type": "Basic Card",
+    "sub_type": "Basic",
+    "description": "โจมตีเป้าหมาย 1 คนในระยะ (หากเป้าหมายไม่มี Dodge จะเสีย 1 HP)",
+    "conditions_of_use": "ระยะการโจมตีตามอาวุธที่สวมใส่ (ค่าเริ่มต้นคือ 1), ปกติใช้ได้เทิร์นละ 1 ครั้ง",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014284266ed161a63759.jpg"
+  },
+  {
+    "card_name": "Dodge",
+    "main_type": "Basic Card",
+    "sub_type": "Basic",
+    "description": "หลบหลีกการโจมตี (Attack) หรือใช้ป้องกันธนู (Raining Arrows) เพื่อไม่ให้เสีย HP",
+    "conditions_of_use": "ใช้เมื่อถูกตั้งเป้าหมายจากการโจมตี",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014233766ed14e9bebdb.jpg"
+  },
+  {
+    "card_name": "Peach",
+    "main_type": "Basic Card",
+    "sub_type": "Basic",
+    "description": "ฟื้นฟู 1 HP ให้ตัวเอง (ในเทิร์น) หรือใช้ช่วยชีวิตผู้เล่นที่กำลังจะตาย (HP ลดเหลือ 0)",
+    "conditions_of_use": "ใช้ฟื้นฟูตนเองในเทิร์น หรือใช้นอกเทิร์นเมื่อมีคนกำลังจะตาย",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014400566ed18c590b33.jpg"
+  },
+  {
+    "card_name": "Wine",
+    "main_type": "Basic Card",
+    "sub_type": "Basic",
+    "description": "เพิ่มความเสียหายของการโจมตี (Attack) ใบถัดไปในเทิร์นนี้เป็น 2 หรือใช้ฟื้นฟูตัวเองเมื่อกำลังจะตาย (เหมือน Peach)",
+    "conditions_of_use": "ใช้เพิ่มความเสียหายได้ 1 ครั้งต่อเทิร์น หรือใช้ฟื้นฟูเฉพาะตัวเองเมื่อ HP เหลือ 0",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014452766ed1a07699f7.jpg"
+  },
+  {
+    "card_name": "Fire Attack",
+    "main_type": "Basic Card",
+    "sub_type": "Elemental",
+    "description": "แสดงการ์ด 1 ใบให้ทุกคนดู หากผู้ใช้สามารถทิ้งการ์ดที่มีสัญลักษณ์ (Suit) ตรงกับการ์ดที่เป้าหมายแสดง เป้าหมายจะรับความเสียหายธาตุไฟ 1 หน่วย",
+    "conditions_of_use": "เป้าหมายต้องมีการ์ดในมือ",
+    "product_expansion": "Kingdom Wars",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014394766ed18b3abfd2.jpg"
+  },
+  {
+    "card_name": "Thunder Attack",
+    "main_type": "Basic Card",
+    "sub_type": "Elemental",
+    "description": "เทียบเท่า Attack ปกติแต่ทำความเสียหายธาตุสายฟ้า (Thunder Damage)",
+    "conditions_of_use": "เหมือน Attack ทั่วไป",
+    "product_expansion": "Endless Legend Expansion",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014444466ed19dc0749a.jpg"
+  },
+  {
+    "card_name": "Bumper Harvest",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "จั่วการ์ดจากกองกลางจำนวนเท่ากับผู้เล่นที่ยังมีชีวิต หงายการ์ดขึ้น และให้ผู้เล่นแต่ละคนเลือกหยิบไป 1 ใบ (เริ่มจากผู้ใช้)",
+    "conditions_of_use": "ไม่มี",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014241966ed1513d7125.jpg"
+  },
+  {
+    "card_name": "Oath of the Peach Garden",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "ฟื้นฟู 1 HP ให้กับผู้เล่นทุกคนที่ได้รับบาดเจ็บ (รวมถึงผู้ใช้)",
+    "conditions_of_use": "ไม่มี",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014165366ed1355169ef.jpg"
+  },
+  {
+    "card_name": "Negation",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "ยกเลิกผลของการ์ด Stratagem หรือ Conditional ที่มีเป้าหมายไปยังผู้เล่น 1 คน",
+    "conditions_of_use": "ใช้แทรกเมื่อมีการใช้ Stratagem",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013323166ed08efecc76.jpg"
+  },
+  {
+    "card_name": "Alliance",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "หรือเรียกอีกชื่อว่า Iron Chains - เชื่อมโยงผู้เล่น 2 คนเข้าด้วยกัน เมื่อคนใดคนหนึ่งรับความเสียหายธาตุ อีกคนจะรับความเสียหายเท่ากัน หรือใช้ทิ้งเพื่อจั่วใหม่ (Reforge)",
+    "conditions_of_use": "เลือกเป้าหมาย 1-2 คน",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916341066ebe20225755.jpg"
+  },
+  {
+    "card_name": "Barbarian Invasion",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "ผู้เล่นคนอื่นทุกคนต้องทิ้งการ์ด Attack 1 ใบ หากไม่ทิ้งจะเสีย 1 HP",
+    "conditions_of_use": "มีผลกับผู้เล่นทุกคนยกเว้นผู้ใช้",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014305266ed169cc2b59.jpg"
+  },
+  {
+    "card_name": "Borrowed Sword",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "สั่งให้เป้าหมายที่มีอาวุธ โจมตีเป้าหมายที่สองด้วย Attack หากเป้าหมายแรกไม่ทำตาม จะต้องมอบอาวุธให้ผู้ใช้",
+    "conditions_of_use": "เป้าหมายที่ 1 ต้องมีอาวุธติดตั้งอยู่",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014312966ed16c1789af.jpg"
+  },
+  {
+    "card_name": "Raining Arrows",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "ผู้เล่นคนอื่นทุกคนต้องทิ้งการ์ด Dodge 1 ใบ หากไม่ทิ้งจะเสีย 1 HP",
+    "conditions_of_use": "มีผลกับผู้เล่นทุกคนยกเว้นผู้ใช้",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014340966ed1761909c6.jpg"
+  },
+  {
+    "card_name": "Something Out of Nothing",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "หรือ Ex Nihilo - ผู้ใช้จั่วการ์ด 2 ใบจากกอง",
+    "conditions_of_use": "ไม่มี",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014343666ed177cc16a3.jpg"
+  },
+  {
+    "card_name": "Duel",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "ท้าดวลเป้าหมาย เป้าหมายต้องทิ้ง Attack จากนั้นผลัดกันทิ้ง Attack ไปเรื่อยๆ ใครไม่สามารถทิ้งได้จะรับความเสียหาย 1 HP",
+    "conditions_of_use": "ไม่มีระยะจำกัด",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014345866ed1792871c0.jpg"
+  },
+  {
+    "card_name": "Steal",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "ขโมยการ์ด 1 ใบจากเป้าหมาย (ในมือหรือในโซนอุปกรณ์/รอตัดสิน)",
+    "conditions_of_use": "เป้าหมายต้องอยู่ในระยะ 1",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014363066ed17eed2877.jpg"
+  },
+  {
+    "card_name": "Flame Tactic",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "เทียบเท่า Fire Attack",
+    "conditions_of_use": "เป้าหมายต้องมีการ์ดในมือ",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014392266ed189a4c6a4.jpg"
+  },
+  {
+    "card_name": "Iron Chains",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "รีเซ็ตหรือล่ามโซ่เป้าหมาย 1-2 คน หรือจั่วไพ่ใหม่ (เหมือน Alliance)",
+    "conditions_of_use": "ไม่มีระยะจำกัด",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014450866ed19f413551.jpg"
+  },
+  {
+    "card_name": "Lightning",
+    "main_type": "Stratagem Card",
+    "sub_type": "Conditional",
+    "description": "นำไปวางในโซนรอตัดสินของผู้เล่น เมื่อถึงเทิร์นให้เปิดไพ่ตัดสิน หากเป็นโพดำ (Spades) 2 ถึง 9 ผู้เล่นจะรับความเสียหายธาตุสายฟ้า 3 HP หากไม่ใช่ ให้ส่ง Lightning ไปยังผู้เล่นคนถัดไป",
+    "conditions_of_use": "วางในโซนตัดสินของตนเอง",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014180066ed13985ce62.jpg"
+  },
+  {
+    "card_name": "Overindulgence",
+    "main_type": "Stratagem Card",
+    "sub_type": "Conditional",
+    "description": "หรือ Indulgence - นำไปวางในโซนรอตัดสินของเป้าหมาย เมื่อถึงเทิร์นให้เปิดไพ่ตัดสิน หากไม่ใช่โพแดง (Hearts) เป้าหมายจะถูกข้ามเฟสเล่นไพ่ (Play Phase) ในเทิร์นนั้น",
+    "conditions_of_use": "วางในโซนตัดสินเป้าหมาย",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014302766ed1683b32cf.jpg"
+  },
+  {
+    "card_name": "Rations Depleted",
+    "main_type": "Stratagem Card",
+    "sub_type": "Conditional",
+    "description": "หรือ Starvation - นำไปวางในโซนรอตัดสินของเป้าหมาย เมื่อถึงเทิร์นให้เปิดไพ่ตัดสิน หากไม่ใช่ดอกจิก (Clubs) เป้าหมายจะถูกข้ามเฟสจั่วไพ่ (Draw Phase) ในเทิร์นนั้น",
+    "conditions_of_use": "เป้าหมายต้องอยู่ในระยะ 1 ยกเว้นผู้มีสกิลพิเศษ",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014441566ed19bfae6cc.jpg"
+  },
+  {
+    "card_name": "Frost Sword",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 2: เมื่อใช้โจมตี (Attack) สำเร็จ คุณสามารถเลือกไม่ทำความเสียหาย แต่บังคับให้เป้าหมายทิ้งการ์ด 2 ใบแทน",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013400466ed0ab4a08ad.jpg"
+  },
+  {
+    "card_name": "Six Swords of Wu",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 2: อาวุธเพิ่มเติม",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Endless Legend Expansion",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916341566ebe207e0b9b.jpg"
+  },
+  {
+    "card_name": "Two-bladed Trident",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 3: หากการโจมตี (Attack) ถูกหลบหลีก คุณสามารถทิ้งการ์ดในมือ 1 ใบเพื่อบังคับให้การโจมตีนั้นยังคงส่งผลอยู่",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916342466ebe210ebc3d.jpg"
+  },
+  {
+    "card_name": "Kirin Bow",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 5: เมื่อใช้โจมตี (Attack) สำเร็จ คุณสามารถเลือกทำลายม้า (Mount) ของเป้าหมาย 1 ตัว",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014281666ed1600db743.jpg"
+  },
+  {
+    "card_name": "Zhuge Crossbow",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 1: ในเทิร์นของคุณ คุณสามารถใช้ Attack กี่ใบก็ได้โดยไม่มีข้อจำกัดจำนวนครั้ง",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014293266ed164c8ef28.jpg"
+  },
+  {
+    "card_name": "Green Dragon Blade",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 3: หากการโจมตี (Attack) ถูกหลบหลีก คุณสามารถใช้ Attack ได้อีกครั้งใส่เป้าหมายเดิม",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014323066ed16fe2df5b.jpg"
+  },
+  {
+    "card_name": "Serpent Spear",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 3: คุณสามารถทิ้งการ์ดในมือ 2 ใบเพื่อใช้เป็น Attack",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014330566ed172177f08.jpg"
+  },
+  {
+    "card_name": "Rock Cleaving Axe",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 3: หากการโจมตี (Attack) ถูกหลบหลีก คุณสามารถทิ้งการ์ด 2 ใบ (ในมือหรืออุปกรณ์) เพื่อบังคับให้การโจมตีทะลุผ่าน",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014352166ed17a9aefbc.jpg"
+  },
+  {
+    "card_name": "Sky Piercing Halberd",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 4: หากใช้ Attack เป็นการ์ดใบสุดท้ายในมือ จะสามารถเลือกเป้าหมายได้สูงสุด 3 คน",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014354466ed17c0bfab7.jpg"
+  },
+  {
+    "card_name": "Yin-Yang Swords",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 2: หากเพศของเป้าหมายต่างจากผู้ใช้ เมื่อโจมตีสำเร็จเป้าหมายจะต้องทิ้งการ์ดในมือ 1 ใบ",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014360566ed17d5469de.jpg"
+  },
+  {
+    "card_name": "Blue Steel Sword",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 2: การโจมตี (Attack) จะทะลุผ่านชุดเกราะ (Armor) ทั้งหมด ป้องกันไม่ได้ด้วยคุณสมบัติชุดเกราะ",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014371866ed181e49171.jpg"
+  },
+  {
+    "card_name": "Feathered Fan",
+    "main_type": "Equipment Card",
+    "sub_type": "Weapon",
+    "description": "ระยะโจมตี 4: การโจมตี (Attack) ธรรมดา จะถือเป็นการโจมตีธาตุไฟ (Fire Damage)",
+    "conditions_of_use": "สวมใส่เป็นอาวุธหลัก",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014403066ed18deeb3d4.jpg"
+  },
+  {
+    "card_name": "Nio Shield",
+    "main_type": "Equipment Card",
+    "sub_type": "Armor",
+    "description": "หรือ Renwang Shield - คุณจะไม่ได้รับความเสียหายจากการโจมตี (Attack) ที่มีการ์ดสัญลักษณ์สีดำ (Spades, Clubs)",
+    "conditions_of_use": "สวมใส่เป็นชุดเกราะ",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013365666ed09f899277.jpg"
+  },
+  {
+    "card_name": "Eight Trigrams Formation",
+    "main_type": "Equipment Card",
+    "sub_type": "Armor",
+    "description": "เมื่อจำเป็นต้องใช้ Dodge คุณสามารถสุ่มตัดสิน 1 ใบ หากเปิดได้ไพ่สีแดง จะถือว่าได้ใช้ Dodge ฟรี",
+    "conditions_of_use": "สวมใส่เป็นชุดเกราะ",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014300366ed166b24f71.jpg"
+  },
+  {
+    "card_name": "Silver Lion Helmet",
+    "main_type": "Equipment Card",
+    "sub_type": "Armor",
+    "description": "ความเสียหายใดๆ ที่คุณได้รับในแต่ละครั้ง จะลดลงเหลือสูงสุดไม่เกิน 1 เสมอ และเมื่อชุดเกราะนี้ถูกถอดออกหรือถูกทำลาย คุณจะฟื้นฟู 1 HP",
+    "conditions_of_use": "สวมใส่เป็นชุดเกราะ",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014405366ed18f572589.jpg"
+  },
+  {
+    "card_name": "Rattan Armor",
+    "main_type": "Equipment Card",
+    "sub_type": "Armor",
+    "description": "คุณจะไม่ได้รับความเสียหายจาก Attack ธรรมดา, Raining Arrows, และ Barbarian Invasion แต่จะรับความเสียหายธาตุไฟเพิ่มขึ้น 1",
+    "conditions_of_use": "สวมใส่เป็นชุดเกราะ",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014435266ed19a85192a.jpg"
+  },
+  {
+    "card_name": "Fergana Steed",
+    "main_type": "Equipment Card",
+    "sub_type": "Mount",
+    "description": "ม้าหนี / Defensive Horse (+1) - ผู้เล่นคนอื่นจะต้องมีระยะการโจมตีเพิ่มขึ้นอีก 1 จึงจะเข้าถึงคุณได้",
+    "conditions_of_use": "สวมใส่เป็นม้า",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014334766ed174b2c963.jpg"
+  },
+  {
+    "card_name": "Shadowrunner",
+    "main_type": "Equipment Card",
+    "sub_type": "Mount",
+    "description": "ม้าหนี / Defensive Horse (+1) - เหมือน Fergana Steed",
+    "conditions_of_use": "สวมใส่เป็นม้า",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014365066ed1802e8169.jpg"
+  },
+  {
+    "card_name": "Red Hare",
+    "main_type": "Equipment Card",
+    "sub_type": "Mount",
+    "description": "ม้าบุก / Offensive Horse (-1) - ระยะโจมตีของคุณลดลง -1 (คุณสามารถโจมตีเป้าหมายที่อยู่ไกลออกไปได้ง่ายขึ้น)",
+    "conditions_of_use": "สวมใส่เป็นม้า",
+    "product_expansion": "Standard",
+    "pic_url": "https://static.wtkgames.com/icons/cards/default.png"
+  },
+  {
+    "card_name": "Lightning Hoof",
+    "main_type": "Equipment Card",
+    "sub_type": "Mount",
+    "description": "ม้าบุก / Offensive Horse (-1) - เหมือน Red Hare",
+    "conditions_of_use": "สวมใส่เป็นม้า",
+    "product_expansion": "Standard",
+    "pic_url": "https://static.wtkgames.com/icons/cards/default.png"
+  },
+  {
+    "card_name": "Wooden Cart",
+    "main_type": "Equipment Card",
+    "sub_type": "Treasure",
+    "description": "เก็บการ์ดไว้ใต้การ์ดสมบัตินี้เพื่อใช้ในการส่งต่อหรือเก็บสะสมนอกเหนือจากข้อจำกัดการ์ดในมือ",
+    "conditions_of_use": "สวมใส่ในช่องสมบัติ",
+    "product_expansion": "Kingdom Wars",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014385466ed187eeca06.jpg"
+  }
+]

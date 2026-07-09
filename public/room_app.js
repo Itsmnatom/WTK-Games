@@ -675,7 +675,7 @@
       selectedCard = me.hand.find(c => c.id === actualCardId);
     }
 
-    orderedOpponents.forEach(pId => {
+    orderedOpponents.forEach((pId, i) => {
       const p = gameState.players[pId];
       if (!p) return;
 

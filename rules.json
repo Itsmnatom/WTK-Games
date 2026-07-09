@@ -1,0 +1,217 @@
+{
+  "game_name": "War of the Three Kingdoms",
+  "meta_data": {
+    "total_cards": 159,
+    "components": {
+      "identity_cards": 10,
+      "health_point_cards": 11,
+      "general_cards": 30,
+      "game_cards_standard": 104,
+      "game_cards_ex": 4
+    }
+  },
+  "setup_rules": {
+    "recommended_players": {
+      "min": 5,
+      "max": 7
+    },
+    "identity_distribution": {
+      "4_players":  { "lord": 1, "loyalist": 1, "rebel": 1, "spy": 1 },
+      "5_players":  { "lord": 1, "loyalist": 1, "rebel": 2, "spy": 1 },
+      "6_players":  { "lord": 1, "loyalist": 1, "rebel": 3, "spy": 1 },
+      "7_players":  { "lord": 1, "loyalist": 2, "rebel": 3, "spy": 1 },
+      "8_players":  { "lord": 1, "loyalist": 2, "rebel": 4, "spy": 1 },
+      "9_players":  { "lord": 1, "loyalist": 3, "rebel": 4, "spy": 1 },
+      "10_players": { "lord": 1, "loyalist": 3, "rebel": 4, "spy": 2 }
+    },
+    "general_selection": {
+      "lord_pool_size": 5,
+      "lord_default_pool": ["Cao Cao", "Liu Bei", "Sun Quan"],
+      "other_player_pool_size": 3,
+      "lord_hp_bonus_condition": {
+        "min_players_required": 6,
+        "hp_bonus": 1
+      }
+    },
+    "initial_hand_cards": 4
+  },
+  "identities_and_objectives": {
+    "lord": {
+      "visibility": "public",
+      "victory_condition": "Eliminate all Rebels and Spies."
+    },
+    "loyalist": {
+      "visibility": "hidden",
+      "victory_condition": "Protect the Lord and ensure the Lord's victory."
+    },
+    "rebel": {
+      "visibility": "hidden",
+      "victory_condition": "Defeat the Lord and overthrow their rule."
+    },
+    "spy": {
+      "visibility": "hidden",
+      "victory_condition": "Outlast all players, leaving the Lord as the final 1v1 challenge, then defeat the Lord to be the lone survivor."
+    }
+  },
+  "turn_structure": {
+    "turn_direction": "counterclockwise",
+    "phases": [
+      {
+        "phase_id": 1,
+        "phase_name": "Preparation Phase",
+        "description": "Trigger phase before Judgement where specific character skills activate."
+      },
+      {
+        "phase_id": 2,
+        "phase_name": "Judgement Phase",
+        "rules": {
+          "skip_if_empty": true,
+          "target_zone": "judgement_zone",
+          "resolution_order": "newest_to_oldest"
+        }
+      },
+      {
+        "phase_id": 3,
+        "phase_name": "Draw Phase",
+        "actions": {
+          "draw_count": 2,
+          "source": "deck"
+        }
+      },
+      {
+        "phase_id": 4,
+        "phase_name": "Play Phase",
+        "rules": {
+          "attack_limit_per_turn": 1,
+          "duplicate_stratagem_restriction": "Same card cannot exist in a single player's judgement zone simultaneously."
+        }
+      },
+      {
+        "phase_id": 5,
+        "phase_name": "Discard Phase",
+        "rules": {
+          "max_hand_size_calculation": "current_hp",
+          "action": "Discard 1 card for each excess card in hand."
+        }
+      },
+      {
+        "phase_id": 6,
+        "phase_name": "Final Phase",
+        "description": "Trigger phase after Discard where specific character skills activate."
+      }
+    ]
+  },
+  "core_mechanics": {
+    "distance": {
+      "base_calculation": "Shortest physical path between active players (clockwise or counterclockwise).",
+      "eliminated_player_effect": "Eliminated players no longer occupy a position; distance shortens.",
+      "min_distance": 1,
+      "self_distance": 0
+    },
+    "attack_range": {
+      "default_range": 1,
+      "override_method": "Equipped weapon attack range."
+    },
+    "zones": {
+      "hand_cards": { "ownership": "player", "visibility": "private" },
+      "equipment_zone": { "ownership": "player", "visibility": "public", "is_battlefield": true },
+      "judgement_zone": { "ownership": "none", "visibility": "public", "is_battlefield": true }
+    },
+    "combat_and_damage": {
+      "damage_vs_deduction": {
+        "damage": "Has a source (the player who used the card). Triggers damage-related skills.",
+        "hp_deduction": "Lacks a source. Does not trigger skills activated by receiving damage."
+      },
+      "damage_settlement_priority": [
+        "Inflicting Damage",
+        "Taking Damage",
+        "Deduction of HP",
+        "After Inflicting Damage",
+        "After Taking Damage"
+      ]
+    },
+    "dying_and_defeat": {
+      "dying_threshold_hp": 0,
+      "rescue_card": "Peach",
+      "settlement_priority": "Dying event must be settled prior to completing the Damage event.",
+      "rewards_and_punishments": {
+        "defeat_rebel": {
+          "reward": "Any player who defeats a Rebel draws 3 cards."
+        },
+        "lord_defeats_loyalist": {
+          "punishment": "The Lord must discard all cards in their hand and equipment zone."
+        }
+      }
+    },
+    "rule_hierarchy_priority": [
+      "General Skills",
+      "Game Card Effects",
+      "Basic Game Rules"
+    ]
+  },
+  "basic_card_registry": {
+    "Attack": {
+      "main_type": "Basic",
+      "action_window": "Play Phase",
+      "target": "Another player within your Attack Range",
+      "effect": "Inflicts 1 damage on the target player.",
+      "sub_variants": {
+        "Fire Attack": { "damage_type": "fire" },
+        "Thunder Attack": { "damage_type": "lightning" }
+      }
+    },
+    "Dodge": {
+      "main_type": "Basic",
+      "action_window": "When an incoming [Attack] begins its settlement.",
+      "target": "An incoming [Attack] card",
+      "effect": "Nullifies the target [Attack]."
+    },
+    "Peach": {
+      "main_type": "Basic",
+      "action_window": "During the Play Phase or when a player is in a Dying State.",
+      "target": "Self (during Play Phase if HP is not full) or Any dying player.",
+      "effect": "The target player recovers 1 HP."
+    },
+    "Wine": {
+      "main_type": "Basic",
+      "action_window": "During the Play Phase or when the holder enters a Dying State.",
+      "target": "Self",
+      "effect": "If played in Play Phase: Damage +1 on your next [Attack] this turn. If played in Dying State: The holder recovers 1 HP."
+    }
+  },
+  "equipment_slots": {
+    "Weapon": {
+      "slot_limit": 1,
+      "replacement_rule": "Must discard current weapon before equipping a new one.",
+      "primary_effect": "Modifies Attack Range and alters offensive capability."
+    },
+    "Armor": {
+      "slot_limit": 1,
+      "replacement_rule": "Must discard current armor before equipping a new one.",
+      "primary_effect": "Alters defensive capability."
+    },
+    "Mount": {
+      "slot_limit_per_type": 1,
+      "types": {
+        "Offensive (-1)": { "effect": "Distance -1 when you attempt to reach other players. Minimum limit is 1." },
+        "Defensive (+1)": { "effect": "Distance +1 when other players attempt to reach you." }
+      },
+      "combination_rule": "Can equip one +1 mount and one -1 mount simultaneously, but cannot duplicate names or types."
+    }
+  },
+  "game_vocabulary_appendix": {
+    "Obtain": "Take random card if from Hand; Take card of choice if from Equipment or Judgement Zone.",
+    "Lose": "Card is removed from Hand or Equipment Zone.",
+    "Use_Play_As": "Convert properties of card(s) into another. Retains original properties after settlement cycle.",
+    "Exhibit": "Show designated card to all players, then place it back.",
+    "Reveal": "Show designated card to all players until settlement is complete.",
+    "Ignore": "Player is unaffected by the event.",
+    "One_Injury": "The injury event resulting from a single instance of damage, regardless of amount.",
+    "1_Damage": "Amount of damage points. Skills triggering on '1 Damage' trigger multiple times if multiple points are dealt.",
+    "Regarded_as": "View properties or events differently under specific criteria without changing base conversion.",
+    "Next_Player": "The player to the current player's right side.",
+    "Transferring": "Changing card ownership face down (or face up if required).",
+    "Substitution": "Replace target card with a different card. Replaced card goes to Discard Pile.",
+    "Shift": "Changing the target or recipient of a card or effect."
+  }
+}

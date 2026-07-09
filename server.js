@@ -1,7 +1,23 @@
+const fs = require('fs');
 const express = require('express');
+let SERVER_CARD_DB = {};
+try {
+    const dbData = JSON.parse(fs.readFileSync('public/cards_db.json', 'utf8'));
+    dbData.forEach(c => {
+        let englishName = c.card_name.toUpperCase().replace(/\s+/g, '_');
+        if (englishName === "ATTACK") englishName = "SLASH";
+        if (englishName === "OVERINDULGENCE") englishName = "INDULGENCE";
+        if (englishName === "SOMETHING_OUT_OF_NOTHING") englishName = "EX_NIHILO";
+        if (englishName === "ALLIANCE" || englishName === "IRON_CHAINS") englishName = "IRON_CHAIN";
+        if (englishName === "BARBARIAN_INVASION") englishName = "BARBARIAN_INVASION";
+        if (englishName === "RAINING_ARROWS") englishName = "ARROW_BARRAGE";
+        if (englishName === "OATH_OF_THE_PEACH_GARDEN") englishName = "PEACH_GARDEN";
+        SERVER_CARD_DB[englishName] = c;
+    });
+} catch(e) { console.error("Could not load cards_db.json on server", e); }
+
 const http = require('http');
 const { Server } = require('socket.io');
-const fs = require('fs');
 const path = require('path');
 
 const app = express();
@@ -135,6 +151,10 @@ function getSanitizedRoomState(room, targetPlayerId) {
     winnerRole: room.winnerRole || null,
     winnerText: room.winnerText || null
   };
+}
+
+function notifyCardPlayed(room, playerId, cardName, targetId) {
+  io.to(room.id).emit('card_played', { playerId, cardName, targetId });
 }
 
 function broadcastRoomState(room) {
@@ -288,7 +308,7 @@ function assignRoles(room) {
   if (count === 3) {
     roles = ['LORD', 'REBEL', 'RENEGADE'];
   } else if (count === 4) {
-    roles = ['LORD', 'LOYALIST', 'REBEL', 'REBEL'];
+    roles = ['LORD', 'LOYALIST', 'REBEL', 'RENEGADE'];
   } else if (count === 5) {
     roles = ['LORD', 'LOYALIST', 'REBEL', 'REBEL', 'RENEGADE'];
   } else if (count === 6) {
@@ -443,6 +463,7 @@ function advanceDyingAsker(room) {
         if (killer.equipment.armor) { room.discardPile.push(killer.equipment.armor); killer.equipment.armor = null; }
         if (killer.equipment.defensiveHorse) { room.discardPile.push(killer.equipment.defensiveHorse); killer.equipment.defensiveHorse = null; }
         if (killer.equipment.offensiveHorse) { room.discardPile.push(killer.equipment.offensiveHorse); killer.equipment.offensiveHorse = null; }
+        if (killer.equipment.treasure) { room.discardPile.push(killer.equipment.treasure); killer.equipment.treasure = null; }
         console.log(`Lord ${killer.name} killed a LOYALIST and lost all cards.`);
       }
     }
@@ -746,6 +767,7 @@ function runBotTurn(room, botId) {
     if (peachIdx !== -1) {
       bot.hand.splice(peachIdx, 1);
       bot.hp += 1;
+      notifyCardPlayed(room, botId, 'PEACH');
       console.log(`Bot ${bot.name} used PEACH. HP: ${bot.hp}`);
       actionTaken = true;
     }
@@ -757,6 +779,7 @@ function runBotTurn(room, botId) {
     if (exIdx !== -1) {
       const card = bot.hand.splice(exIdx, 1)[0];
       room.discardPile.push(card);
+      notifyCardPlayed(room, botId, 'EX_NIHILO');
       console.log(`Bot ${bot.name} used EX_NIHILO`);
       drawCards(room, 2).forEach(c => bot.hand.push(c));
       broadcastRoomState(room);
@@ -774,6 +797,7 @@ function runBotTurn(room, botId) {
         if (bot.equipment.weapon) room.discardPile.push(bot.equipment.weapon);
         w.range = w.name === 'BLUE_STEEL_SWORD' ? 2 : 1;
         bot.equipment.weapon = w;
+        notifyCardPlayed(room, botId, w.name);
         console.log(`Bot ${bot.name} equipped ${w.name}`);
         actionTaken = true;
       }
@@ -825,7 +849,8 @@ function runBotTurn(room, botId) {
         }
         if (discardedCard) room.discardPile.push(discardedCard);
         
-        console.log(`Bot ${bot.name} used SABOTAGE on ${target.name}`);
+        notifyCardPlayed(room, botId, 'SABOTAGE', target.id);
+      console.log(`Bot ${bot.name} used SABOTAGE on ${target.name}`);
         broadcastRoomState(room);
         actionTaken = true;
       }
@@ -859,7 +884,8 @@ function runBotTurn(room, botId) {
         }
         if (stolenCard) bot.hand.push(stolenCard);
         
-        console.log(`Bot ${bot.name} used STEAL on ${target.name}`);
+        notifyCardPlayed(room, botId, 'STEAL', target.id);
+      console.log(`Bot ${bot.name} used STEAL on ${target.name}`);
         broadcastRoomState(room);
         actionTaken = true;
       }
@@ -1005,13 +1031,49 @@ function getCardById(room, cardId) {
   return null;
 }
 
-function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId) {
+function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageType = 'NORMAL') {
   const targetPlayer = room.players[targetPlayerId];
-  if (!targetPlayer) return;
+  if (!targetPlayer || !targetPlayer.isAlive) return;
   
-  targetPlayer.hp -= damage;
-  console.log(`${targetPlayer.name} took ${damage} damage. Remaining HP: ${targetPlayer.hp}`);
+  let finalDamage = damage;
+
+  // Armor processing
+  if (targetPlayer.equipment && targetPlayer.equipment.armor) {
+    const armorName = targetPlayer.equipment.armor.name;
+    if (armorName === 'SILVER_LION_HELMET') {
+      if (finalDamage > 1) {
+        console.log(`${targetPlayer.name} Silver Lion Helmet reduced damage to 1`);
+        finalDamage = 1;
+      }
+    }
+    if (armorName === 'RATTAN_ARMOR') {
+      if (damageType === 'FIRE') {
+        console.log(`${targetPlayer.name} Rattan Armor increased fire damage by 1`);
+        finalDamage += 1;
+      } else if (damageType === 'NORMAL' && (!cardUsed || cardUsed.name === 'SLASH' || cardUsed.name === 'ARROW_BARRAGE' || cardUsed.name === 'BARBARIAN_INVASION')) {
+        console.log(`${targetPlayer.name} Rattan Armor nullified normal attack damage`);
+        return; // Prevent damage entirely
+      }
+    }
+  }
+
+  targetPlayer.hp -= finalDamage;
+  console.log(`${targetPlayer.name} took ${finalDamage} ${damageType} damage. Remaining HP: ${targetPlayer.hp}`);
   
+  // Chain reaction for elemental damage
+  if (targetPlayer.isChained && (damageType === 'FIRE' || damageType === 'THUNDER')) {
+    targetPlayer.isChained = false; // Breaking this chain
+    // Find other chained players
+    room.turnOrder.forEach(pid => {
+       if (pid !== targetPlayerId && room.players[pid] && room.players[pid].isAlive && room.players[pid].isChained) {
+          console.log(`Chain reaction hits ${room.players[pid].name}!`);
+          room.players[pid].isChained = false;
+          // Recursively deal same elemental damage
+          dealDamage(room, pid, finalDamage, cardUsed, attackerId, damageType);
+       }
+    });
+  }
+
   // Cao Cao skill: Emperor's Domain
   if (hasCharacter(targetPlayer, 'CAO_CAO') && cardUsed) {
     const idx = room.discardPile.findIndex(c => c.id === cardUsed.id);
@@ -1075,7 +1137,7 @@ function handleBotDodge(room, botId, damage) {
     const cardUsed = pending ? getCardById(room, pending.cardUsedId) : null;
     room.pendingAction = null;
     dealDamage(room, botId, damage, cardUsed, attackerId);
-    if (bot.hp > 0 && !room.pendingAction) {
+    if (!room.pendingAction) {
       resumeAfterAttack(room);
     }
   }
@@ -1112,7 +1174,7 @@ function handleBotDuelSlash(room) {
           const cardUsed = getCardById(room, pending.cardUsedId);
           room.pendingAction = null;
           dealDamage(room, pending.currentPlayerToSlash, 1, cardUsed, attackerId);
-          if (room.players[pending.currentPlayerToSlash].hp > 0 && !room.pendingAction) resumeAfterAttack(room);
+          if (!room.pendingAction) resumeAfterAttack(room);
           broadcastRoomState(room);
         }
       }, 15000);
@@ -1124,7 +1186,7 @@ function handleBotDuelSlash(room) {
     const cardUsed = getCardById(room, pending.cardUsedId);
     room.pendingAction = null;
     dealDamage(room, damagedPlayerId, 1, cardUsed, attackerId);
-    if (bot.hp > 0 && !room.pendingAction) {
+    if (!room.pendingAction) {
       resumeAfterAttack(room);
     }
   }
@@ -1245,7 +1307,7 @@ function handleBotSeduction(room, botId) {
     const attackerId = pending ? pending.sourcePlayerId : null;
     room.pendingAction = null;
     dealDamage(room, botId, 1, null, attackerId);
-    if (bot.hp > 0 && !room.pendingAction) {
+    if (!room.pendingAction) {
       resumeAfterAttack(room);
     }
   }
@@ -1272,7 +1334,7 @@ function handleBotZhouYu(room, botId, requiredColor) {
     const attackerId = pending ? pending.sourcePlayerId : null;
     room.pendingAction = null;
     dealDamage(room, botId, 1, null, attackerId);
-    if (bot.hp > 0 && !room.pendingAction) {
+    if (!room.pendingAction) {
       resumeAfterAttack(room);
     }
   }
@@ -1286,6 +1348,11 @@ io.on('connection', (socket) => {
   
   socket.on('create_room', ({ roomId, playerName, mode }) => {
     const rId = roomId || 'ROOM_' + Math.random().toString(36).substr(2, 4).toUpperCase();
+    
+    if (gameRooms[rId] && roomId) {
+      return socket.emit('game_error', { message: "ห้องนี้ถูกสร้างไปแล้ว กรุณาเข้าร่วมแทน" });
+    }
+
     gameRooms[rId] = {
       roomId: rId,
       status: 'LOBBY',
@@ -1360,6 +1427,11 @@ io.on('connection', (socket) => {
   socket.on('start_game', ({ roomId, botCount }) => {
     const room = gameRooms[roomId];
     if (!room) return;
+    
+    if (room.mode !== 'BOT' && room.turnOrder.length < 2) {
+      socket.emit('game_error', { message: 'ต้องมีผู้เล่นในห้องอย่างน้อย 2 คนจึงจะเริ่มเกมได้ (รอผู้เล่นอื่นเข้าร่วม)' });
+      return;
+    }
     
     if (room.mode === 'BOT') {
       const targetCount = botCount || 3;
@@ -1487,6 +1559,7 @@ io.on('connection', (socket) => {
 
       const damage = player.wineActive ? 2 : 1;
       player.wineActive = false;
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       player.hand.splice(cardIndex, 1);
       room.attacksPlayedInTurn += 1;
       player.slashedThisTurn = true;
@@ -1530,12 +1603,14 @@ io.on('connection', (socket) => {
         return socket.emit('game_error', { message: "ไม่สามารถใช้ PEACH ได้" });
       }
 
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       player.hand.splice(cardIndex, 1);
       room.discardPile.push(cardUsed);
       targetPlayer.hp += 1;
       broadcastRoomState(room);
 
     } else if (cardUsed.name === 'WINE') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       player.hand.splice(cardIndex, 1);
       room.discardPile.push(cardUsed);
       player.wineActive = true;
@@ -1601,6 +1676,7 @@ io.on('connection', (socket) => {
         return socket.emit('game_error', { message: "ไม่มีการ์ดให้ขโมย" });
       }
 
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const stealCard = player.hand.splice(cardIndex, 1)[0];
       room.discardPile.push(stealCard);
       player.hand.push(stolenCard);
@@ -1608,6 +1684,7 @@ io.on('connection', (socket) => {
       broadcastRoomState(room);
 
     } else if (cardUsed.name === 'ZHUGE_CROSSBOW' || cardUsed.name === 'BLUE_STEEL_SWORD') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const equipCard = player.hand.splice(cardIndex, 1)[0];
       equipCard.range = cardUsed.name === 'ZHUGE_CROSSBOW' ? 1 : 2;
       if (player.equipment.weapon) {
@@ -1618,6 +1695,7 @@ io.on('connection', (socket) => {
       broadcastRoomState(room);
 
     } else if (cardUsed.name === 'LIGHTNING_HOOF') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const equipCard = player.hand.splice(cardIndex, 1)[0];
       if (player.equipment.defensiveHorse) {
         room.discardPile.push(player.equipment.defensiveHorse);
@@ -1627,6 +1705,7 @@ io.on('connection', (socket) => {
       broadcastRoomState(room);
 
     } else if (cardUsed.name === 'RED_HARE') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const equipCard = player.hand.splice(cardIndex, 1)[0];
       if (player.equipment.offensiveHorse) {
         room.discardPile.push(player.equipment.offensiveHorse);
@@ -1684,6 +1763,7 @@ io.on('connection', (socket) => {
         return socket.emit('game_error', { message: "ไม่มีการ์ดให้ทำลาย" });
       }
 
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const saboCard = player.hand.splice(cardIndex, 1)[0];
       room.discardPile.push(saboCard);
       room.discardPile.push(discardedCard);
@@ -1691,6 +1771,7 @@ io.on('connection', (socket) => {
       broadcastRoomState(room);
 
     } else if (cardUsed.name === 'EX_NIHILO') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const exCard = player.hand.splice(cardIndex, 1)[0];
       room.discardPile.push(exCard);
       console.log(`${player.name} EX_NIHILO: draw 2 cards`);
@@ -1707,6 +1788,7 @@ io.on('connection', (socket) => {
         return socket.emit('game_error', { message: "ขงเบ้งเปิดใช้สกิล เมืองว่างเปล่า ไม่สามารถเป็นเป้าหมาย DUEL ได้" });
       }
 
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const duelCard = player.hand.splice(cardIndex, 1)[0];
       room.discardPile.push(duelCard);
       
@@ -1738,7 +1820,7 @@ io.on('connection', (socket) => {
             const cardUsedTimeout = getCardById(room, room.pendingAction.cardUsedId);
             room.pendingAction = null;
             dealDamage(room, targetPlayerId, 1, cardUsedTimeout, attackerId);
-            if (room.players[targetPlayerId].hp > 0 && !room.pendingAction) resumeAfterAttack(room);
+            if (!room.pendingAction) resumeAfterAttack(room);
             broadcastRoomState(room);
           }
         }, 15000);
@@ -1761,6 +1843,7 @@ io.on('connection', (socket) => {
         return socket.emit('game_error', { message: `เป้าหมายมี ${cardUsed.name} อยู่แล้ว` });
       }
       
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const card = player.hand.splice(cardIndex, 1)[0];
       targetPlayer.delayedKitZone = targetPlayer.delayedKitZone || [];
       targetPlayer.delayedKitZone.push(card);
@@ -1768,6 +1851,7 @@ io.on('connection', (socket) => {
       console.log(`${player.name} played ${card.name} on ${targetPlayer.name}`);
       broadcastRoomState(room);
     } else if (cardUsed.name === 'PEACH_GARDEN') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const aoeCard = player.hand.splice(cardIndex, 1)[0];
       room.discardPile.push(aoeCard);
       console.log(`${player.name} PEACH_GARDEN: heal all injured players`);
@@ -1779,6 +1863,7 @@ io.on('connection', (socket) => {
       broadcastRoomState(room);
 
     } else if (cardUsed.name === 'BARBARIAN_INVASION' || cardUsed.name === 'ARROW_BARRAGE') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const aoeCard = player.hand.splice(cardIndex, 1)[0];
       room.discardPile.push(aoeCard);
       
@@ -2004,7 +2089,7 @@ io.on('connection', (socket) => {
         const cardUsed = getCardById(room, pending.cardUsedId);
         room.pendingAction = null;
         dealDamage(room, damagedPlayerId, 1, cardUsed, attackerId);
-        if (room.players[damagedPlayerId].hp > 0 && !room.pendingAction) resumeAfterAttack(room);
+        if (!room.pendingAction) resumeAfterAttack(room);
       } else if (pending && pending.type === 'WAITING_FOR_AOE') {
         const attackerId = pending.sourcePlayerId;
         const cardUsed = getCardById(room, pending.cardUsedId);
@@ -2021,7 +2106,7 @@ io.on('connection', (socket) => {
         const damage = pending ? pending.damage : 1;
         room.pendingAction = null;
         dealDamage(room, playerId, damage, cardUsed, attackerId);
-        if (room.players[playerId].hp > 0 && !room.pendingAction) resumeAfterAttack(room);
+        if (!room.pendingAction) resumeAfterAttack(room);
       }
     }
 
