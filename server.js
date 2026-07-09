@@ -2472,6 +2472,13 @@ io.on('connection', (socket) => {
           }
         }
       }
+
+      // Check if ANY human players are left connected
+      const humanPlayersLeft = Object.values(foundRoom.players).filter(p => !p.isBot && p.isAlive).length;
+      if (humanPlayersLeft === 0) {
+        console.log(`All human players disconnected. Deleting room ${foundRoom.id}...`);
+        delete gameRooms[foundRoom.id];
+      }
     }
   });
 });

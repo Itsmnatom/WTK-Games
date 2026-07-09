@@ -1,0 +1,323 @@
+﻿diff --git a/public/room_app.js b/public/room_app.js
+index c0c0a11..963d78d 100644
+--- a/public/room_app.js
++++ b/public/room_app.js
+@@ -341,6 +341,49 @@
+ 
+   // --- AUDIO & EFFECTS ---
+ 
++  
++  function showCardPlayAnimation(playerId, cardName) {
++    if (!CARD_IMAGES[cardName]) return;
++    const avatarEl = playerId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${playerId}`);
++    if (!avatarEl) return;
++
++    const overlay = document.createElement('div');
++    overlay.className = 'card-play-overlay';
++    
++    const cardImg = document.createElement('img');
++    cardImg.src = CARD_IMAGES[cardName];
++    cardImg.className = 'card-play-img';
++    
++    overlay.appendChild(cardImg);
++    document.body.appendChild(overlay);
++
++    const rect = avatarEl.getBoundingClientRect();
++    const startX = rect.left + rect.width / 2;
++    const startY = rect.top + rect.height / 2;
++
++    overlay.style.left = `${startX}px`;
++    overlay.style.top = `${startY}px`;
++    overlay.style.transform = 'translate(-50%, -50%) scale(0.1)';
++    overlay.style.opacity = '0';
++
++    requestAnimationFrame(() => {
++      overlay.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
++      overlay.style.left = '50%';
++      overlay.style.top = '50%';
++      overlay.style.transform = 'translate(-50%, -50%) scale(1.5)';
++      overlay.style.opacity = '1';
++    });
++
++    setTimeout(() => {
++      overlay.style.transition = 'all 0.4s ease-in';
++      overlay.style.opacity = '0';
++      overlay.style.transform = 'translate(-50%, -50%) scale(1.8)';
++      setTimeout(() => {
++        if (overlay.parentElement) overlay.remove();
++      }, 400);
++    }, 1500);
++  }
++
+   function addLog(message, type = 'system') {
+     const entry = document.createElement('div');
+     entry.className = `log-entry log-${type}`;
+@@ -441,6 +484,34 @@
+   });
+ 
+   socket.on('room_state_update', onRoomStateUpdate);
++
++  socket.on('card_played', ({ playerId, cardName, targetId }) => {
++    showCardPlayAnimation(playerId, cardName);
++    
++    // Add special alert for the target
++    if (targetId && targetId === myPlayerId && playerId !== myPlayerId) {
++       const pName = gameState.players[playerId]?.name || 'α╕¿α╕▒α╕òα╕úα╕╣';
++       const cName = CARD_NAME_MAPPING[cardName] || cardName;
++       if (cardName === 'SLASH') {
++             showToast(`ΓÜá∩╕Å ${pName} α╣éα╕êα╕íα╕òα╕╡ (Slash) α╣âα╕¬α╣êα╕äα╕╕α╕ô!`, 'error');
++         } else if (cardName === 'STEAL') {
++             showToast(`ΓÜá∩╕Å ${pName} α╕éα╣éα╕íα╕ó (Steal) α╕üα╕▓α╕úα╣îα╕öα╕äα╕╕α╕ô!`, 'error');
++         } else if (cardName === 'SABOTAGE') {
++             showToast(`ΓÜá∩╕Å ${pName} α╕ùα╕│α╕Ñα╕▓α╕ó (Sabotage) α╕üα╕▓α╕úα╣îα╕öα╕äα╕╕α╕ô!`, 'error');
++         } else if (cardName === 'DUEL') {
++             showToast(`ΓÜö∩╕Å ${pName} α╕ùα╣ëα╕▓α╕öα╕ºα╕Ñ (Duel) α╕üα╕▒α╕Üα╕äα╕╕α╕ô!`, 'error');
++         } else if (cardName === 'FIRE_ATTACK') {
++             showToast(`≡ƒöÑ ${pName} α╣âα╕èα╣ëα╣éα╕êα╕íα╕òα╕╡α╕ÿα╕▓α╕òα╕╕α╣äα╕ƒ (Fire Attack) α╣âα╕¬α╣êα╕äα╕╕α╕ô!`, 'error');
++         } else if (cardName === 'THUNDER_ATTACK') {
++             showToast(`ΓÜí ${pName} α╣âα╕èα╣ëα╣éα╕êα╕íα╕òα╕╡α╕ÿα╕▓α╕òα╕╕α╕¬α╕▓α╕óα╕ƒα╣ëα╕▓ (Thunder Attack) α╣âα╕¬α╣êα╕äα╕╕α╕ô!`, 'error');
++         } else if (cardName === 'IRON_CHAIN') {
++             showToast(`Γ¢ô∩╕Å ${pName} α╕Ñα╣êα╕▓α╕íα╣éα╕ïα╣ê (Iron Chains) α╕äα╕╕α╕ô!`, 'error');
++         } else if (['LIGHTNING', 'INDULGENCE', 'STARVATION'].includes(cardName)) {
++           showToast(`ΓÜá∩╕Å ${pName} α╕ºα╕▓α╕çα╕üα╕▓α╕úα╣îα╕öα╕½α╕Öα╣êα╕ºα╕çα╣Çα╕ºα╕Ñα╕▓ (${cName}) α╣âα╕¬α╣êα╕äα╕╕α╕ô!`, 'error');
++       }
++    }
++  });
++
+   
+   socket.on('game_error', (err) => {
+     showToast(err.message, 'error');
+@@ -654,7 +725,40 @@
+     return Math.max(1, baseDistance);
+   }
+ 
+-  function renderOpponents() {
++  
++        const buildEquipTags = (equipment) => {
++           let tags = '';
++           if (!equipment) return tags;
++           
++           if (equipment.weapon) {
++              const info = CARD_DICT[equipment.weapon.name] || {};
++              const title = info.desc ? info.desc.replace(/"/g, "'") : 'α╕¡α╕▓α╕ºα╕╕α╕ÿ';
++              tags += `<span class="meta-tag" title="${title}"><span class="tag-icon">≡ƒùí∩╕Å</span>${CARD_NAME_MAPPING[equipment.weapon.name] || equipment.weapon.name}</span>`;
++           }
++           if (equipment.armor) {
++              const info = CARD_DICT[equipment.armor.name] || {};
++              const title = info.desc ? info.desc.replace(/"/g, "'") : 'α╕èα╕╕α╕öα╣Çα╕üα╕úα╕▓α╕░';
++              tags += `<span class="meta-tag" title="${title}"><span class="tag-icon">≡ƒ¢í∩╕Å</span>${CARD_NAME_MAPPING[equipment.armor.name] || equipment.armor.name}</span>`;
++           }
++           if (equipment.defensiveHorse) {
++              const info = CARD_DICT[equipment.defensiveHorse.name] || {};
++              const title = info.desc ? info.desc.replace(/"/g, "'") : 'α╕íα╣ëα╕▓α╕¢α╣ëα╕¡α╕çα╕üα╕▒α╕Ö';
++              tags += `<span class="meta-tag" title="${title}"><span class="tag-icon">≡ƒÉ┤</span>${CARD_NAME_MAPPING[equipment.defensiveHorse.name] || equipment.defensiveHorse.name}</span>`;
++           }
++           if (equipment.offensiveHorse) {
++              const info = CARD_DICT[equipment.offensiveHorse.name] || {};
++              const title = info.desc ? info.desc.replace(/"/g, "'") : 'α╕íα╣ëα╕▓α╣éα╕êα╕íα╕òα╕╡';
++              tags += `<span class="meta-tag" title="${title}"><span class="tag-icon">≡ƒÅç</span>${CARD_NAME_MAPPING[equipment.offensiveHorse.name] || equipment.offensiveHorse.name}</span>`;
++           }
++           if (equipment.treasure) {
++              const info = CARD_DICT[equipment.treasure.name] || {};
++              const title = info.desc ? info.desc.replace(/"/g, "'") : 'α╕¬α╕íα╕Üα╕▒α╕òα╕┤';
++              tags += `<span class="meta-tag" title="${title}"><span class="tag-icon">≡ƒÆÄ</span>${CARD_NAME_MAPPING[equipment.treasure.name] || equipment.treasure.name}</span>`;
++           }
++           return tags;
++        };
++
++    function renderOpponents() {
+     opponentsZone.innerHTML = '';
+     
+     if (!gameState.turnOrder) return;
+@@ -728,95 +832,23 @@
+       const avatarContent = heroPic ? '' : (CHAR_ICONS[p.character] || '≡ƒÄ¡');
+ 
+       let equipTags = '';
+-      if (p.equipment) {
+-        if (p.equipment.weapon) equipTags += `<span class="meta-tag"><span class="tag-icon">≡ƒùí∩╕Å</span>${p.equipment.weapon.name}</span>`;
+-        if (p.equipment.defensiveHorse) equipTags += `<span class="meta-tag"><span class="tag-icon">≡ƒÉ┤</span>α╕íα╣ëα╕▓α╕½α╕íα╕¡α╕Ü (+1)</span>`;
+-        if (p.equipment.offensiveHorse) equipTags += `<span class="meta-tag"><span class="tag-icon">≡ƒÅç</span>α╕íα╣ëα╕▓α╕Üα╕╕α╕ü (-1)</span>`;
+-      }
+-      if (p.delayedKitZone && p.delayedKitZone.length > 0) {
+-        p.delayedKitZone.forEach(c => {
+-          let icon = 'ΓÅ│';
+-          if (c.name === 'LIGHTNING') icon = 'ΓÜí';
+-          if (c.name === 'INDULGENCE') icon = '≡ƒì╖';
+-          if (c.name === 'STARVATION') icon = '≡ƒìÜ';
+-          equipTags += `<span class="meta-tag" style="background: rgba(244,67,54,0.2);"><span class="tag-icon">${icon}</span>${c.name}</span>`;
+-        });
+-      }
+-
+-      card.innerHTML = `
+-        <div class="opponent-header" style="cursor:pointer;" onclick="window.showHeroInfo('${p.character}')">
+-          <div class="opponent-avatar" ${avatarStyle}>${avatarContent}</div>
+-          <div class="opponent-info">
+-            <div class="opponent-name">${p.name} Γä╣∩╕Å</div>
+-            <div class="opponent-role ${roleCss}" style="${isDead ? 'font-size: 1.2em; font-weight: bold;' : ''}">${roleLabel}${p.character ? ` ┬╖ ${p.character}` : ''}</div>
+-          </div>
+-        </div>
+-        <div class="hp-bar-container">
+-          <div class="hp-label">
+-            <span>HP</span>
+-            <span class="mono">${p.hp} / ${p.maxHp}</span>
+-          </div>
+-          <div class="hp-bar-track">
+-            <div class="hp-bar-fill ${hpClass}" style="width: ${hpPercent}%"></div>
+-          </div>
+-        </div>
+-        <div class="opponent-meta">
+-          <span class="meta-tag"><span class="tag-icon">≡ƒâÅ</span>${p.handCount} α╣âα╕Ü</span>
+-          <span class="meta-tag" style="background: rgba(255,255,255,0.1);"><span class="tag-icon">≡ƒôÅ</span>α╕úα╕░α╕óα╕░: ${isDead ? '-' : dist}</span>
+-          ${rangeText}
+-          ${equipTags}
+-        </div>
+-      `;
+-
+-      if (isTargetCandidate) {
+-        card.addEventListener('click', (e) => {
+-          if (e.target.closest('.opponent-header')) return;
+-          onSelectTarget(pId);
+-        });
+-      }
+-
+-      opponentsZone.appendChild(card);
+-    });
+-  }
+-
+-  const HERO_SKILLS_TH = {
+-    'ZHEN_JI': '≡ƒö« α╣Çα╕ùα╕₧α╕ÿα╕┤α╕öα╕▓α╣üα╕íα╣êα╕Öα╣ëα╕│α╕Ñα╕▒α╣êα╕º (Luo River): α╕ùα╕¡α╕óα╕ùα╕│α╕Öα╕▓α╕ó α╕½α╕▓α╕üα╣äα╕öα╣ëα╕¬α╕╡α╕öα╕│α╕êα╕░α╣äα╕öα╣ëα╕úα╕▒α╕Üα╣Çα╕éα╣ëα╕▓α╕íα╕╖α╕¡α╕ƒα╕úα╕╡ α╕êα╕Öα╕üα╕ºα╣êα╕▓α╕êα╕░α╣äα╕öα╣ëα╕¬α╕╡α╣üα╕öα╕ç\n≡ƒ¢í∩╕Å α╣äα╕úα╣ëα╕Ñα╕▒α╕üα╕⌐α╕ôα╣î (Goddess): α╣âα╕èα╣ëα╕üα╕▓α╕úα╣îα╕öα╕¬α╕╡α╕öα╕│α╣üα╕ùα╕Ö DODGE α╣äα╕öα╣ë',
+-    'LADY_ZHEN': '≡ƒö« α╣Çα╕ùα╕₧α╕ÿα╕┤α╕öα╕▓α╣üα╕íα╣êα╕Öα╣ëα╕│α╕Ñα╕▒α╣êα╕º (Luo River): α╕ùα╕¡α╕óα╕ùα╕│α╕Öα╕▓α╕ó α╕½α╕▓α╕üα╣äα╕öα╣ëα╕¬α╕╡α╕öα╕│α╕êα╕░α╣äα╕öα╣ëα╕úα╕▒α╕Üα╣Çα╕éα╣ëα╕▓α╕íα╕╖α╕¡α╕ƒα╕úα╕╡ α╕êα╕Öα╕üα╕ºα╣êα╕▓α╕êα╕░α╣äα╕öα╣ëα╕¬α╕╡α╣üα╕öα╕ç\n≡ƒ¢í∩╕Å α╣äα╕úα╣ëα╕Ñα╕▒α╕üα╕⌐α╕ôα╣î (Goddess): α╣âα╕èα╣ëα╕üα╕▓α╕úα╣îα╕öα╕¬α╕╡α╕öα╕│α╣üα╕ùα╕Ö DODGE α╣äα╕öα╣ë',
+-    'SUN_QUAN': '≡ƒææ α╕£α╕Ñα╕▒α╕öα╕üα╕▓α╕úα╣îα╕ö (Resignation): α╕ùα╕┤α╣ëα╕çα╕üα╕▓α╕úα╣îα╕ö N α╣âα╕Üα╣Çα╕₧α╕╖α╣êα╕¡α╕êα╕▒α╣êα╕ºα╣âα╕½α╕íα╣ê N α╣âα╕Ü (α╣Çα╕ùα╕┤α╕úα╣îα╕Öα╕Ñα╕░α╕äα╕úα╕▒α╣ëα╕ç)',
+-    'GUAN_YU': '≡ƒùí∩╕Å α╣Çα╕ùα╕₧α╕¬α╕çα╕äα╕úα╕▓α╕í (God of War): α╣âα╕èα╣ëα╕üα╕▓α╕úα╣îα╕öα╕¬α╕╡α╣üα╕öα╕çα╣Çα╕¢α╣çα╕Ö SLASH α╣äα╕öα╣ë',
+-    'ZHAO_YUN': '≡ƒÉë α╕êα╕┤α╕òα╕ºα╕┤α╕ìα╕ìα╕▓α╕ôα╕íα╕▒α╕çα╕üα╕ú (Dragon Courage): SLASH α╣üα╕Ñα╕░ DODGE α╣üα╕¢α╕Ñα╕çα╕¬α╕Ñα╕▒α╕Üα╕üα╕▒α╕Öα╣äα╕öα╣ë',
+-    'ZHANG_FEI': '≡ƒªü α╕äα╕│α╕úα╕▓α╕íα╕¿α╕╢α╕ü (Bellow): α╣âα╕èα╣ë SLASH α╣äα╕öα╣ëα╣äα╕íα╣êα╕êα╕│α╕üα╕▒α╕öα╕äα╕úα╕▒α╣ëα╕çα╣âα╕Öα╣Çα╕ùα╕┤α╕úα╣îα╕Ö',
+-    'ZHUGE_LIANG': '≡ƒÅ» α╣Çα╕íα╕╖α╕¡α╕çα╕ºα╣êα╕▓α╕çα╣Çα╕¢α╕Ñα╣êα╕▓ (Empty City): [Passive] α╣äα╕íα╣êα╕íα╕╡α╕üα╕▓α╕úα╣îα╕öα╕Üα╕Öα╕íα╕╖α╕¡ = α╣äα╕íα╣êα╕ûα╕╣α╕ü SLASH/DUEL α╣äα╕öα╣ë\n≡ƒÆí α╣âα╕èα╣ëα╕üα╕▓α╕úα╣îα╕öα╣âα╕½α╣ëα╕½α╕íα╕öα╣Çα╕₧α╕╖α╣êα╕¡α╣Çα╕éα╣ëα╕▓α╕¬α╕ûα╕▓α╕Öα╕░α╕¢α╣ëα╕¡α╕çα╕üα╕▒α╕Öα╕¬α╕íα╕Üα╕╣α╕úα╕ôα╣î!',
+-    'CAO_CAO': '≡ƒææ α╕íα╕½α╕▓α╕¡α╕╕α╕¢α╕úα╕▓α╕è (Emperor\'s Domain): [Passive] α╣äα╕öα╣ëα╕úα╕▒α╕Üα╕öα╕▓α╣Çα╕íα╕ê = α╕½α╕óα╕┤α╕Üα╕üα╕▓α╕úα╣îα╕öα╕ùα╕╡α╣êα╣éα╕öα╕Öα╕òα╕╡α╕éα╕╢α╣ëα╕Öα╕íα╕╖α╕¡\n≡ƒÆí α╕óα╕┤α╣êα╕çα╕ûα╕╣α╕üα╕òα╕╡α╕íα╕▓α╕ü α╕óα╕┤α╣êα╕çα╣äα╕öα╣ëα╕üα╕▓α╕úα╣îα╕öα╕äα╕╖α╕Öα╕íα╕▓α╕ü!',
+-    'SIMA_YI': '≡ƒªà α╕¢α╣ëα╕¡α╕Öα╕üα╕Ñα╕▒α╕Ü (Feedback): [Passive] α╣äα╕öα╣ëα╕úα╕▒α╕Üα╕öα╕▓α╣Çα╕íα╕ê = α╕éα╣éα╕íα╕óα╕üα╕▓α╕úα╣îα╕öα╕êα╕▓α╕üα╕íα╕╖α╕¡α╕£α╕╣α╣ëα╣éα╕êα╕íα╕òα╕╡ 1 α╣âα╕Ü\n≡ƒÆí α╣âα╕äα╕úα╕òα╕╡α╕¬α╕╕α╕íα╕▓α╕¡α╕╡α╣ë α╕òα╣ëα╕¡α╕çα╕₧α╕úα╣ëα╕¡α╕íα╣Çα╕¬α╕╡α╕óα╕üα╕▓α╕úα╣îα╕ö!',
+-    'LV_BU': '≡ƒùí∩╕Å α╣äα╕úα╣ëα╣Çα╕ùα╕╡α╕óα╕íα╕ùα╕▓α╕Ö (Unrivaled): [Passive] SLASH α╕éα╕¡α╕çα╕Ñα╕┤α╣éα╕¢α╣ëα╕òα╣ëα╕¡α╕çα╣âα╕èα╣ë DODGE 2 α╣âα╕Üα╕½α╕Ñα╕Ü\n≡ƒÆí α╕öα╕▓α╣Çα╕íα╕êα╕½α╕Öα╕▒α╕üα╕¬α╕╕α╕ö α╕½α╕Ñα╕Üα╕óα╕▓α╕üα╕¬α╕╕α╕öα╣âα╕Öα╣Çα╕üα╕í!',
+-    'LIU_BEI': '≡ƒÆ¥ α╕¢α╕▒α╕Öα╕¬α╕╕α╕é (Benevolence): [Active] α╕íα╕¡α╕Üα╕üα╕▓α╕úα╣îα╕öα╣âα╕½α╣ëα╣Çα╕₧α╕╖α╣êα╕¡α╕Öα╕úα╣êα╕ºα╕íα╕ùα╕╡α╕í α╣âα╕½α╣ë >= 2 α╣âα╕Ü = α╕ƒα╕╖α╣ëα╕Ö 1 HP\n≡ƒÆí α╕üα╕öα╕¢α╕╕α╣êα╕í α╕¬α╕üα╕┤α╕Ñ: α╕¢α╕▒α╕Öα╕¬α╕╕α╕é α╣Çα╕Ñα╕╖α╕¡α╕üα╕üα╕▓α╕úα╣îα╕ö α╣üα╕Ñα╣ëα╕ºα╣Çα╕Ñα╕╖α╕¡α╕üα╣Çα╕¢α╣ëα╕▓α╕½α╕íα╕▓α╕ó',
+-    'DIAO_CHAN': '≡ƒî╕ α╕Üα╣êα╕ºα╕çα╣Çα╕¬α╕Öα╣êα╕½α╕▓ (Seduction): [Active] α╕ùα╕┤α╣ëα╕ç 1 α╕üα╕▓α╕úα╣îα╕ö α╕Üα╕▒α╕çα╕äα╕▒α╕Üα╕¿α╕▒α╕òα╕úα╕╣α╕ùα╕┤α╣ëα╕ç SLASH α╣äα╕íα╣êα╕ùα╕┤α╣ëα╕ç = α╣Çα╕¬α╕╡α╕ó 1 HP\n≡ƒÆí α╕üα╕öα╕¢α╕╕α╣êα╕í α╕¬α╕üα╕┤α╕Ñ: α╕Üα╣êα╕ºα╕çα╣Çα╕¬α╕Öα╣êα╕½α╕▓ α╣Çα╕Ñα╕╖α╕¡α╕üα╕üα╕▓α╕úα╣îα╕ö α╣üα╕Ñα╣ëα╕ºα╣Çα╕Ñα╕╖α╕¡α╕üα╣Çα╕¢α╣ëα╕▓α╕½α╕íα╕▓α╕ó',
+-    'ZHOU_YU': '≡ƒÄ¿ α╕úα╕╣α╕¢α╕çα╕▓α╕í: [Passive] α╕êα╕▒α╣êα╕º 3 α╣âα╕Ü (α╕¢α╕üα╕òα╕┤ 2)\n≡ƒöÑ α╕Üα╣êα╕íα╣Çα╕₧α╕Ñα╕┤α╕ç (Sow Discord): [Active] α╕ùα╕┤α╣ëα╕ç 1 α╕üα╕▓α╕úα╣îα╕ö α╕Üα╕▒α╕çα╕äα╕▒α╕Üα╕¿α╕▒α╕òα╕úα╕╣α╕ùα╕┤α╣ëα╕çα╕¬α╕╡α╣Çα╕öα╕╡α╕óα╕ºα╕üα╕▒α╕Ö α╣äα╕íα╣êα╕ùα╕┤α╣ëα╕ç = α╣Çα╕¬α╕╡α╕ó 1 HP\n≡ƒÆí α╕üα╕öα╕¢α╕╕α╣êα╕í α╕¬α╕üα╕┤α╕Ñ: α╕Üα╣êα╕íα╣Çα╕₧α╕Ñα╕┤α╕ç α╣Çα╕Ñα╕╖α╕¡α╕üα╕üα╕▓α╕úα╣îα╕ö α╣üα╕Ñα╣ëα╕ºα╣Çα╕Ñα╕╖α╕¡α╕üα╣Çα╕¢α╣ëα╕▓α╕½α╕íα╕▓α╕ó'
+-  };
+-
+-  function renderPlayerStatus() {
+-    const me = gameState.players[myPlayerId];
+-    if (!me) return;
+-
+-    const hpPercent = Math.max(0, (me.hp / me.maxHp) * 100);
+-    const hpClass = getHpClass(me.hp, me.maxHp);
+-    const roleLabel = ROLE_LABELS[me.role] || '???';
+-
+-    const heroPic = getHeroPic(me.character);
+-    const avatarStyle = heroPic ? `style="background-image: url('${heroPic}'); background-size: cover; background-position: center; font-size: 0;"` : '';
+-    const avatarContent = heroPic ? '' : (CHAR_ICONS[me.character] || '≡ƒÄ¡');
+-
+-    let equipTags = '';
+-    if (me.equipment) {
+-      if (me.equipment.weapon) equipTags += `<span class="meta-tag"><span class="tag-icon">≡ƒùí∩╕Å</span>${me.equipment.weapon.name}</span>`;
+-      if (me.equipment.defensiveHorse) equipTags += `<span class="meta-tag"><span class="tag-icon">≡ƒÉ┤</span>α╕íα╣ëα╕▓α╕½α╕íα╕¡α╕Ü</span>`;
+-      if (me.equipment.offensiveHorse) equipTags += `<span class="meta-tag"><span class="tag-icon">≡ƒÅç</span>α╕íα╣ëα╕▓α╕Üα╕╕α╕ü</span>`;
++      
++        if (p.equipment) {
++           equipTags += buildEquipTags(p.equipment);
++        }
++    if (me.delayedKitZone && me.delayedKitZone.length > 0) {
++      me.delayedKitZone.forEach(c => {
++        let icon = '≡ƒâÅ';
++        if (c.name === 'LIGHTNING') icon = 'ΓÜí';
++        if (c.name === 'INDULGENCE') icon = '≡ƒì╖';
++        if (c.name === 'STARVATION') icon = '≡ƒìÜ';
++        equipTags += `<span class="meta-tag" style="background: rgba(244,67,54,0.2);"><span class="tag-icon">${icon}</span>${CARD_NAME_MAPPING[c.name] || c.name}</span>`;
++      });
+     }
+ 
+     playerStatusBar.innerHTML = `
+       <div class="player-identity" style="cursor:pointer;" onclick="window.showHeroInfo('${me.character}')">
+-        <div class="player-avatar" ${avatarStyle}>${avatarContent}</div>
++        <div class="player-avatar" ${avatarStyle}>${avatarContent}${p && p.isChained ? '<div style="position:absolute;top:-10px;left:-10px;font-size:24px;filter:drop-shadow(0 0 5px red);">Γ¢ô∩╕Å</div>' : ''}${me && me.isChained ? '<div style="position:absolute;top:-10px;left:-10px;font-size:24px;filter:drop-shadow(0 0 5px red);">Γ¢ô∩╕Å</div>' : ''}</div>
+         <div class="player-name-role">
+           <div class="player-name">${me.name} Γä╣∩╕Å</div>
+           <div class="player-role">${roleLabel}${me.character ? ` ┬╖ ${me.character}` : ''}</div>
+@@ -1254,7 +1286,7 @@
+       targetZone: 'HAND'
+     });
+ 
+-    addLog(`α╣âα╕èα╣ëα╕üα╕▓α╕úα╣îα╕ö ${card?.name || '???'} α╣éα╕êα╕íα╕òα╕╡ ${gameState.players[targetPlayerId]?.name || targetPlayerId}`, 'attack');
++    
+ 
+     clearSelection();
+   }
+@@ -1621,15 +1653,9 @@
+           showToast(`${nextP.name} α╕òα╕üα╕úα╕¡α╕Üα╕üα╕▓α╕úα╕úα╕Ü!`, 'error');
+         }
+ 
+-        if (!prevP.equipment?.weapon && nextP.equipment?.weapon) {
+-          addLog(`≡ƒùí∩╕Å ${nextP.name} α╕¬α╕ºα╕íα╣âα╕¬α╣êα╕¡α╕▓α╕ºα╕╕α╕ÿ ${nextP.equipment.weapon.name}`, 'system');
+-        }
+-        if (!prevP.equipment?.defensiveHorse && nextP.equipment?.defensiveHorse) {
+-          addLog(`≡ƒÉ┤ ${nextP.name} α╕¬α╕ºα╕íα╣âα╕¬α╣êα╕íα╣ëα╕▓α╕½α╕íα╕¡α╕Ü ${nextP.equipment.defensiveHorse.name}`, 'system');
+-        }
+-        if (!prevP.equipment?.offensiveHorse && nextP.equipment?.offensiveHorse) {
+-          addLog(`α╕íα╣ëα╕▓ ${nextP.name} α╕¬α╕ºα╕íα╣âα╕¬α╣êα╕íα╣ëα╕▓α╣éα╕êα╕íα╕òα╕╡ ${nextP.equipment.offensiveHorse.name}`, 'system');
+-        }
++        
++        
++        
+         
+         // Draw card animation
+         const prevHandCount = prevP.handCount !== undefined ? prevP.handCount : (prevP.hand ? prevP.hand.length : 0);
+@@ -1673,14 +1699,51 @@
+     }
+   }
+ 
++  
++  let wtkCards = [];
++  let CARD_NAME_MAPPING = {};
++  let CARD_IMAGES = {};
++  let CARD_DICT = {};
++
+   // --- LOAD WTK DATABASE ---
+   fetch('/heroes.json')
++
+     .then(res => res.json())
+     .then(heroes => {
+       wtkHeroes = heroes;
+     })
+-    .catch(err => {
+-      console.error("Error loading heroes database:", err);
+-    });
++    
++      .catch(err => {
++        console.error("Error loading heroes database:", err);
++      });
++
++  fetch('/cards_db.json')
++      .then(res => res.json())
++      .then(cards => {
++        wtkCards = cards;
++        cards.forEach(c => {
++           let englishName = c.card_name.toUpperCase().replace(/s+/g, '_');
++           if (englishName === "ATTACK") englishName = "SLASH";
++           if (englishName === "OVERINDULGENCE") englishName = "INDULGENCE";
++           if (englishName === "SOMETHING_OUT_OF_NOTHING") englishName = "EX_NIHILO";
++           if (englishName === "ALLIANCE" || englishName === "IRON_CHAINS") englishName = "IRON_CHAIN";
++           if (englishName === "BARBARIAN_INVASION") englishName = "BARBARIAN_INVASION";
++           if (englishName === "RAINING_ARROWS") englishName = "ARROW_BARRAGE";
++           if (englishName === "OATH_OF_THE_PEACH_GARDEN") englishName = "PEACH_GARDEN";
++           
++           CARD_NAME_MAPPING[englishName] = c.card_name;
++           CARD_IMAGES[englishName] = c.pic_url;
++           CARD_DICT[englishName] = {
++               name: c.card_name,
++               desc: c.description,
++               icon: c.main_type === 'Basic Card' ? 'ΓÜö∩╕Å' : c.main_type === 'Stratagem Card' ? '≡ƒô£' : '≡ƒ¢í∩╕Å',
++               theme: c.main_type === 'Basic Card' ? 'card-default' : c.main_type === 'Stratagem Card' ? 'card-orange' : 'card-blue'
++           };
++        });
++      })
++      .catch(err => {
++        console.error("Error loading cards database:", err);
++      });
++
+ 
+ })();

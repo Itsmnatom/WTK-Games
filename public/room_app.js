@@ -341,22 +341,111 @@
 
   // --- AUDIO & EFFECTS ---
 
+  function showCardPlayAnimation(playerId, cardName) {
+    if (!CARD_IMAGES[cardName]) return;
+    const avatarEl = playerId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${playerId}`);
+    if (!avatarEl) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'card-play-overlay';
+    const cardImg = document.createElement('img');
+    cardImg.src = CARD_IMAGES[cardName];
+    cardImg.className = 'card-play-img';
+    overlay.appendChild(cardImg);
+    document.body.appendChild(overlay);
+
+    const rect = avatarEl.getBoundingClientRect();
+    const startX = rect.left + rect.width / 2;
+    const startY = rect.top + rect.height / 2;
+
+    overlay.style.left = `${startX}px`;
+    overlay.style.top = `${startY}px`;
+    overlay.style.transform = 'translate(-50%, -50%) scale(0.1)';
+    overlay.style.opacity = '0';
+
+    requestAnimationFrame(() => {
+      overlay.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      overlay.style.left = '50%';
+      overlay.style.top = '50%';
+      overlay.style.transform = 'translate(-50%, -50%) scale(1.5)';
+      overlay.style.opacity = '1';
+    });
+
+    setTimeout(() => {
+      overlay.style.transition = 'all 0.4s ease-in';
+      overlay.style.opacity = '0';
+      overlay.style.transform = 'translate(-50%, -50%) scale(1.8)';
+      setTimeout(() => {
+        if (overlay.parentElement) overlay.remove();
+      }, 400);
+    }, 1200);
+  }
+
   function addLog(message, type = 'system') {
-    const entry = document.createElement('div');
-    entry.className = `log-entry log-${type}`;
-    
     let htmlMsg = message;
+    let isAction = false;
+    let icon = '💬';
+    
+    if (message.includes('โจมตี')) { isAction = true; icon = '⚔️'; }
+    else if (message.includes('ขโมย') || message.includes('STEAL')) { isAction = true; icon = '🖐️'; }
+    else if (message.includes('เสียชีวิต')) { isAction = true; icon = '☠️'; }
+    else if (message.includes('ฟื้นฟู')) { isAction = true; icon = '💖'; }
+    else if (message.includes('เสียพลังชีวิต')) { isAction = true; icon = '🩸'; }
+    else if (message.includes('SABOTAGE')) { isAction = true; icon = '🔥'; }
+    else if (type === 'attack') { isAction = true; icon = '⚡'; }
+
     if (typeof CARD_DICT !== 'undefined') {
       for (const [key, val] of Object.entries(CARD_DICT)) {
-        // Need to be careful with replace, but simple string match works for exact card keys
         const regex = new RegExp(`\\b${key}\\b`, 'g');
-        htmlMsg = htmlMsg.replace(regex, `<span style="color: var(--accent-gold); font-weight: bold;">${val.icon} ${val.name}</span>`);
+        htmlMsg = htmlMsg.replace(regex, `<span style="color: #fbbf24; font-size: 1.2em; font-weight: 900; text-shadow: 0 0 10px rgba(251,191,36,0.6);">${val.icon} ${val.name}</span>`);
       }
     }
     
-    entry.innerHTML = htmlMsg;
-    eventLog.appendChild(entry);
-    eventLog.scrollTop = eventLog.scrollHeight;
+    if (isAction) {
+       htmlMsg = `<div style="font-size: 48px; margin-bottom: 12px; text-align: center;">${icon}</div><div style="text-align: center; line-height: 1.4;">${htmlMsg}</div>`;
+    }
+    
+    // Create animated floating log
+    const floatLog = document.createElement('div');
+    floatLog.innerHTML = htmlMsg;
+    floatLog.style.position = 'absolute';
+    floatLog.style.left = '50%';
+    floatLog.style.top = '50%';
+    floatLog.style.transform = isAction ? 'translate(-50%, -50%) scale(0.5)' : 'translate(-50%, -50%) scale(0.8)';
+    floatLog.style.background = isAction ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.9)';
+    floatLog.style.color = 'white';
+    floatLog.style.padding = isAction ? '20px 40px' : '10px 20px';
+    floatLog.style.borderRadius = '30px';
+    floatLog.style.fontSize = isAction ? '20px' : '16px';
+    floatLog.style.fontWeight = 'bold';
+    floatLog.style.pointerEvents = 'none';
+    floatLog.style.zIndex = '9999';
+    floatLog.style.boxShadow = isAction ? '0 0 40px rgba(0,0,0,0.9), inset 0 0 20px rgba(251,191,36,0.2)' : '0 4px 16px rgba(0,0,0,0.8)';
+    floatLog.style.border = type === 'attack' || type === 'damage' ? '2px solid #ef4444' : '1px solid #fbbf24';
+    floatLog.style.transition = 'all 3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    floatLog.style.opacity = '0';
+    
+    document.body.appendChild(floatLog);
+    
+    // Pop out animation
+    setTimeout(() => {
+      floatLog.style.transform = isAction ? 'translate(-50%, -50%) scale(1.2)' : 'translate(-50%, -50%) scale(1)';
+      floatLog.style.opacity = '1';
+    }, 10);
+
+    // Float up and fade out
+    setTimeout(() => {
+      floatLog.style.top = '20%';
+      floatLog.style.transform = 'translate(-50%, -50%) scale(0.9)';
+      floatLog.style.opacity = '0';
+    }, 2500);
+    
+    // Remove after animation
+    setTimeout(() => {
+      if (document.body.contains(floatLog)) {
+        document.body.removeChild(floatLog);
+      }
+    }, 5600);
   }
 
   function getHpClass(hp, maxHp) {
@@ -442,6 +531,21 @@
 
   socket.on('room_state_update', onRoomStateUpdate);
   
+  socket.on('card_played', ({ playerId, cardName, targetId }) => {
+    try {
+      showCardPlayAnimation(playerId, cardName);
+
+      // Notify local player if they're targeted
+      if (targetId && targetId === myPlayerId && playerId !== myPlayerId) {
+        const pName = (gameState && gameState.players && gameState.players[playerId]) ? gameState.players[playerId].name : `Player ${playerId}`;
+        const cName = cardName;
+        showToast(`${pName} played ${cName}`, 'error');
+      }
+    } catch (e) {
+      console.error('card_played handler error', e);
+    }
+  });
+
   socket.on('game_error', (err) => {
     showToast(err.message, 'error');
     
@@ -729,9 +833,9 @@
 
       let equipTags = '';
       if (p.equipment) {
-        if (p.equipment.weapon) equipTags += `<span class="meta-tag"><span class="tag-icon">🗡️</span>${p.equipment.weapon.name}</span>`;
-        if (p.equipment.defensiveHorse) equipTags += `<span class="meta-tag"><span class="tag-icon">🐴</span>ม้าหมอบ (+1)</span>`;
-        if (p.equipment.offensiveHorse) equipTags += `<span class="meta-tag"><span class="tag-icon">🏇</span>ม้าบุก (-1)</span>`;
+        if (p.equipment.weapon) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${p.equipment.weapon.name}</span>`;
+        if (p.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ (+1)</span>`;
+        if (p.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก (-1)</span>`;
       }
       if (p.delayedKitZone && p.delayedKitZone.length > 0) {
         p.delayedKitZone.forEach(c => {
@@ -739,7 +843,7 @@
           if (c.name === 'LIGHTNING') icon = '⚡';
           if (c.name === 'INDULGENCE') icon = '🍷';
           if (c.name === 'STARVATION') icon = '🍚';
-          equipTags += `<span class="meta-tag" style="background: rgba(244,67,54,0.2);"><span class="tag-icon">${icon}</span>${c.name}</span>`;
+          equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(c.name)}" style="background: rgba(244,67,54,0.2);"><span class="tag-icon">${icon}</span>${c.name}</span>`;
         });
       }
 
@@ -773,6 +877,25 @@
           if (e.target.closest('.opponent-header')) return;
           onSelectTarget(pId);
         });
+      }
+
+      // Tabletop Positioning (Full Circle layout)
+      const numOpp = gameState.turnOrder.length - 1;
+      if (numOpp > 0) {
+        // Total seats = numOpp + 1 (including self). Self is at bottom (-90 deg).
+        // We arrange opponents counter-clockwise.
+        const totalSeats = numOpp + 1;
+        const angleStep = (2 * Math.PI) / totalSeats;
+        const angle = -Math.PI / 2 + (i + 1) * angleStep; // start from bottom right, go CCW
+        
+        const rx = 38; // % of table width 
+        const ry = 35; // % of table height 
+        
+        const left = 50 + Math.cos(angle) * rx;
+        const top = 45 - Math.sin(angle) * ry; // adjusted center a bit lower since top UI takes space
+        
+        card.style.left = `${left}%`;
+        card.style.top = `${top}%`;
       }
 
       opponentsZone.appendChild(card);
@@ -809,31 +932,32 @@
 
     let equipTags = '';
     if (me.equipment) {
-      if (me.equipment.weapon) equipTags += `<span class="meta-tag"><span class="tag-icon">🗡️</span>${me.equipment.weapon.name}</span>`;
-      if (me.equipment.defensiveHorse) equipTags += `<span class="meta-tag"><span class="tag-icon">🐴</span>ม้าหมอบ</span>`;
-      if (me.equipment.offensiveHorse) equipTags += `<span class="meta-tag"><span class="tag-icon">🏇</span>ม้าบุก</span>`;
+      if (me.equipment.weapon) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${me.equipment.weapon.name}</span>`;
+      if (me.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ</span>`;
+      if (me.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก</span>`;
+    }
+
+    let hpDots = '';
+    for(let j=0; j<me.maxHp; j++) {
+      hpDots += `<div class="hp-point ${j >= me.hp ? 'empty' : ''}"></div>`;
     }
 
     playerStatusBar.innerHTML = `
-      <div class="player-identity" style="cursor:pointer;" onclick="window.showHeroInfo('${me.character}')">
-        <div class="player-avatar" ${avatarStyle}>${avatarContent}</div>
-        <div class="player-name-role">
-          <div class="player-name">${me.name} ℹ️</div>
-          <div class="player-role">${roleLabel}${me.character ? ` · ${me.character}` : ''}</div>
+      <div class="role-badge">${roleLabel}</div>
+      <div class="self-avatar" ${avatarStyle} onclick="window.showHeroInfo('${me.character}')" style="cursor:pointer; ${avatarStyle ? avatarStyle.replace('style="', '') : ''}"></div>
+      <div class="self-details">
+        <div style="cursor:pointer;" onclick="window.showHeroInfo('${me.character}')">
+          <div class="self-name">${me.name} ℹ️</div>
+          <div class="self-hero">${me.character || 'ไม่มีขุนพล'}</div>
+        </div>
+        <div class="hp-container self-hp">
+          ${hpDots}
+        </div>
+        <div class="player-equip-tags" style="margin-top: 4px; font-size: 11px;">
+          ${equipTags} 
+          ${me.wineActive ? '<span class="meta-tag" style="border-color: var(--accent-gold); color: var(--accent-gold);"><span class="tag-icon">🍶</span>ไวน์ทำงาน</span>' : ''}
         </div>
       </div>
-      <div class="player-hp-section">
-        <div class="hp-bar-container">
-          <div class="hp-label">
-            <span>HP</span>
-            <span class="mono">${me.hp} / ${me.maxHp}</span>
-          </div>
-          <div class="hp-bar-track">
-            <div class="hp-bar-fill ${hpClass}" style="width: ${hpPercent}%"></div>
-          </div>
-        </div>
-      </div>
-      <div class="player-equip-tags">${equipTags} ${me.wineActive ? '<span class="meta-tag" style="border-color: var(--accent-gold); color: var(--accent-gold);"><span class="tag-icon">🍶</span>ไวน์ทำงาน</span>' : ''}</div>
     `;
 
     // Render side-panel skill box
@@ -868,8 +992,7 @@
       const cardDiv = document.createElement('div');
       
       const dictInfo = CARD_DICT[c.name] || { name: c.name, desc: '', icon: '🃏', theme: 'card-default' };
-      const theme = dictInfo.theme;
-      cardDiv.className = `game-card ${theme}`;
+      cardDiv.className = 'card-v2';
       
       const isLobbyOrPlay = !isDiscardPhase() && isMyTurn() && gameState.currentPhase === 'PLAY' && (
         (hasCharacter(me.character, 'SUN_QUAN') && !me.skillResignationUsed) ||
@@ -887,14 +1010,18 @@
         }
       }
 
-      const icon = dictInfo.icon;
       const displayName = dictInfo.name;
+      const picHtml = dictInfo.pic ? `<div class="card-image-bg" style="background-image: url('${dictInfo.pic}');"></div>` : '';
+      const suitClass = (c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade';
+      const suitSymbol = c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣';
       
-      const picHtml = dictInfo.pic ? `<div class="card-pic" style="background-image: url('${dictInfo.pic}'); width: 100%; height: 60%; background-size: cover; background-position: center; border-radius: 4px; margin-bottom: 4px;"></div>` : `<span class="card-icon">${icon}</span>`;
       cardDiv.innerHTML = `
         ${picHtml}
-        <span class="card-name" style="font-size:13px; text-align:center; padding: 0 4px; line-height: 1.2;">${displayName}</span>
-        <span class="mono" style="font-size:10px; color:var(--text-muted); position:absolute; bottom:6px; right:8px;">${c.suit} ${c.rank}</span>
+        <div class="card-top ${suitClass}">
+          <span>${c.rank}</span>
+          <span class="card-suit">${suitSymbol}</span>
+        </div>
+        <div class="card-name-v2" style="color: ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'var(--hp-full)' : '#fff'};">${displayName}</div>
         <div class="card-tooltip">
           <strong>${displayName}</strong><br/>
           <span style="color:#ddd; font-size:11px;">${dictInfo.desc}</span>
@@ -910,6 +1037,22 @@
       });
 
       handCards.appendChild(cardDiv);
+    });
+
+    // Fan cards animation
+    const cards = handCards.querySelectorAll('.card-v2');
+    const count = cards.length;
+    const maxAngle = 20;
+    const spread = window.innerWidth < 920 ? 40 : 60;
+    
+    cards.forEach((cDiv, index) => {
+      const centerOffset = index - (count - 1) / 2;
+      const angle = (centerOffset / (count / 2 || 1)) * maxAngle;
+      const xOffset = centerOffset * spread;
+      const yOffset = Math.abs(centerOffset) * 5;
+      
+      cDiv.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${angle}deg)`;
+      cDiv.style.zIndex = index;
     });
 
     if (isDiscardPhase()) {
@@ -1138,7 +1281,7 @@
       return;
     }
 
-    if (card.name === 'STEAL') {
+    if (card.name === 'STEAL' || card.name === 'SABOTAGE') {
       const targetPlayer = gameState.players[targetPlayerId];
       const hasWeapon = targetPlayer.equipment && targetPlayer.equipment.weapon;
       const hasDefHorse = targetPlayer.equipment && targetPlayer.equipment.defensiveHorse;
@@ -1674,6 +1817,10 @@
   }
 
   // --- LOAD WTK DATABASE ---
+  let wtkCards = [];
+  globalThis.CARD_NAME_MAPPING = globalThis.CARD_NAME_MAPPING || {};
+  globalThis.CARD_IMAGES = globalThis.CARD_IMAGES || {};
+  globalThis.CARD_DICT = globalThis.CARD_DICT || {};
   fetch('/heroes.json')
     .then(res => res.json())
     .then(heroes => {
@@ -1681,6 +1828,34 @@
     })
     .catch(err => {
       console.error("Error loading heroes database:", err);
+    });
+
+  fetch('/cards_db.json')
+    .then(res => res.json())
+    .then(cards => {
+      wtkCards = cards;
+      cards.forEach(c => {
+        let englishName = (c.card_name || '').toUpperCase().replace(/\s+/g, '_');
+        if (englishName === 'ATTACK') englishName = 'SLASH';
+        if (englishName === 'OVERINDULGENCE') englishName = 'INDULGENCE';
+        if (englishName === 'SOMETHING_OUT_OF_NOTHING') englishName = 'EX_NIHILO';
+        if (englishName === 'IRON_CHAINS') englishName = 'IRON_CHAIN';
+        if (englishName === 'RAINING_ARROWS') englishName = 'ARROW_BARRAGE';
+        if (englishName === 'OATH_OF_THE_PEACH_GARDEN') englishName = 'PEACH_GARDEN';
+
+        globalThis.CARD_NAME_MAPPING[englishName] = c.card_name;
+        globalThis.CARD_IMAGES[englishName] = c.pic_url || c.pic || '';
+        globalThis.CARD_DICT[englishName] = {
+          name: c.card_name,
+          desc: c.description || c.desc || '',
+          icon: c.main_type === 'Basic Card' ? '🃏' : (c.main_type === 'Stratagem Card' ? '📜' : '🔧'),
+          theme: c.main_type === 'Basic Card' ? 'card-default' : (c.main_type === 'Stratagem Card' ? 'card-orange' : 'card-blue'),
+          pic: c.pic_url || c.pic || null
+        };
+      });
+    })
+    .catch(err => {
+      console.error('Error loading cards database:', err);
     });
 
 })();

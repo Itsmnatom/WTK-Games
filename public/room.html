@@ -88,91 +88,57 @@
       </div>
     </div>
 
-    <!-- Main Board -->
-    <div class="board-layout table-mode">
-      <div class="main-column">
-        <div class="table-area">
-        <div class="opponents-zone" id="opponents-zone">
-          <!-- Dynamically populated -->
+    <!-- Main Board UI V2 -->
+    <div class="game-container" data-od-id="game-container">
+      
+      <!-- Opponents Area -->
+      <div class="opponents-area" id="opponents-zone" data-od-id="opponents-area">
+        <!-- Dynamically populated -->
+      </div>
+
+      <!-- Central Play Area -->
+      <div class="play-area" data-od-id="play-area">
+        <div class="deck-zone" id="deck-pile" data-od-id="deck">
+          <span class="deck-count" id="deck-count-text">กองการ์ด</span>
         </div>
         
-        <div class="table-center" id="table-center">
-           <div class="deck-pile" id="deck-pile">
-             <div class="card-back-img"></div>
-             <span class="deck-count">กองการ์ด</span>
-           </div>
-           <div class="discard-pile" id="discard-pile">
-             <span class="discard-text">กองทิ้ง</span>
-           </div>
+        <div class="discard-zone" id="discard-pile" style="position: absolute; top: 170px; right: 24px; width: 90px; height: 130px; background: rgba(0,0,0,0.5); border: 2px dashed var(--accent-gold); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+          <span class="discard-text">กองทิ้ง</span>
         </div>
-      </div> <!-- End table-area -->
+      </div>
 
-      <!-- Player Zone -->
-      <div class="player-zone" id="player-zone">
-        <!-- Player Status Bar -->
-        <div class="player-status-bar glass-panel" id="player-status-bar">
+      <!-- Self Area -->
+      <div class="self-area" data-od-id="self-area">
+        
+        <div class="self-plate" id="player-status-bar" data-od-id="self-plate">
           <!-- Dynamically populated -->
         </div>
 
         <!-- Target Selection Hint -->
-        <div class="target-hint hidden" id="target-hint">
+        <div class="target-hint hidden" id="target-hint" style="position: absolute; top: -40px; left: 50%; transform: translateX(-50%); background: var(--accent-primary); color: white; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 14px; z-index: 200;">
           <span class="hint-icon">🎯</span>
-          <span id="target-hint-text">เลือกเป้าหมายจากผู้เล่นด้านบน</span>
+          <span id="target-hint-text">เลือกเป้าหมายที่ต้องการโจมตีจากผู้เล่นด้านบน</span>
         </div>
 
-        <!-- Hand Zone Wrapper -->
-        <div style="display: flex; gap: 16px; width: 100%; align-items: stretch; margin-top: 10px; flex-wrap: wrap;">
-          <!-- Hand Cards -->
-          <div class="hand-zone glass-panel" style="flex: 2; min-width: 320px; margin: 0;">
-            <div class="hand-title-row">
-              <span class="panel-title">🃏 การ์ดบนมือ</span>
-              <span class="mono" id="hand-count" style="font-size:12px; color: var(--text-muted);">0 ใบ</span>
-            </div>
-
-            <div class="discard-instruction hidden" id="discard-instruction">
-              <span>⚠️ กรุณาเลือกการ์ดทิ้งอีก <strong id="discard-needed-count">0</strong> ใบ (ขีดจำกัดเท่ากับพลังชีวิตปัจจุบัน)</span>
-            </div>
-
-            <div class="hand-cards" id="hand-cards">
-              <!-- Dynamically populated -->
-            </div>
-
-            <div class="hand-actions" id="hand-actions">
-              <button class="btn-action btn-play" id="btn-play-card" disabled>ใช้การ์ด</button>
-              <button class="btn-action btn-primary hidden" id="btn-sun-quan-skill" style="background: var(--accent-gold); color: #000;">👑 สกิล: ผลัดการ์ด</button>
-              <button class="btn-action btn-primary hidden" id="btn-liu-bei-skill" style="background: var(--hp-full); color: #000;">💝 สกิล: ปันสุข</button>
-              <button class="btn-action btn-primary hidden" id="btn-diao-chan-skill" style="background: #ec4899; color: #fff;">🌸 สกิล: บ่วงเสน่หา</button>
-              <button class="btn-action btn-primary hidden" id="btn-zhou-yu-skill" style="background: #3b82f6; color: #fff;">🔥 สกิล: บ่มเพลิง</button>
-              <button class="btn-action btn-end-turn" id="btn-end-turn" disabled>จบช่วงร่าย</button>
-              <button class="btn-action btn-discard hidden" id="btn-discard-confirm">ยืนยันการทิ้งการ์ด</button>
-            </div>
+        <div class="hand-area" id="hand-cards" data-od-id="hand-area">
+          <div id="hand-count" style="display:none;"></div>
+          <div id="discard-instruction" class="target-hint hidden" style="position: absolute; top: -80px; left: 50%; transform: translateX(-50%); background: #ef4444; color: white; padding: 6px 16px; border-radius: 12px; font-weight: bold; font-size: 14px; z-index: 200;">
+            ⚠️ กรุณาเลือกการ์ดทิ้งอีก <strong id="discard-needed-count">0</strong> ใบ
           </div>
+          <!-- Dynamically populated -->
+        </div>
 
-          <!-- General Skill Info Side Panel -->
-          <div class="glass-panel" id="general-skills-panel" style="flex: 1; min-width: 250px; padding: 16px; display: flex; flex-direction: column; gap: 12px; border-color: var(--accent-cyan); margin: 0;">
-            <div style="display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
-              <span style="font-size: 24px;">🛡️</span>
-              <div>
-                <h3 id="skill-box-hero-name" style="color: var(--accent-gold); font-size: 15px; margin: 0;">ความสามารถขุนพล</h3>
-                <span id="skill-box-hero-sub" style="font-size: 11px; color: var(--text-muted);">เลือกขุนพลแล้ว</span>
-              </div>
-            </div>
-            <div id="skill-box-desc" style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; white-space: pre-line;">
-              รายละเอียดสกิลและกติกาพิเศษของคุณจะปรากฏที่นี่...
-            </div>
-          </div>
+        <div class="action-bar" id="action-buttons-zone" data-od-id="action-bar">
+          <button class="btn-action btn-play" id="btn-play-card" disabled>ใช้การ์ด</button>
+          <button class="btn-action btn-primary hidden" id="btn-sun-quan-skill" style="background: var(--accent-gold); color: #000;">👑 สกิล: ผลัดการ์ด</button>
+          <button class="btn-action btn-primary hidden" id="btn-liu-bei-skill" style="background: var(--hp-full); color: #000;">💝 สกิล: ปันสุข</button>
+          <button class="btn-action btn-primary hidden" id="btn-diao-chan-skill" style="background: #ec4899; color: #fff;">🌸 สกิล: บ่วงเสน่หา</button>
+          <button class="btn-action btn-primary hidden" id="btn-zhou-yu-skill" style="background: #3b82f6; color: #fff;">🔥 สกิล: บ่มเพลิง</button>
+          <button class="btn-action btn-end-turn" id="btn-end-turn" disabled>จบช่วงร่าย</button>
+          <button class="btn-action btn-discard hidden" id="btn-discard-confirm">ยืนยันการทิ้งการ์ด</button>
         </div>
       </div>
-
-      </div> <!-- End main-column -->
-      </div> <!-- End main-column -->
-      <!-- Action / Log Panel -->
-      <div class="action-panel glass-panel sidebar-log">
-        <span class="panel-title">📜 บันทึกเหตุการณ์</span>
-        <div class="event-log" id="event-log">
-          <div class="log-entry log-system">เชื่อมต่อห้องสำเร็จ พร้อมรบ!</div>
-        </div>
-      </div>
+      
     </div>
   </div>
 
