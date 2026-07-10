@@ -154,7 +154,7 @@ function getSanitizedRoomState(room, targetPlayerId) {
 }
 
 function notifyCardPlayed(room, playerId, cardName, targetId) {
-  io.to(room.id).emit('card_played', { playerId, cardName, targetId });
+  io.to(room.roomId).emit('card_played', { playerId, cardName, targetId });
 }
 
 function broadcastRoomState(room) {
@@ -164,6 +164,41 @@ function broadcastRoomState(room) {
       io.to(p.socketId).emit('room_state_update', getSanitizedRoomState(room, pId));
     }
   });
+}
+
+function getCardLocalName(cardName) {
+  const dict = {
+    'SLASH': 'โจมตี', 'DODGE': 'หลบหลีก', 'PEACH': 'ลูกท้อ', 'WINE': 'สุรา',
+    'STEAL': 'ขโมย', 'SABOTAGE': 'ทำลาย', 'EX_NIHILO': 'สร้างจากความว่างเปล่า',
+    'DUEL': 'ดวล', 'BARBARIAN_INVASION': 'คนเถื่อนบุก', 'ARROW_BARRAGE': 'ธนูหมื่นดอก',
+    'PEACH_GARDEN': 'สวนท้อ', 'LIGHTNING': 'อัสนีบาต', 'INDULGENCE': 'สุขสำราญ',
+    'STARVATION': 'เสบียงขาด', 'ZHUGE_CROSSBOW': 'หน้าไม้จูกัด', 'BLUE_STEEL_SWORD': 'ง้าวฟ้าสะท้าน'
+  };
+  return dict[cardName] || cardName;
+}
+
+function logCardPlay(playerName, cardName, targetName = null) {
+  const cNameLocal = getCardLocalName(cardName);
+  let msg = `🃏 ${playerName} ใช้ ${cNameLocal} (${cardName})`;
+  if (targetName) msg += ` ใส่ ${targetName}`;
+  console.log(msg);
+}
+
+function logDamage(targetName, damage, hp, maxHp, attackerName = null, cardName = null) {
+  let msg = `💥 ${targetName} เสียพลังชีวิต ${damage} หน่วย`;
+  if (attackerName) msg += ` จาก ${attackerName}`;
+  if (cardName) msg += ` (${cardName})`;
+  msg += ` (พลังชีวิต: ${hp}/${maxHp})`;
+  console.log(msg);
+}
+
+function logHeal(targetName, amount, hp, maxHp) {
+  console.log(`💖 ${targetName} ฟื้นฟูพลังชีวิต ${amount} หน่วย (พลังชีวิต: ${hp}/${maxHp})`);
+}
+
+function logDeath(playerName, role) {
+  const roles = { 'LORD': 'จอมทัพ', 'LOYALIST': 'ภักดี', 'REBEL': 'กบฏ', 'SPY': 'ไส้ศึก' };
+  console.log(`☠️ ${playerName} (บทบาท: ${roles[role] || role}) เสียชีวิตแล้ว!`);
 }
 
 function checkGameOver(room) {
@@ -416,6 +451,7 @@ function checkDyingAskerBot(room) {
     }, 1000);
   } else if (asker && asker.isAlive && !asker.isBot) {
     // Human timeout
+    const askerIdxSnapshot = pending.currentAskerIdx;
     setTimeout(() => {
       if (room.pendingAction && room.pendingAction.type === 'DYING' && room.pendingAction.currentAskerIdx === pending.currentAskerIdx) {
         console.log(`Human ${asker.name} timed out in DYING phase.`);
@@ -431,7 +467,13 @@ function advanceDyingAsker(room) {
   const pending = room.pendingAction;
   const startingIdx = room.turnOrder.indexOf(pending.targetPlayerId);
   
-  pending.currentAskerIdx = (pending.currentAskerIdx + 1) % room.turnOrder.length;
+  do {
+    pending.currentAskerIdx = (pending.currentAskerIdx + 1) % room.turnOrder.length;
+  } while (
+    pending.currentAskerIdx !== startingIdx && 
+    room.players[room.turnOrder[pending.currentAskerIdx]] && 
+    !room.players[room.turnOrder[pending.currentAskerIdx]].isAlive
+  );
   
   if (pending.currentAskerIdx === startingIdx) {
     const dyingPlayer = room.players[pending.targetPlayerId];
@@ -561,12 +603,21 @@ function startPlayPhase(room) {
 }
 
 function startPlayerTurn(room) {
+  if (room.status === 'ENDED') return;
+  
+  let aliveCount = Object.values(room.players).filter(p => p.isAlive).length;
+  if (aliveCount === 0) {
+    room.status = 'ENDED';
+    return;
+  }
+  
   const playerId = room.turnOrder[room.currentTurnIndex];
   const player = room.players[playerId];
   
   if (!player.isAlive) {
     room.currentTurnIndex = (room.currentTurnIndex + 1) % room.turnOrder.length;
-    startPlayerTurn(room);
+    // Use setTimeout to avoid call stack exceeded in edge cases
+    setTimeout(() => startPlayerTurn(room), 0);
     return;
   }
   
@@ -600,9 +651,8 @@ function startPlayerTurn(room) {
       if (card.name === 'LIGHTNING') {
         if (judgeCard.suit === 'SPADE' && judgeCard.rank >= 2 && judgeCard.rank <= 9) {
           console.log(`LIGHTNING struck ${player.name}! 3 Damage!`);
-          player.hp -= 3;
-          if (player.hp <= 0) {
-            startDyingPhase(room, playerId);
+          dealDamage(room, playerId, 3, card, null, 'THUNDER');
+          if (room.pendingAction && room.pendingAction.type === 'DYING') {
             return; // Dying phase takes over
           }
         } else {
@@ -636,6 +686,7 @@ function startPlayerTurn(room) {
   if (hasCharacter(player, 'ZHEN_JI') || hasCharacter(player, 'LADY_ZHEN')) {
     if (player.isBot) {
       console.log(`Bot Zhen Ji triggers Luo River`);
+      notifyCardPlayed(room, playerId, 'สกิล Luo River', null);
       let isBlack = true;
       while (isBlack) {
         const drawn = drawCards(room, 1);
@@ -768,7 +819,8 @@ function runBotTurn(room, botId) {
       bot.hand.splice(peachIdx, 1);
       bot.hp += 1;
       notifyCardPlayed(room, botId, 'PEACH');
-      console.log(`Bot ${bot.name} used PEACH. HP: ${bot.hp}`);
+      logHeal(bot.name, 1, bot.hp, bot.maxHp);
+      logCardPlay(bot.name, 'PEACH');
       actionTaken = true;
     }
   }
@@ -780,7 +832,7 @@ function runBotTurn(room, botId) {
       const card = bot.hand.splice(exIdx, 1)[0];
       room.discardPile.push(card);
       notifyCardPlayed(room, botId, 'EX_NIHILO');
-      console.log(`Bot ${bot.name} used EX_NIHILO`);
+      logCardPlay(bot.name, 'EX_NIHILO');
       drawCards(room, 2).forEach(c => bot.hand.push(c));
       broadcastRoomState(room);
       actionTaken = true;
@@ -798,7 +850,7 @@ function runBotTurn(room, botId) {
         w.range = w.name === 'BLUE_STEEL_SWORD' ? 2 : 1;
         bot.equipment.weapon = w;
         notifyCardPlayed(room, botId, w.name);
-        console.log(`Bot ${bot.name} equipped ${w.name}`);
+        logCardPlay(bot.name, w.name);
         actionTaken = true;
       }
     }
@@ -811,12 +863,12 @@ function runBotTurn(room, botId) {
       if (h.name === 'RED_HARE' && !bot.equipment.offensiveHorse) {
         bot.hand.splice(horseIdx, 1);
         bot.equipment.offensiveHorse = h;
-        console.log(`Bot ${bot.name} equipped RED_HARE`);
+        logCardPlay(bot.name, 'RED_HARE');
         actionTaken = true;
       } else if (h.name === 'LIGHTNING_HOOF' && !bot.equipment.defensiveHorse) {
         bot.hand.splice(horseIdx, 1);
         bot.equipment.defensiveHorse = h;
-        console.log(`Bot ${bot.name} equipped LIGHTNING_HOOF`);
+        logCardPlay(bot.name, 'LIGHTNING_HOOF');
         actionTaken = true;
       }
     }
@@ -850,7 +902,7 @@ function runBotTurn(room, botId) {
         if (discardedCard) room.discardPile.push(discardedCard);
         
         notifyCardPlayed(room, botId, 'SABOTAGE', target.id);
-      console.log(`Bot ${bot.name} used SABOTAGE on ${target.name}`);
+        logCardPlay(bot.name, 'SABOTAGE', target.name);
         broadcastRoomState(room);
         actionTaken = true;
       }
@@ -885,7 +937,7 @@ function runBotTurn(room, botId) {
         if (stolenCard) bot.hand.push(stolenCard);
         
         notifyCardPlayed(room, botId, 'STEAL', target.id);
-      console.log(`Bot ${bot.name} used STEAL on ${target.name}`);
+        logCardPlay(bot.name, 'STEAL', target.name);
         broadcastRoomState(room);
         actionTaken = true;
       }
@@ -915,7 +967,7 @@ function runBotTurn(room, botId) {
           damage: 1,
           timeoutAt: Date.now() + 15000
         };
-        console.log(`Bot ${bot.name} used DUEL on ${targetId}`);
+        logCardPlay(bot.name, 'DUEL', targetId);
         broadcastRoomState(room);
         actionTaken = true;
         
@@ -1058,7 +1110,17 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
   }
 
   targetPlayer.hp -= finalDamage;
-  console.log(`${targetPlayer.name} took ${finalDamage} ${damageType} damage. Remaining HP: ${targetPlayer.hp}`);
+  const attackerName = attackerId && room.players[attackerId] ? room.players[attackerId].name : null;
+  logDamage(targetPlayer.name, finalDamage, targetPlayer.hp, targetPlayer.maxHp, attackerName, cardUsed ? cardUsed.name : null);
+  
+  io.to(room.roomId).emit('damage_log', {
+    targetId: targetPlayerId,
+    attackerId: attackerId,
+    damage: finalDamage,
+    cardName: cardUsed ? cardUsed.name : null,
+    hp: targetPlayer.hp,
+    maxHp: targetPlayer.maxHp
+  });
   
   // Chain reaction for elemental damage
   if (targetPlayer.isChained && (damageType === 'FIRE' || damageType === 'THUNDER')) {
@@ -1075,15 +1137,15 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
   }
 
   // Cao Cao skill: Emperor's Domain
-  if (hasCharacter(targetPlayer, 'CAO_CAO') && cardUsed) {
-    const idx = room.discardPile.findIndex(c => c.id === cardUsed.id);
-    if (idx !== -1) {
-      const card = room.discardPile.splice(idx, 1)[0];
-      targetPlayer.hand.push(card);
-    } else {
-      targetPlayer.hand.push(cardUsed);
+  if (hasCharacter(targetPlayer, 'CAO_CAO') && cardUsed && !['PEACH', 'WINE'].includes(cardUsed.name)) {
+    targetPlayer.hand.push(cardUsed);
+    // Remove from discard pile
+    const discardIdx = room.discardPile.findIndex(c => c.id === cardUsed.id);
+    if (discardIdx !== -1) {
+      room.discardPile.splice(discardIdx, 1);
     }
     console.log(`${targetPlayer.name} (Cao Cao) used Emperor's Domain: obtained the card that dealt damage.`);
+    notifyCardPlayed(room, targetPlayerId, 'สกิล Emperor\'s Domain', attackerId);
   }
 
   // Sima Yi skill: Feedback
@@ -1094,6 +1156,7 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
       const stolen = attacker.hand.splice(randIdx, 1)[0];
       targetPlayer.hand.push(stolen);
       console.log(`${targetPlayer.name} (Sima Yi) used Feedback: stole 1 card from ${attacker.name}`);
+      notifyCardPlayed(room, targetPlayerId, 'สกิล Feedback', attackerId);
     }
   }
 
@@ -1592,6 +1655,10 @@ io.on('connection', (socket) => {
             const cardUsed = getCardById(room, pending.cardUsedId);
             room.pendingAction = null;
             dealDamage(room, targetPlayerId, damage, cardUsed, attackerId);
+            room.pendingAction = null;
+            dealDamage(room, targetPlayerId, 1, null, playerId);
+            if (!room.pendingAction) resumeAfterAttack(room);
+            broadcastRoomState(room);
           }
         }, timeoutMs);
       }
@@ -2355,6 +2422,7 @@ io.on('connection', (socket) => {
     
     player.skillDiaoChanUsed = true;
     console.log(`${player.name} (Diao Chan) Seduction against ${targetPlayer.name}`);
+    notifyCardPlayed(room, playerId, 'สกิล Seduction', targetPlayerId);
     
     const timeoutMs = 15000;
     room.pendingAction = {
@@ -2377,6 +2445,10 @@ io.on('connection', (socket) => {
         if (room.pendingAction && room.pendingAction.cardUsedId === cardId && room.pendingAction.type === 'DIAO_CHAN_SEDUCTION') {
           room.pendingAction = null;
           dealDamage(room, targetPlayerId, 1, null, playerId);
+          room.pendingAction = null;
+          dealDamage(room, targetPlayerId, 1, null, playerId);
+          if (!room.pendingAction) resumeAfterAttack(room);
+          broadcastRoomState(room);
         }
       }, timeoutMs);
     }
@@ -2426,6 +2498,10 @@ io.on('connection', (socket) => {
         if (room.pendingAction && room.pendingAction.cardUsedId === cardId && room.pendingAction.type === 'ZHOU_YU_DISCORD') {
           room.pendingAction = null;
           dealDamage(room, targetPlayerId, 1, null, playerId);
+          room.pendingAction = null;
+          dealDamage(room, targetPlayerId, 1, null, playerId);
+          if (!room.pendingAction) resumeAfterAttack(room);
+          broadcastRoomState(room);
         }
       }, timeoutMs);
     }
@@ -2476,9 +2552,10 @@ io.on('connection', (socket) => {
       // Check if ANY human players are left connected
       const humanPlayersLeft = Object.values(foundRoom.players).filter(p => !p.isBot && p.isAlive).length;
       if (humanPlayersLeft === 0) {
-        console.log(`All human players disconnected. Deleting room ${foundRoom.id}...`);
-        delete gameRooms[foundRoom.id];
+        console.log(`All human players disconnected. Deleting room ${foundRoom.roomId}...`);
+        delete gameRooms[foundRoom.roomId];
       }
+
     }
   });
 });

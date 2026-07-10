@@ -1,5 +1,19 @@
-(function() {
+
+      
+      //if (gameState.currentTurnPlayerId !== lastTurnPlayerId || gameState.currentPhase !== lastPhase) {(function() {
   // --- UTILS ---
+  function getEquipTooltip(cardName) {
+    if (cardName === 'ZHUGE_CROSSBOW') return 'หน้าไม้ขงเบ้ง (ระยะ 1)\nสามารถใช้การ์ด โจมตี (SLASH) ได้ไม่จำกัดจำนวนครั้งในเทิร์น';
+    if (cardName === 'BLUE_STEEL_SWORD') return 'ง้าวชิงกัง (ระยะ 2)\nโจมตีทะลุเกราะ (ไม่สนใจเกราะของเป้าหมาย)';
+    if (cardName === 'RED_HARE') return 'ม้าเซ็กเธาว์ (ม้าบุก -1)\nลดระยะห่างระหว่างคุณกับเป้าหมายลง 1 (เป้าหมายอยู่ใกล้ขึ้น)';
+    if (cardName === 'LIGHTNING_HOOF') return 'ม้าเต็กเลา (ม้าหมอบ +1)\nเพิ่มระยะห่างระหว่างคุณกับศัตรู 1 (ศัตรูโจมตีคุณยากขึ้น)';
+    if (cardName === 'RATTAN_ARMOR') return 'เกราะหวาย\nป้องกันการโจมตีปกติทั้งหมด แต่จะได้รับความเสียหายจากไฟแรงขึ้น +1';
+    if (cardName === 'SILVER_LION_HELMET') return 'หมวกสิงโตเงิน\nลดความเสียหายทั้งหมดที่มากกว่า 1 ให้เหลือเพียง 1 เสมอ';
+    if (cardName === 'LIGHTNING') return 'อัสนีบาต (สายฟ้า)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากได้โพดำ 2-9 จะโดน 3 ดาเมจ ไม่งั้นส่งต่อให้คนถัดไป';
+    if (cardName === 'INDULGENCE') return 'สุขสำราญ (เว้นเทิร์น)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่หัวใจ จะถูกข้ามเฟสเล่นการ์ดทันที';
+    if (cardName === 'STARVATION') return 'เสบียงขาด (ห้ามจั่ว)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่ดอกจิก จะถูกข้ามเฟสจั่วการ์ดทันที';
+    return cardName;
+  }
   function calculateDistance(state, fromId, toId) {
     const order = state.turnOrder.filter(pid => state.players[pid] && state.players[pid].isAlive);
     const idxFrom = order.indexOf(fromId);
@@ -109,6 +123,7 @@
   // --- STATE ---
   let socket = null;
   let myPlayerId = null;
+  
   let myRoomId = null;
   let gameState = null;
   let selectedCardId = null;
@@ -298,11 +313,18 @@
     }, 3000);
   }
 
-  function showSystemAlert(message, duration = 3000) {
+  function showSystemAlert(message, duration = 3000, type = 'default') {
+    let container = document.getElementById('system-alert-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'system-alert-container';
+      document.body.appendChild(container);
+    }
     const banner = document.createElement('div');
     banner.className = 'system-alert-banner';
-    banner.textContent = message;
-    document.body.appendChild(banner);
+    if (type === 'error' || type === 'damage' || type === 'attack') banner.classList.add('alert-danger');
+    banner.innerHTML = message;
+    container.appendChild(banner);
     setTimeout(() => {
       if (banner.parentElement) banner.remove();
     }, duration);
@@ -342,14 +364,15 @@
   // --- AUDIO & EFFECTS ---
 
   function showCardPlayAnimation(playerId, cardName) {
-    if (!CARD_IMAGES[cardName]) return;
+    const cData = typeof CARD_DICT !== 'undefined' ? CARD_DICT[cardName] : (globalThis.CARD_DICT && globalThis.CARD_DICT[cardName] ? globalThis.CARD_DICT[cardName] : null);
+    if (!cData || !cData.pic) return;
     const avatarEl = playerId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${playerId}`);
     if (!avatarEl) return;
 
     const overlay = document.createElement('div');
     overlay.className = 'card-play-overlay';
     const cardImg = document.createElement('img');
-    cardImg.src = CARD_IMAGES[cardName];
+    cardImg.src = cData.pic;
     cardImg.className = 'card-play-img';
     overlay.appendChild(cardImg);
     document.body.appendChild(overlay);
@@ -382,70 +405,9 @@
   }
 
   function addLog(message, type = 'system') {
-    let htmlMsg = message;
-    let isAction = false;
-    let icon = '💬';
-    
-    if (message.includes('โจมตี')) { isAction = true; icon = '⚔️'; }
-    else if (message.includes('ขโมย') || message.includes('STEAL')) { isAction = true; icon = '🖐️'; }
-    else if (message.includes('เสียชีวิต')) { isAction = true; icon = '☠️'; }
-    else if (message.includes('ฟื้นฟู')) { isAction = true; icon = '💖'; }
-    else if (message.includes('เสียพลังชีวิต')) { isAction = true; icon = '🩸'; }
-    else if (message.includes('SABOTAGE')) { isAction = true; icon = '🔥'; }
-    else if (type === 'attack') { isAction = true; icon = '⚡'; }
-
-    if (typeof CARD_DICT !== 'undefined') {
-      for (const [key, val] of Object.entries(CARD_DICT)) {
-        const regex = new RegExp(`\\b${key}\\b`, 'g');
-        htmlMsg = htmlMsg.replace(regex, `<span style="color: #fbbf24; font-size: 1.2em; font-weight: 900; text-shadow: 0 0 10px rgba(251,191,36,0.6);">${val.icon} ${val.name}</span>`);
-      }
-    }
-    
-    if (isAction) {
-       htmlMsg = `<div style="font-size: 48px; margin-bottom: 12px; text-align: center;">${icon}</div><div style="text-align: center; line-height: 1.4;">${htmlMsg}</div>`;
-    }
-    
-    // Create animated floating log
-    const floatLog = document.createElement('div');
-    floatLog.innerHTML = htmlMsg;
-    floatLog.style.position = 'absolute';
-    floatLog.style.left = '50%';
-    floatLog.style.top = '50%';
-    floatLog.style.transform = isAction ? 'translate(-50%, -50%) scale(0.5)' : 'translate(-50%, -50%) scale(0.8)';
-    floatLog.style.background = isAction ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.9)';
-    floatLog.style.color = 'white';
-    floatLog.style.padding = isAction ? '20px 40px' : '10px 20px';
-    floatLog.style.borderRadius = '30px';
-    floatLog.style.fontSize = isAction ? '20px' : '16px';
-    floatLog.style.fontWeight = 'bold';
-    floatLog.style.pointerEvents = 'none';
-    floatLog.style.zIndex = '9999';
-    floatLog.style.boxShadow = isAction ? '0 0 40px rgba(0,0,0,0.9), inset 0 0 20px rgba(251,191,36,0.2)' : '0 4px 16px rgba(0,0,0,0.8)';
-    floatLog.style.border = type === 'attack' || type === 'damage' ? '2px solid #ef4444' : '1px solid #fbbf24';
-    floatLog.style.transition = 'all 3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    floatLog.style.opacity = '0';
-    
-    document.body.appendChild(floatLog);
-    
-    // Pop out animation
-    setTimeout(() => {
-      floatLog.style.transform = isAction ? 'translate(-50%, -50%) scale(1.2)' : 'translate(-50%, -50%) scale(1)';
-      floatLog.style.opacity = '1';
-    }, 10);
-
-    // Float up and fade out
-    setTimeout(() => {
-      floatLog.style.top = '20%';
-      floatLog.style.transform = 'translate(-50%, -50%) scale(0.9)';
-      floatLog.style.opacity = '0';
-    }, 2500);
-    
-    // Remove after animation
-    setTimeout(() => {
-      if (document.body.contains(floatLog)) {
-        document.body.removeChild(floatLog);
-      }
-    }, 5600);
+    let duration = 3500;
+    if (type === 'damage' || type === 'attack') duration = 4500;
+    showSystemAlert(message, duration, type);
   }
 
   function getHpClass(hp, maxHp) {
@@ -530,21 +492,56 @@
   });
 
   socket.on('room_state_update', onRoomStateUpdate);
-  
-  socket.on('card_played', ({ playerId, cardName, targetId }) => {
-    try {
-      showCardPlayAnimation(playerId, cardName);
 
-      // Notify local player if they're targeted
-      if (targetId && targetId === myPlayerId && playerId !== myPlayerId) {
-        const pName = (gameState && gameState.players && gameState.players[playerId]) ? gameState.players[playerId].name : `Player ${playerId}`;
-        const cName = cardName;
-        showToast(`${pName} played ${cName}`, 'error');
+    socket.on('card_played', ({ playerId, cardName, targetId }) => {
+      try {
+        showCardPlayAnimation(playerId, cardName);
+
+        if (gameState && gameState.players) {
+          const pName = gameState.players[playerId] ? gameState.players[playerId].name : playerId;
+          
+          const localDict = typeof CARD_DICT !== 'undefined' ? CARD_DICT : {};
+          const globalDict = globalThis.CARD_DICT || {};
+          const cData = localDict[cardName] || globalDict[cardName];
+          let cNameLocal = cData ? cData.name : cardName;
+          if (cNameLocal.includes(' (')) {
+            cNameLocal = cNameLocal.split(' (')[0];
+          }
+
+          let msg = `🃏 ${pName} ใช้ ${cNameLocal} (${cardName})`;
+          if (targetId && targetId !== playerId) {
+            const tName = gameState.players[targetId] ? gameState.players[targetId].name : targetId;
+            msg += ` ใส่ ${tName}`;
+          }
+          addLog(msg, 'system');
+        }
+      } catch (e) {
+        console.error('card_played handler error', e);
       }
-    } catch (e) {
-      console.error('card_played handler error', e);
-    }
-  });
+    });
+
+    socket.on('damage_log', (data) => {
+      const { targetId, attackerId, damage, cardName, hp, maxHp } = data;
+      if (!gameState || !gameState.players) return;
+      
+      const targetName = gameState.players[targetId] ? gameState.players[targetId].name : targetId;
+      let msg = `💥 ${targetName} เสียพลังชีวิต ${damage} หน่วย`;
+      
+      if (attackerId && gameState.players[attackerId]) {
+        msg += ` จาก ${gameState.players[attackerId].name}`;
+      }
+      if (cardName) {
+        msg += ` (${cardName})`;
+      }
+      
+      msg += ` (พลังชีวิต: ${hp}/${maxHp})`;
+      addLog(msg, 'damage');
+    });
+
+    
+    
+  
+  
 
   socket.on('game_error', (err) => {
     showToast(err.message, 'error');
@@ -688,7 +685,9 @@
     'DIAO CHAN': 'Seduction: ทิ้งไพ่ 1 ใบ เพื่อบังคับผู้ชาย 2 คนให้ DUEL กันเอง',
     'SIMA YI': 'Feedback: เมื่อได้รับดาเมจ สุ่มขโมยไพ่ 1 ใบจากผู้โจมตี',
     'ZHOU YU': 'Handsome: ช่วงจั่วไพ่จะจั่วได้ 3 ใบแทนที่จะเป็น 2 ใบ',
-    'ZHEN JI': 'Luo River: เมื่อเริ่มเทิร์น จั่วไพ่ตัดสินสีดำ จะได้ไพ่ขึ้นมือและจั่วต่อได้เรื่อยๆ'
+    'ZHEN JI': 'Luo River: เมื่อเริ่มเทิร์น จั่วไพ่ตัดสินสีดำ จะได้ไพ่ขึ้นมือและจั่วต่อได้เรื่อยๆ',
+    'LADY ZHEN (ZHEN JI)': 'Luo River: เมื่อเริ่มเทิร์น จั่วไพ่ตัดสินสีดำ จะได้ไพ่ขึ้นมือและจั่วต่อได้เรื่อยๆ',
+    'LADY ZHEN': 'Luo River: เมื่อเริ่มเทิร์น จั่วไพ่ตัดสินสีดำ จะได้ไพ่ขึ้นมือและจั่วต่อได้เรื่อยๆ'
   };
 
   function renderDraftChoices() {
@@ -765,11 +764,14 @@
     const myIndex = gameState.turnOrder.indexOf(myPlayerId);
     if (myIndex === -1) return;
 
-    // Order players starting from the one after myPlayerId
+    // Order players starting from the one after myPlayerId, including dead players
     const orderedOpponents = [];
     for (let i = 1; i < gameState.turnOrder.length; i++) {
       const pId = gameState.turnOrder[(myIndex + i) % gameState.turnOrder.length];
-      orderedOpponents.push(pId);
+      const p = gameState.players[pId];
+      if (p) {
+        orderedOpponents.push(pId);
+      }
     }
 
     const me = gameState.players[myPlayerId];
@@ -849,7 +851,7 @@
 
       card.innerHTML = `
         <div class="opponent-header" style="cursor:pointer;" onclick="window.showHeroInfo('${p.character}')">
-          <div class="opponent-avatar" ${avatarStyle}>${avatarContent}</div>
+          <div id="opp-avatar-${pId}" class="opponent-avatar" ${avatarStyle}>${avatarContent}</div>
           <div class="opponent-info">
             <div class="opponent-name">${p.name} ℹ️</div>
             <div class="opponent-role ${roleCss}" style="${isDead ? 'font-size: 1.2em; font-weight: bold;' : ''}">${roleLabel}${p.character ? ` · ${p.character}` : ''}</div>
@@ -879,20 +881,26 @@
         });
       }
 
-      // Tabletop Positioning (Full Circle layout)
-      const numOpp = gameState.turnOrder.length - 1;
+      // Tabletop Positioning (Horseshoe layout)
+      const numOpp = orderedOpponents.length;
       if (numOpp > 0) {
-        // Total seats = numOpp + 1 (including self). Self is at bottom (-90 deg).
-        // We arrange opponents counter-clockwise.
-        const totalSeats = numOpp + 1;
-        const angleStep = (2 * Math.PI) / totalSeats;
-        const angle = -Math.PI / 2 + (i + 1) * angleStep; // start from bottom right, go CCW
+        let angle;
+        if (numOpp === 1) {
+          angle = Math.PI / 2; // Top center (90 deg)
+        } else {
+          // Span from -15 deg to 195 deg (Bottom right arc over top to Bottom left)
+          const startAngle = -15 * (Math.PI / 180);
+          const endAngle = 195 * (Math.PI / 180);
+          const angleRange = endAngle - startAngle;
+          const step = angleRange / (numOpp - 1);
+          angle = startAngle + (i * step);
+        }
         
-        const rx = 38; // % of table width 
-        const ry = 35; // % of table height 
+        const rx = 44; // % of table width 
+        const ry = 36; // reduced from 42 to bring them down
         
         const left = 50 + Math.cos(angle) * rx;
-        const top = 45 - Math.sin(angle) * ry; // adjusted center a bit lower since top UI takes space
+        const top = 52 - Math.sin(angle) * ry; // adjusted center from 48 to 52
         
         card.style.left = `${left}%`;
         card.style.top = `${top}%`;
@@ -935,6 +943,15 @@
       if (me.equipment.weapon) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${me.equipment.weapon.name}</span>`;
       if (me.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ</span>`;
       if (me.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก</span>`;
+    }
+    if (me.delayedKitZone && me.delayedKitZone.length > 0) {
+      me.delayedKitZone.forEach(c => {
+        let icon = '⏳';
+        if (c.name === 'LIGHTNING') icon = '⚡';
+        if (c.name === 'INDULGENCE') icon = '🍷';
+        if (c.name === 'STARVATION') icon = '🍚';
+        equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(c.name)}" style="background: rgba(244,67,54,0.2);"><span class="tag-icon">${icon}</span>${c.name}</span>`;
+      });
     }
 
     let hpDots = '';
@@ -1754,7 +1771,7 @@
 
       if (prevP && nextP) {
         if (nextP.hp < prevP.hp) {
-          addLog(`💥 ${nextP.name} เสียพลังชีวิต ${prevP.hp - nextP.hp} หน่วย (พลังชีวิต: ${nextP.hp}/${nextP.maxHp})`, 'damage');
+          // Handled by explicit damage_log event from server
         } else if (nextP.hp > prevP.hp) {
           addLog(`💖 ${nextP.name} ฟื้นฟูพลังชีวิต 1 หน่วย (พลังชีวิต: ${nextP.hp}/${nextP.maxHp})`, 'heal');
         }
@@ -1858,4 +1875,3 @@
       console.error('Error loading cards database:', err);
     });
 
-})();

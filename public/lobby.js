@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
     inputNickname.value = cachedName;
   }
 
+  // Save name automatically as user types
+  inputNickname.addEventListener('input', () => {
+    localStorage.setItem('savedPlayerName', inputNickname.value.trim());
+  });
+
   btnModeOnlineMenu.addEventListener('click', () => {
     panelMenu.classList.add('hidden');
     panelOnlineSetup.classList.remove('hidden');
