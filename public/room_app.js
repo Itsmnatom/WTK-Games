@@ -12,6 +12,8 @@
     if (cardName === 'LIGHTNING') return 'อัสนีบาต (สายฟ้า)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากได้โพดำ 2-9 จะโดน 3 ดาเมจ ไม่งั้นส่งต่อให้คนถัดไป';
     if (cardName === 'INDULGENCE') return 'สุขสำราญ (เว้นเทิร์น)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่หัวใจ จะถูกข้ามเฟสเล่นการ์ดทันที';
     if (cardName === 'STARVATION') return 'เสบียงขาด (ห้ามจั่ว)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่ดอกจิก จะถูกข้ามเฟสจั่วการ์ดทันที';
+    if (cardName === 'NIO_SHIELD') return 'โล่หนี่หวัง\nป้องกันความเสียหายจากไพ่ Attack สัญลักษณ์สีดำ (♠/♣)';
+    if (cardName === 'EIGHT_TRIGRAMS_FORMATION') return 'ประยุทธ์แปดทิศ\n(ยังไม่เปิดใช้งานสกิลพิเศษ)';
     return cardName;
   }
   function calculateDistance(state, fromId, toId) {
@@ -240,7 +242,11 @@
     'ZHUGE_CROSSBOW': { name: 'หน้าไม้จูกัด', desc: 'อาวุธระยะ 1: SLASH ได้ไม่จำกัด', icon: '🏹', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014293266ed164c8ef28.jpg' },
     'BLUE_STEEL_SWORD': { name: 'ง้าวมังกร', desc: 'อาวุธระยะ 2: เพิกเฉยเกราะ', icon: '🗡️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014371866ed181e49171.jpg' },
     'LIGHTNING_HOOF': { name: 'ม้าบุก (-1)', desc: 'ลดระยะการโจมตีลง 1', icon: '🏇', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014365066ed1802e8169.jpg' },
-    'RED_HARE': { name: 'ม้าหมอบ (+1)', desc: 'เพิ่มระยะป้องกันขึ้น 1', icon: '🐴', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014334766ed174b2c963.jpg' }
+    'RED_HARE': { name: 'ม้าหมอบ (+1)', desc: 'เพิ่มระยะป้องกันขึ้น 1', icon: '🐴', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014334766ed174b2c963.jpg' },
+    'NIO_SHIELD': { name: 'โล่หนี่หวัง', desc: 'ป้องกัน Attack สัญลักษณ์สีดำ', icon: '🛡️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013365666ed09f899277.jpg' },
+    'EIGHT_TRIGRAMS_FORMATION': { name: 'ประยุทธ์แปดทิศ', desc: 'ชุดเกราะพิเศษ', icon: '☯️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014300366ed166b24f71.jpg' },
+    'SILVER_LION_HELMET': { name: 'หมวกสิงโตเงิน', desc: 'ลดดาเมจเหลือ 1 เสมอ', icon: '🦁', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014405366ed18f572589.jpg' },
+    'RATTAN_ARMOR': { name: 'เกราะหวาย', desc: 'กัน Attack ปกติ แต่รับดาเมจไฟ +1', icon: '🥋', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014435266ed19a85192a.jpg' },
   };
 
   const CHAR_ICONS = {
@@ -330,7 +336,7 @@
     }, duration);
   }
 
-  function triggerDrawAnimation(playerId, count) {
+  /*function triggerDrawAnimation(playerId, count) {
     const avatarEl = playerId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${playerId}`);
     if (!avatarEl) return;
     
@@ -359,7 +365,7 @@
         }, 600);
       }, i * 200);
     }
-  }
+  }*/
 
   // --- AUDIO & EFFECTS ---
 
@@ -838,6 +844,7 @@
         if (p.equipment.weapon) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${p.equipment.weapon.name}</span>`;
         if (p.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ (+1)</span>`;
         if (p.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก (-1)</span>`;
+        if (p.equipment.armor) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.armor.name)}"><span class="tag-icon">🛡️</span>${p.equipment.armor.name}</span>`;
       }
       if (p.delayedKitZone && p.delayedKitZone.length > 0) {
         p.delayedKitZone.forEach(c => {
@@ -996,6 +1003,7 @@
     if (skillBoxName) skillBoxName.textContent = heroName;
     if (skillBoxSub) skillBoxSub.textContent = `ขุนพลฝ่าย: ${roleLabel}`;
     if (skillBoxDesc) skillBoxDesc.innerHTML = skillDesc.replace(/\n/g, '<br>');
+    if (me.equipment.armor) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.armor.name)}"><span class="tag-icon">🛡️</span>${me.equipment.armor.name}</span>`;
   }
 
   function renderHand() {
@@ -1303,8 +1311,9 @@
       const hasWeapon = targetPlayer.equipment && targetPlayer.equipment.weapon;
       const hasDefHorse = targetPlayer.equipment && targetPlayer.equipment.defensiveHorse;
       const hasOffHorse = targetPlayer.equipment && targetPlayer.equipment.offensiveHorse;
+      const hasArmor = targetPlayer.equipment && targetPlayer.equipment.armor;
       
-      if (hasWeapon || hasDefHorse || hasOffHorse) {
+      if (hasWeapon || hasDefHorse || hasOffHorse || hasArmor) {
         const stealChoiceOverlay = document.getElementById('steal-choice-overlay');
         const stealChoiceTargetName = document.getElementById('steal-choice-target-name');
         const stealChoiceOptions = document.getElementById('steal-choice-options');
@@ -1389,7 +1398,24 @@
           });
           stealChoiceOptions.appendChild(btnOffHorse);
         }
-        
+        // armor option
+        if (hasArmor) {
+          const btnArmor = document.createElement('button');
+          btnArmor.className = 'btn-back';
+          btnArmor.style.width = '100%';
+          btnArmor.textContent = `🛡️ เกราะ [${targetPlayer.equipment.armor.name}]`;
+          btnArmor.addEventListener('click', () => {
+            socket.emit('use_card', {
+              roomId: myRoomId,
+              cardId: cardIdToPlay,
+              targetPlayerId: targetPlayerId,
+              targetZone: 'ARMOR'
+            });
+            stealChoiceOverlay.classList.add('hidden');
+            clearSelection();
+          });
+          stealChoiceOptions.appendChild(btnArmor);
+        }
         // Cancel option
         const btnCancel = document.createElement('button');
         btnCancel.className = 'btn-take-damage';

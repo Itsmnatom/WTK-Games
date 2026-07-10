@@ -245,73 +245,102 @@ function initDeck() {
   const deck = [];
   let idCounter = 1;
   
-  // Slashes (32 cards)
-  for (let i = 0; i < 32; i++) {
-    const suit = i < 16 ? (i < 8 ? 'SPADE' : 'CLUB') : (i < 24 ? 'HEART' : 'DIAMOND');
+  // Slashes (20 cards)
+  for (let i = 0; i < 20; i++) {
+    const suit = i < 10 ? (i < 5 ? 'SPADE' : 'CLUB') : (i < 15 ? 'HEART' : 'DIAMOND');
     deck.push({ id: `c_${idCounter++}`, name: 'SLASH', suit, rank: Math.floor(Math.random() * 13) + 1, type: 'BASIC' });
   }
-  // Dodges (16 cards)
-  for (let i = 0; i < 16; i++) {
-    const suit = i < 8 ? 'HEART' : 'DIAMOND';
+  // Dodges (10 cards)
+  for (let i = 0; i < 10; i++) {
+    const suit = i < 5 ? 'HEART' : 'DIAMOND';
     deck.push({ id: `c_${idCounter++}`, name: 'DODGE', suit, rank: Math.floor(Math.random() * 13) + 1, type: 'BASIC' });
   }
-  // Peaches (8 cards)
-  for (let i = 0; i < 8; i++) {
+  // Peaches (12 cards)
+  for (let i = 0; i < 12; i++) {
     const suit = i < 6 ? 'HEART' : 'DIAMOND';
     deck.push({ id: `c_${idCounter++}`, name: 'PEACH', suit, rank: Math.floor(Math.random() * 13) + 1, type: 'BASIC' });
   }
-  // Wine (6 cards)
-  for (let i = 0; i < 6; i++) {
+  // Wine (10 cards)
+  for (let i = 0; i < 10; i++) {
     const suit = suits[i % 4];
     deck.push({ id: `c_${idCounter++}`, name: 'WINE', suit, rank: Math.floor(Math.random() * 13) + 1, type: 'BASIC' });
   }
-  // Steals (6 cards)
-  for (let i = 0; i < 6; i++) {
+  // Steals (10 cards)
+  for (let i = 0; i < 10; i++) {
     const suit = i % 2 === 0 ? 'SPADE' : 'CLUB';
     deck.push({ id: `c_${idCounter++}`, name: 'STEAL', suit, rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
   }
-  // Sabotage (Dismantle) (6 cards)
-  for (let i = 0; i < 6; i++) {
+  // Sabotage (Dismantle) (12 cards)
+  for (let i = 0; i < 12; i++) {
     const suit = i % 2 === 0 ? 'SPADE' : 'CLUB';
     deck.push({ id: `c_${idCounter++}`, name: 'SABOTAGE', suit, rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
   }
-  // Ex Nihilo (Something from Nothing) (4 cards)
-  for (let i = 0; i < 4; i++) {
+  // Ex Nihilo (Something from Nothing) (10 cards)
+  for (let i = 0; i < 10; i++) {
     deck.push({ id: `c_${idCounter++}`, name: 'EX_NIHILO', suit: 'HEART', rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
   }
-  // Duel (3 cards)
-  for (let i = 0; i < 3; i++) {
-    const suit = i === 0 ? 'SPADE' : 'CLUB';
+  // Duel (10 cards)
+  for (let i = 0; i < 10; i++) {
+    const suit = i % 2 === 0 ? 'SPADE' : 'CLUB';
     deck.push({ id: `c_${idCounter++}`, name: 'DUEL', suit, rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
   }
-  // Zhuge Crossbow (2 cards)
-  deck.push({ id: `c_${idCounter++}`, name: 'ZHUGE_CROSSBOW', suit: 'DIAMOND', rank: 1, type: 'EQUIPMENT' });
-  deck.push({ id: `c_${idCounter++}`, name: 'ZHUGE_CROSSBOW', suit: 'SPADE', rank: 1, type: 'EQUIPMENT' });
-  // Blue Steel Sword (1 card)
-  deck.push({ id: `c_${idCounter++}`, name: 'BLUE_STEEL_SWORD', suit: 'SPADE', rank: 6, type: 'EQUIPMENT' });
-  // Lightning Hoof (+1 defensive mount) (1 card)
-  deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING_HOOF', suit: 'HEART', rank: 13, type: 'EQUIPMENT' });
-  // Red Hare (-1 offensive mount) (1 card)
-  deck.push({ id: `c_${idCounter++}`, name: 'RED_HARE', suit: 'HEART', rank: 5, type: 'EQUIPMENT' });
-
-  // Barbarian Invasion (Savage Assault) (3 cards)
-  for (let i = 0; i < 3; i++) {
+  // Zhuge Crossbow (5 cards)
+  for (let i = 0; i < 5; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'ZHUGE_CROSSBOW', suit: 'DIAMOND', rank: 1, type: 'EQUIPMENT' });
+    deck.push({ id: `c_${idCounter++}`, name: 'ZHUGE_CROSSBOW', suit: 'SPADE', rank: 1, type: 'EQUIPMENT' });
+  }
+  // Blue Steel Sword (5 cards)
+  for (let i = 0; i < 5; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'BLUE_STEEL_SWORD', suit: 'SPADE', rank: 6, type: 'EQUIPMENT' });
+  }
+  // Lightning Hoof (+1 defensive mount) (7 cards)
+  for (let i = 0; i < 7; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING_HOOF', suit: 'HEART', rank: 13, type: 'EQUIPMENT' });
+  }
+  // Red Hare (-1 offensive mount) (7 cards)
+  for (let i = 0; i < 7; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'RED_HARE', suit: 'HEART', rank: 5, type: 'EQUIPMENT' });
+  }
+  // Nio Shield (5 cards)
+  for (let i = 0; i < 5; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'NIO_SHIELD', suit: 'SPADE', rank: 8, type: 'EQUIPMENT' });
+  }
+  // Eight Trigrams Formation (5 cards)
+  for (let i = 0; i < 5; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'EIGHT_TRIGRAMS_FORMATION', suit: 'CLUB', rank: 4, type: 'EQUIPMENT' });
+  }
+  // Silver Lion Helmet (5 cards )
+  for (let i = 0; i < 5; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'SILVER_LION_HELMET', suit: 'DIAMOND', rank: 11, type: 'EQUIPMENT' });
+  }
+  // Rattan Armor (5 cards)
+  for (let i = 0; i < 5; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'RATTAN_ARMOR', suit: 'CLUB', rank: 2, type: 'EQUIPMENT' });
+  }
+  // Barbarian Invasion (Savage Assault) (10 cards)
+  for (let i = 0; i < 10; i++) {
     deck.push({ id: `c_${idCounter++}`, name: 'BARBARIAN_INVASION', suit: 'SPADE', rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
   }
-  // Arrow Barrage (Archery Attack) (1 card)
-  deck.push({ id: `c_${idCounter++}`, name: 'ARROW_BARRAGE', suit: 'HEART', rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
-  // Peach Garden (1 card)
-  deck.push({ id: `c_${idCounter++}`, name: 'PEACH_GARDEN', suit: 'HEART', rank: 1, type: 'KIT' });
+  // Arrow Barrage (Archery Attack) (10 cards)
+  for (let i = 0; i < 10; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'ARROW_BARRAGE', suit: 'HEART', rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
+  }
+  // Peach Garden (10 cards)
+  for (let i = 0; i < 10; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'PEACH_GARDEN', suit: 'HEART', rank: 1, type: 'KIT' });
+  }
 
-  // Lightning (2 cards)
+  // Lightning (4 cards)
   deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING', suit: 'SPADE', rank: 1, type: 'DELAYED' });
   deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING', suit: 'HEART', rank: 12, type: 'DELAYED' });
-  // Indulgence (3 cards)
-  for (let i = 0; i < 3; i++) {
+  deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING', suit: 'CLUB', rank: 10, type: 'DELAYED' });
+  deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING', suit: 'DIAMOND', rank: 11, type: 'DELAYED' });
+  // Indulgence (10 cards)
+  for (let i = 0; i < 10; i++) {
     deck.push({ id: `c_${idCounter++}`, name: 'INDULGENCE', suit: 'SPADE', rank: 6, type: 'DELAYED' });
   }
-  // Starvation (2 cards)
-  for (let i = 0; i < 2; i++) {
+  // Starvation (10 cards)
+  for (let i = 0; i < 10; i++) {
     deck.push({ id: `c_${idCounter++}`, name: 'STARVATION', suit: 'CLUB', rank: 10, type: 'DELAYED' });
   }
 
@@ -935,6 +964,9 @@ function runBotTurn(room, botId) {
           else if (target.equipment.offensiveHorse) { stolenCard = target.equipment.offensiveHorse; target.equipment.offensiveHorse = null; }
         }
         if (stolenCard) bot.hand.push(stolenCard);
+        if (stolenCard && stolenCard.name === 'SILVER_LION_HELMET') {
+        target.hp = Math.min(target.maxHp, target.hp + 1);
+        }
         
         notifyCardPlayed(room, botId, 'STEAL', target.id);
         logCardPlay(bot.name, 'STEAL', target.name);
@@ -1096,6 +1128,12 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
       if (finalDamage > 1) {
         console.log(`${targetPlayer.name} Silver Lion Helmet reduced damage to 1`);
         finalDamage = 1;
+      }
+    }
+    if (armorName === 'NIO_SHIELD') {
+    if (cardUsed && cardUsed.name === 'SLASH' && (cardUsed.suit === 'SPADE' || cardUsed.suit === 'CLUB')) {
+    console.log(`${targetPlayer.name} Nio Shield blocked a black-suit Attack`);
+    return;
       }
     }
     if (armorName === 'RATTAN_ARMOR') {
@@ -1718,8 +1756,12 @@ io.on('connection', (socket) => {
           stolenCard = targetPlayer.equipment.offensiveHorse;
           targetPlayer.equipment.offensiveHorse = null;
         }
+      } else if (targetZone === 'ARMOR') {
+        if (targetPlayer.equipment && targetPlayer.equipment.armor) {
+          stolenCard = targetPlayer.equipment.armor;
+          targetPlayer.equipment.armor = null;
+        }
       }
-
       // Fallback
       if (!stolenCard) {
         if (targetPlayer.hand && targetPlayer.hand.length > 0) {
@@ -1747,6 +1789,10 @@ io.on('connection', (socket) => {
       const stealCard = player.hand.splice(cardIndex, 1)[0];
       room.discardPile.push(stealCard);
       player.hand.push(stolenCard);
+      if (stolenCard.name === 'SILVER_LION_HELMET') {
+        targetPlayer.hp = Math.min(targetPlayer.maxHp, targetPlayer.hp + 1);
+        console.log(`${targetPlayer.name} lost Silver Lion Helmet to STEAL, healed 1 HP`);
+      }
       console.log(`${player.name} STEAL: stole ${stolenCard.name}(${stolenCard.suit}) from ${targetPlayer.name} [zone=${targetZone}]`);
       broadcastRoomState(room);
 
@@ -1805,6 +1851,9 @@ io.on('connection', (socket) => {
       } else if (targetZone === 'OFF_HORSE' && targetPlayer.equipment && targetPlayer.equipment.offensiveHorse) {
         discardedCard = targetPlayer.equipment.offensiveHorse;
         targetPlayer.equipment.offensiveHorse = null;
+      } else if (targetZone === 'ARMOR' && targetPlayer.equipment && targetPlayer.equipment.armor) {
+        discardedCard = targetPlayer.equipment.armor;
+        targetPlayer.equipment.armor = null;
       }
 
       // Fallback
@@ -1822,6 +1871,9 @@ io.on('connection', (socket) => {
           } else if (targetPlayer.equipment.offensiveHorse) {
             discardedCard = targetPlayer.equipment.offensiveHorse;
             targetPlayer.equipment.offensiveHorse = null;
+          } else if (targetPlayer.equipment.armor) {
+            discardedCard = targetPlayer.equipment.armor;
+            targetPlayer.equipment.armor = null;
           }
         }
       }
@@ -1834,7 +1886,25 @@ io.on('connection', (socket) => {
       const saboCard = player.hand.splice(cardIndex, 1)[0];
       room.discardPile.push(saboCard);
       room.discardPile.push(discardedCard);
+      if (discardedCard.name === 'SILVER_LION_HELMET') {
+        targetPlayer.hp = Math.min(targetPlayer.maxHp, targetPlayer.hp + 1);
+        console.log(`${targetPlayer.name} lost Silver Lion Helmet to SABOTAGE, healed 1 HP`);
+      }
       console.log(`${player.name} SABOTAGE: discarded ${discardedCard.name}(${discardedCard.suit}) from ${targetPlayer.name} [zone=${targetZone}]`);
+      broadcastRoomState(room);
+
+    } else if (cardUsed.name === 'NIO_SHIELD' || cardUsed.name === 'EIGHT_TRIGRAMS_FORMATION' || cardUsed.name === 'SILVER_LION_HELMET' || cardUsed.name === 'RATTAN_ARMOR') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
+      const equipCard = player.hand.splice(cardIndex, 1)[0];
+      if (player.equipment.armor) {
+        room.discardPile.push(player.equipment.armor);
+        if (player.equipment.armor.name === 'SILVER_LION_HELMET') {
+          player.hp = Math.min(player.maxHp, player.hp + 1);
+          console.log(`${player.name} removed Silver Lion Helmet, healed 1 HP`);
+        }
+      }
+      player.equipment.armor = equipCard;
+      console.log(`${player.name} EQUIP: ${equipCard.name}`);
       broadcastRoomState(room);
 
     } else if (cardUsed.name === 'EX_NIHILO') {
@@ -2445,8 +2515,6 @@ io.on('connection', (socket) => {
         if (room.pendingAction && room.pendingAction.cardUsedId === cardId && room.pendingAction.type === 'DIAO_CHAN_SEDUCTION') {
           room.pendingAction = null;
           dealDamage(room, targetPlayerId, 1, null, playerId);
-          room.pendingAction = null;
-          dealDamage(room, targetPlayerId, 1, null, playerId);
           if (!room.pendingAction) resumeAfterAttack(room);
           broadcastRoomState(room);
         }
@@ -2496,8 +2564,6 @@ io.on('connection', (socket) => {
     } else {
       setTimeout(() => {
         if (room.pendingAction && room.pendingAction.cardUsedId === cardId && room.pendingAction.type === 'ZHOU_YU_DISCORD') {
-          room.pendingAction = null;
-          dealDamage(room, targetPlayerId, 1, null, playerId);
           room.pendingAction = null;
           dealDamage(room, targetPlayerId, 1, null, playerId);
           if (!room.pendingAction) resumeAfterAttack(room);

@@ -144,6 +144,15 @@
     "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014363066ed17eed2877.jpg"
   },
   {
+    "card_name": "Sabotage",
+    "main_type": "Stratagem Card",
+    "sub_type": "Regular",
+    "description": "บังคับทิ้งการ์ด 1 ใบจากเป้าหมาย (ในมือหรือในโซนอุปกรณ์) โดยไม่ได้รับการ์ดนั้นมา",
+    "conditions_of_use": "ไม่มีระยะจำกัด",
+    "product_expansion": "Standard",
+    "pic_url": "https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014290866ed1634c9083.jpg"
+  },
+  {
     "card_name": "Flame Tactic",
     "main_type": "Stratagem Card",
     "sub_type": "Regular",
