@@ -950,6 +950,7 @@
       if (me.equipment.weapon) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${me.equipment.weapon.name}</span>`;
       if (me.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ</span>`;
       if (me.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก</span>`;
+      if (me.equipment.armor) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.armor.name)}"><span class="tag-icon">🛡️</span>${me.equipment.armor.name}</span>`;
     }
     if (me.delayedKitZone && me.delayedKitZone.length > 0) {
       me.delayedKitZone.forEach(c => {
@@ -1003,7 +1004,6 @@
     if (skillBoxName) skillBoxName.textContent = heroName;
     if (skillBoxSub) skillBoxSub.textContent = `ขุนพลฝ่าย: ${roleLabel}`;
     if (skillBoxDesc) skillBoxDesc.innerHTML = skillDesc.replace(/\n/g, '<br>');
-    if (me.equipment.armor) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.armor.name)}"><span class="tag-icon">🛡️</span>${me.equipment.armor.name}</span>`;
   }
 
   function renderHand() {
@@ -1808,13 +1808,20 @@
         }
 
         if (!prevP.equipment?.weapon && nextP.equipment?.weapon) {
-          addLog(`🗡️ ${nextP.name} สวมใส่อาวุธ ${nextP.equipment.weapon.name}`, 'system');
+          //addLog(`🗡️ ${nextP.name} สวมใส่อาวุธ ${nextP.equipment.weapon.name}`, 'system');
+          showSystemAlert(`🗡️ ${nextP.name} สวมใส่อาวุธ: ${nextP.equipment.weapon.name}`, 3000);
+        }
+        if (!prevP.equipment?.armor && nextP.equipment?.armor) {
+          //addLog(`🛡️ ${nextP.name} สวมใส่เกราะ ${nextP.equipment.armor.name}`, 'system');
+          showSystemAlert(`🛡️ ${nextP.name} สวมใส่เกราะ: ${nextP.equipment.armor.name}`, 3000);
         }
         if (!prevP.equipment?.defensiveHorse && nextP.equipment?.defensiveHorse) {
-          addLog(`🐴 ${nextP.name} สวมใส่ม้าหมอบ ${nextP.equipment.defensiveHorse.name}`, 'system');
+          //addLog(`🐴 ${nextP.name} สวมใส่ม้าหมอบ ${nextP.equipment.defensiveHorse.name}`, 'system');
+          showSystemAlert(`🐴 ${nextP.name} สวมใส่ม้าหมอบ: ${nextP.equipment.defensiveHorse.name}`, 3000);
         }
         if (!prevP.equipment?.offensiveHorse && nextP.equipment?.offensiveHorse) {
-          addLog(`ม้า ${nextP.name} สวมใส่ม้าโจมตี ${nextP.equipment.offensiveHorse.name}`, 'system');
+          //addLog(`🏇 ${nextP.name} สวมใส่ม้าบุก ${nextP.equipment.offensiveHorse.name}`, 'system');
+          showSystemAlert(`🏇 ${nextP.name} สวมใส่ม้าบุก: ${nextP.equipment.offensiveHorse.name}`, 3000);
         }
         
         // Draw card animation

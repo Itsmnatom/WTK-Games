@@ -368,8 +368,10 @@ function drawCards(room, count) {
 function assignRoles(room) {
   const count = room.turnOrder.length;
   let roles = [];
-  
-  if (count === 3) {
+
+  if (count === 2) {
+    roles = ['LORD', 'REBEL'];
+  } if (count === 3) {
     roles = ['LORD', 'REBEL', 'RENEGADE'];
   } else if (count === 4) {
     roles = ['LORD', 'LOYALIST', 'REBEL', 'RENEGADE'];
