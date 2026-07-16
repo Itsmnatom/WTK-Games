@@ -404,9 +404,6 @@ function initDeck() {
   // ==========================================
   // NEW CARDS (Phase 2 - Group 2 Fire Attack)
   // ==========================================
-  // ==========================================
-  // NEW CARDS (Phase 2 - Group 2 Fire Attack)
-  // ==========================================
   // Fire Attack (5 cards) - Kit card, target reveals 1, attacker discards 1 matching suit to deal 1 FIRE damage
   for (let i = 0; i < 5; i++) {
     deck.push({ id: `c_${idCounter++}`, name: 'FIRE_ATTACK', suit: 'HEART', rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
@@ -889,10 +886,7 @@ function checkDiscardRequirement(room) {
   const player = room.players[playerId];
   
   const handCount = player.hand.length;
-  let maxHand = player.hp;
-  if (player.equipment && player.equipment.treasure && player.equipment.treasure.name === 'WOODEN_CART') {
-    maxHand += 1;
-  }
+  const maxHand = player.hp;
   
   if (handCount <= maxHand) {
     endPlayerTurn(room);
@@ -1835,7 +1829,6 @@ io.on('connection', (socket) => {
       sourcePlayerId: actionData.sourceId,
       targetPlayerId: actionData.targetId,
       cardUsedId: actionData.cardUsed ? actionData.cardUsed.id : null,
-      cardUsedName: actionData.cardUsed ? actionData.cardUsed.name : null,
       timeoutAt: Date.now() + 5000
     };
     
@@ -1902,8 +1895,6 @@ io.on('connection', (socket) => {
         stolenCard = targetPlayer.equipment.offensiveHorse; targetPlayer.equipment.offensiveHorse = null;
       } else if (targetZone === 'ARMOR' && targetPlayer.equipment.armor) {
         stolenCard = targetPlayer.equipment.armor; targetPlayer.equipment.armor = null;
-      } else if (targetZone === 'TREASURE' && targetPlayer.equipment.treasure) {
-        stolenCard = targetPlayer.equipment.treasure; targetPlayer.equipment.treasure = null;
       }
       if (!stolenCard && targetPlayer.hand.length > 0) stolenCard = targetPlayer.hand.splice(Math.floor(Math.random() * targetPlayer.hand.length), 1)[0];
       
@@ -1931,8 +1922,6 @@ io.on('connection', (socket) => {
         discardedCard = targetPlayer.equipment.offensiveHorse; targetPlayer.equipment.offensiveHorse = null;
       } else if (targetZone === 'ARMOR' && targetPlayer.equipment.armor) {
         discardedCard = targetPlayer.equipment.armor; targetPlayer.equipment.armor = null;
-      } else if (targetZone === 'TREASURE' && targetPlayer.equipment.treasure) {
-        discardedCard = targetPlayer.equipment.treasure; targetPlayer.equipment.treasure = null;
       }
       if (!discardedCard && targetPlayer.hand.length > 0) discardedCard = targetPlayer.hand.splice(Math.floor(Math.random() * targetPlayer.hand.length), 1)[0];
       
@@ -2310,13 +2299,6 @@ io.on('connection', (socket) => {
       player.equipment.offensiveHorse = equipCard;
       broadcastRoomState(room);
 
-    } else if (cardUsed.name === 'WOODEN_CART') {
-      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
-      const equipCard = player.hand.splice(cardIndex, 1)[0];
-      if (player.equipment.treasure) room.discardPile.push(player.equipment.treasure);
-      player.equipment.treasure = equipCard;
-      broadcastRoomState(room);
-
     } else if (cardUsed.name === 'SABOTAGE') {
       if (!targetPlayerId) return socket.emit('game_error', { message: "กรุณาระบุเป้าหมายที่จะทำลาย" });
       const targetPlayer = room.players[targetPlayerId];
@@ -2510,11 +2492,7 @@ io.on('connection', (socket) => {
     const hasAll = cardIds.every(cid => player.hand.some(c => c.id === cid));
     if (!hasAll) return socket.emit('game_error', { message: "ไม่พบการ์ดที่ระบุในกองมือ" });
 
-    let maxHand = player.hp;
-    if (player.equipment && player.equipment.treasure && player.equipment.treasure.name === 'WOODEN_CART') {
-      maxHand += 1;
-    }
-    const requiredDiscard = player.hand.length - maxHand;
+    const requiredDiscard = player.hand.length - player.hp;
     if (cardIds.length !== requiredDiscard) {
       return socket.emit('game_error', { message: `กรุณาทิ้งการ์ดทั้งหมด ${requiredDiscard} ใบ` });
     }

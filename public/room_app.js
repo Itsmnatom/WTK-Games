@@ -1,27 +1,17 @@
+
 //if (gameState.currentTurnPlayerId !== lastTurnPlayerId || gameState.currentPhase !== lastPhase) {(function() {
   // --- UTILS ---
   function getEquipTooltip(cardName) {
     if (cardName === 'ZHUGE_CROSSBOW') return 'หน้าไม้ขงเบ้ง (ระยะ 1)\nสามารถใช้การ์ด โจมตี (SLASH) ได้ไม่จำกัดจำนวนครั้งในเทิร์น';
     if (cardName === 'BLUE_STEEL_SWORD') return 'ง้าวชิงกัง (ระยะ 2)\nโจมตีทะลุเกราะ (ไม่สนใจเกราะของเป้าหมาย)';
-    if (cardName === 'SIX_SWORDS_WU') return 'ดาบหกเหล่าอู๋ (ระยะ 2)\nอาวุธมาตรฐานระยะ 2 ไม่มีเอ็ฟเฟกต์พิเศษ';
-    if (cardName === 'KIRIN_BOW') return 'ธนูกิเลน (ระยะ 5)\nเมื่อโจมตีติด ทำลายม้าของเป้าหมาย (ออเฟนซิฟหรือดีเฟนซิฟ)';
-    if (cardName === 'FEATHERED_FAN') return 'พัดขนนก (ระยะ 4)\nดาเมจของ SLASH เป็นดาเมจไฟ (FIRE) - ทะลุ Rattan Armor และชาร์จพิเศษ';
-    if (cardName === 'SERPENT_SPEAR') return 'หอกงู (ระยะ 3)\nทิ้งการ์ด 2 ใบจากมือแทนการใช้ SLASH โจมตีเป้าหมายได้';
-    if (cardName === 'FROST_SWORD') return 'ดาบน้ำแข็ง (ระยะ 2)\nเมื่อโจมตีสำเร็จ คุณสามารถเลือกไม่ทำดาเมจ แต่ให้เป้าหมายทิ้งการ์ด 2 ใบแทนได้';
-    if (cardName === 'TWO_BLADED_TRIDENT') return 'ง้าวสองง่าม (ระยะ 3)\nเมื่อถูกหลบ คุณสามารถทิ้งการ์ดในมือ 1 ใบเพื่อบังคับให้เป้าหมายโดนดาเมจได้ทันที';
-    if (cardName === 'ROCK_CLEAVING_AXE') return 'ขวานผ่าหิน (ระยะ 3)\nเมื่อถูกหลบ คุณสามารถทิ้งการ์ด 2 ใบ (บนมือหรืออุปกรณ์) เพื่อบังคับให้เป้าหมายโดนดาเมจได้ทันที';
-    if (cardName === 'GREEN_DRAGON_BLADE') return 'ง้าวมังกรเขียว (ระยะ 3)\nเมื่อถูกหลบ คุณสามารถใช้ SLASH เพิ่มเติมใส่เป้าหมายเดิมได้ทันที';
-    if (cardName === 'SKY_PIERCING_HALBERD') return 'ทวนกรีดฟ้า (ระยะ 4)\nหากใช้ SLASH เป็นใบสุดท้ายในมือ จะสามารถเลือกเป้าหมายได้สูงสุด 3 คน';
     if (cardName === 'RED_HARE') return 'ม้าเซ็กเธาว์ (ม้าบุก -1)\nลดระยะห่างระหว่างคุณกับเป้าหมายลง 1 (เป้าหมายอยู่ใกล้ขึ้น)';
     if (cardName === 'LIGHTNING_HOOF') return 'ม้าเต็กเลา (ม้าหมอบ +1)\nเพิ่มระยะห่างระหว่างคุณกับศัตรู 1 (ศัตรูโจมตีคุณยากขึ้น)';
-    if (cardName === 'FERGANA_STEED') return 'ม้าเฟอร์กาน่า (ม้าบุก -1)\nลดระยะห่างระหว่างคุณกับเป้าหมายลง 1';
-    if (cardName === 'SHADOWRUNNER') return 'ม้าเงา (ม้าหมอบ +1)\nเพิ่มระยะห่างระหว่างคุณกับศัตรู 1';
     if (cardName === 'RATTAN_ARMOR') return 'เกราะหวาย\nป้องกันการโจมตีปกติทั้งหมด แต่จะได้รับความเสียหายจากไฟแรงขึ้น +1';
     if (cardName === 'SILVER_LION_HELMET') return 'หมวกสิงโตเงิน\nลดความเสียหายทั้งหมดที่มากกว่า 1 ให้เหลือเพียง 1 เสมอ';
     if (cardName === 'LIGHTNING') return 'อัสนีบาต (สายฟ้า)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากได้โพดำ 2-9 จะโดน 3 ดาเมจ ไม่งั้นส่งต่อให้คนถัดไป';
     if (cardName === 'INDULGENCE') return 'สุขสำราญ (เว้นเทิร์น)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่หัวใจ จะถูกข้ามเฟสเล่นการ์ดทันที';
     if (cardName === 'STARVATION') return 'เสบียงขาด (ห้ามจั่ว)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่ดอกจิก จะถูกข้ามเฟสจั่วการ์ดทันที';
-    if (cardName === 'NIO_SHIELD') return 'โล่หนี่หวัง\nป้องกันความเสียหายจากไพ่ Attack สัญลักษณ์สีดำ (สโปดมา/ดอกจิก)';
+    if (cardName === 'NIO_SHIELD') return 'โล่หนี่หวัง\nป้องกันความเสียหายจากไพ่ Attack สัญลักษณ์สีดำ (♠/♣)';
     if (cardName === 'EIGHT_TRIGRAMS_FORMATION') return 'ประยุทธ์แปดทิศ\n(ยังไม่เปิดใช้งานสกิลพิเศษ)';
     return cardName;
   }
@@ -142,8 +132,8 @@
   let countdownInterval = null;
   let wtkHeroes = [];
   let selectedDiscardIds = [];
+  let recentlyDamaged = new Set();
   let currentLobbyAction = null;
-  let borrowedSwordTargetB = null;
 
   // --- DOM ELEMENTS ---
   const $ = (id) => document.getElementById(id);
@@ -184,7 +174,6 @@
   const btnLiuBeiSkill = $('btn-liu-bei-skill');
   const btnDiaoChanSkill = $('btn-diao-chan-skill');
   const btnZhouYuSkill = $('btn-zhou-yu-skill');
-  const btnSerpentSpear = $('btn-serpent-spear');
   const btnEndTurn = $('btn-end-turn');
   const targetHint = $('target-hint');
   const targetHintText = $('target-hint-text');
@@ -198,8 +187,7 @@
 
   // Reaction
   const pendingOverlay = $('pending-overlay');
-  const pendingTitle = $('pending-title');
-  const pendingAttackerName = $('pending-subtitle');
+  const pendingAttackerName = $('pending-attacker-name');
   const countdownBarFill = $('countdown-bar-fill');
   const countdownSeconds = $('countdown-seconds');
   const btnDodge = $('btn-dodge');
@@ -245,15 +233,10 @@
     'STEAL': { name: 'ขโมย (Steal)', desc: 'ขโมยการ์ด 1 ใบจากผู้เล่นในระยะ 1 (บนมือหรือในช่องสวมใส่)', icon: '🖐️', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014363066ed17eed2877.jpg' },
     'SABOTAGE': { name: 'ทำลาย (Sabotage)', desc: 'เลือกทิ้งการ์ด 1 ใบของเป้าหมาย (บนมือหรือในช่องสวมใส่)', icon: '🔥', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014290866ed1634c9083.jpg' },
     'EX_NIHILO': { name: 'ไร้กลางมี (Ex Nihilo)', desc: 'จั่วการ์ด 2 ใบจากกอง', icon: '✨', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014343666ed177cc16a3.jpg' },
-    'FIRE_ATTACK': { name: 'โจมตีด้วยไฟ (Fire Attack)', desc: 'เป้าหมายโชว์ไพ่ 1 ใบ หากคุณทิ้งไพ่ดอกเดียวกัน เป้าหมายจะโดน 1 ดาเมจไฟ', icon: '🔥', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014290866ed1634c9083.jpg' },
-    'NEGATE': { name: 'ไร้ข้อกังขา (Negate)', desc: 'ยกเลิกผลของการ์ดเวทมนตร์หรือดีเลย์ที่เพิ่งถูกใช้', icon: '⛔', theme: 'card-dodge', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/1919280966ec0abe1427b.jpg' },
-    'YIN_YANG_SWORDS': { name: 'กระบี่คู่หยินหยาง', desc: 'อาวุธระยะ 2: ถ้าเป้าหมายเพศตรงข้ามใช้การ์ดหลบ จะสามารถบังคับให้ทิ้งไพ่ 1 ใบ หรือเราจั่วการ์ด 1 ใบ', icon: '⚔️', theme: 'card-equip', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/1919280966ec0abe1427b.jpg' },
     'DUEL': { name: 'ประลอง (Duel)', desc: 'ผลัดกันออก SLASH ผู้ที่ไม่มี SLASH จะโดน 1 ดาเมจ', icon: '🤺', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014345866ed1792871c0.jpg' },
     'BARBARIAN_INVASION': { name: 'วันฟ้าทลายศัตรู', desc: 'ทุกคนต้องออก SLASH 1 ใบ ไม่เช่นนั้นเสีย 1 HP', icon: '🐘', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014305266ed169cc2b59.jpg' },
     'ARROW_BARRAGE': { name: 'ฝนธนู (Archery)', desc: 'ทุกคนต้องออก DODGE 1 ใบ ไม่เช่นนั้นเสีย 1 HP', icon: '🏹', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014340966ed1761909c6.jpg' },
     'PEACH_GARDEN': { name: 'สวนท้อสาบาน', desc: 'ฟื้นฟู 1 HP ให้ทุกคนที่บาดเจ็บ', icon: '🌸', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014165366ed1355169ef.jpg' },
-    'BUMPER_HARVEST': { name: 'เสบียงอุดมสมบูรณ์', desc: 'จั่วการ์ดเข้ากองกลางเท่ากับจำนวนผู้เล่น และสลับกันเลือกคนละใบ', icon: '🌾', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014302766ed1683b32cf.jpg' },
-    'BORROWED_SWORD': { name: 'ยืมดาบฆ่าคน', desc: 'สั่งให้เป้าหมายที่มีอาวุธโจมตีอีกคนหนึ่ง หากไม่ทำ จะยึดอาวุธนั้นมา', icon: '🗡️', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/1919280966ec0abe1427b.jpg' },
     'LIGHTNING': { name: 'สายฟ้า (Lightning)', desc: 'ตัดสินชะตา: โพดำ 2-9 รับ 3 ดาเมจ', icon: '⚡', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014180066ed13985ce62.jpg' },
     'INDULGENCE': { name: 'สุขไม่คิดกลับ', desc: 'ข้ามเฟส Play ถ้าเปิดไม่ได้ โพแดง', icon: '🍷', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014302766ed1683b32cf.jpg' },
     'STARVATION': { name: 'เสบียงขาด', desc: 'ข้ามเฟส Draw ถ้าเปิดไม่ได้ ดอกจิก', icon: '🍚', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014441566ed19bfae6cc.jpg' },
@@ -264,20 +247,7 @@
     'NIO_SHIELD': { name: 'โล่หนี่หวัง', desc: 'ป้องกัน Attack สัญลักษณ์สีดำ', icon: '🛡️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013365666ed09f899277.jpg' },
     'EIGHT_TRIGRAMS_FORMATION': { name: 'ประยุทธ์แปดทิศ', desc: 'ชุดเกราะพิเศษ', icon: '☯️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014300366ed166b24f71.jpg' },
     'SILVER_LION_HELMET': { name: 'หมวกสิงโตเงิน', desc: 'ลดดาเมจเหลือ 1 เสมอ', icon: '🦁', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014405366ed18f572589.jpg' },
-    'WOODEN_CART': { name: 'ม้าไม้จ๊กก๊ก', desc: 'สมบัติ: เพิ่มขีดจำกัดการ์ดบนมือ +1 ใบ', icon: '🛒', theme: 'card-equip', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/1919280966ec0abe1427b.jpg' },
     'RATTAN_ARMOR': { name: 'เกราะหวาย', desc: 'กัน Attack ปกติ แต่รับดาเมจไฟ +1', icon: '🥋', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014435266ed19a85192a.jpg' },
-    'THUNDER_ATTACK': { name: 'สายฟ้าโจมตี (Thunder Attack)', desc: 'โจมตีด้วยดาเมจสายฟ้า — ทะลุ Rattan Armor และชาร์จสายโซ่', icon: '⚡', theme: 'card-slash', pic: '/images/thunder_attack_1784222213955.png' },
-    'SIX_SWORDS_WU': { name: 'ดาบหกเหล่าอู๋ (Six Swords of Wu)', desc: 'อาวุธระยะ 2', icon: '⚔️', theme: 'card-weapon', pic: '/images/six_swords_wu_1784222224266.png' },
-    'FERGANA_STEED': { name: 'ม้าเฟอร์กาน่า (Fergana Steed)', desc: 'ม้าบุก (-1): ลดระยะห่างการโจมตีลง 1', icon: '🐎', theme: 'card-weapon', pic: '/images/fergana_steed_1784222233635.png' },
-    'SHADOWRUNNER': { name: 'ม้าเงา (Shadowrunner)', desc: 'ม้าหมอบ (+1): เพิ่มระยะป้องกันขึ้น 1', icon: '🌑', theme: 'card-weapon', pic: '/images/shadowrunner_1784222242069.png' },
-    'KIRIN_BOW': { name: 'ธนูกิเลน (Kirin Bow)', desc: 'อาวุธระยะ 5: เมื่อโจมตีติด ทำลายม้าของเป้าหมาย', icon: '🏹', theme: 'card-weapon', pic: '/images/kirin_bow_1784222252208.png' },
-    'FEATHERED_FAN': { name: 'พัดขนนก (Feathered Fan)', desc: 'อาวุธระยะ 4: SLASH ทำดาเมจไฟ (FIRE)', icon: '🪶', theme: 'card-weapon', pic: '/images/feathered_fan_1784222261362.png' },
-    'SERPENT_SPEAR': { name: 'หอกงู (Serpent Spear)', desc: 'อาวุธระยะ 3: ทิ้ง 2 ใบแทน SLASH โจมตีเป้าหมายได้', icon: '🐍', theme: 'card-weapon', pic: '/images/serpent_spear_1784222271433.png' },
-    'FROST_SWORD': { name: 'ดาบน้ำแข็ง (Frost Sword)', desc: 'อาวุธระยะ 2: เมื่อโจมตีสำเร็จ สามารถเลือกไม่ทำดาเมจ แต่ให้เป้าหมายทิ้ง 2 ใบแทน', icon: '❄️', theme: 'card-weapon', pic: '/images/frost_sword_1784222281450.png' },
-    'TWO_BLADED_TRIDENT': { name: 'ง้าวสองง่าม (Two-bladed Trident)', desc: 'อาวุธระยะ 3: เมื่อถูกหลบ สามารถทิ้งการ์ดในมือ 1 ใบเพื่อบังคับให้โจมตีต่อ', icon: '🔱', theme: 'card-weapon', pic: '/images/two_bladed_trident_1784222291680.png' },
-    'ROCK_CLEAVING_AXE': { name: 'ขวานผ่าหิน (Rock Cleaving Axe)', desc: 'อาวุธระยะ 3: เมื่อถูกหลบ สามารถทิ้ง 2 ใบ (มือ/อุปกรณ์) เพื่อบังคับให้โจมตีต่อ', icon: '🪓', theme: 'card-weapon', pic: '/images/rock_cleaving_axe_1784222301417.png' },
-    'GREEN_DRAGON_BLADE': { name: 'ง้าวมังกรเขียว (Green Dragon Blade)', desc: 'อาวุธระยะ 3: เมื่อถูกหลบ สามารถออก SLASH ใส่เป้าหมายเดิมได้เรื่อยๆ', icon: '🐉', theme: 'card-weapon', pic: '/images/green_dragon_blade_1784222310697.png' },
-    'SKY_PIERCING_HALBERD': { name: 'ทวนกรีดฟ้า (Sky Piercing Halberd)', desc: 'อาวุธระยะ 4: หากใช้ SLASH เป็นใบสุดท้ายในมือ จะเลือกเป้าหมายได้ 3 คน', icon: '⚔️', theme: 'card-weapon', pic: '/images/sky_piercing_halberd_1784222320198.png' },
   };
 
   const CHAR_ICONS = {
@@ -560,7 +530,8 @@
     socket.on('damage_log', (data) => {
       const { targetId, attackerId, damage, cardName, hp, maxHp } = data;
       if (!gameState || !gameState.players) return;
-      
+      recentlyDamaged.add(targetId);
+      setTimeout(() => recentlyDamaged.delete(targetId), 800);
       const targetName = gameState.players[targetId] ? gameState.players[targetId].name : targetId;
       let msg = `💥 ${targetName} เสียพลังชีวิต ${damage} หน่วย`;
       
@@ -839,7 +810,7 @@
       if (awaitingTarget && !isDead && selectedCard) {
         const isGuanYuSlash = hasCharacter(me.character, 'GUAN_YU') && (selectedCard.suit === 'HEART' || selectedCard.suit === 'DIAMOND');
         const isZhaoYunSlash = hasCharacter(me.character, 'ZHAO_YUN') && selectedCard.name === 'DODGE';
-        const isEffectiveSlash = selectedCard.name === 'SLASH' || selectedCard.name === 'THUNDER_ATTACK' || isGuanYuSlash || isZhaoYunSlash;
+        const isEffectiveSlash = selectedCard.name === 'SLASH' || isGuanYuSlash || isZhaoYunSlash;
 
         if (isEffectiveSlash) {
           const wRange = (me.equipment && me.equipment.weapon) ? me.equipment.weapon.range : 1;
@@ -883,7 +854,6 @@
         if (p.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ (+1)</span>`;
         if (p.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก (-1)</span>`;
         if (p.equipment.armor) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.armor.name)}"><span class="tag-icon">🛡️</span>${p.equipment.armor.name}</span>`;
-        if (p.equipment.treasure) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.treasure.name)}"><span class="tag-icon">💎</span>${p.equipment.treasure.name}</span>`;
       }
       if (p.delayedKitZone && p.delayedKitZone.length > 0) {
         p.delayedKitZone.forEach(c => {
@@ -990,7 +960,6 @@
       if (me.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ</span>`;
       if (me.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก</span>`;
       if (me.equipment.armor) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.armor.name)}"><span class="tag-icon">🛡️</span>${me.equipment.armor.name}</span>`;
-      if (me.equipment.treasure) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.treasure.name)}"><span class="tag-icon">💎</span>${me.equipment.treasure.name}</span>`;
     }
     if (me.delayedKitZone && me.delayedKitZone.length > 0) {
       me.delayedKitZone.forEach(c => {
@@ -1122,11 +1091,7 @@
 
     if (isDiscardPhase()) {
       discardInstruction.classList.remove('hidden');
-      let maxHand = me.hp;
-      if (me.equipment && me.equipment.treasure && me.equipment.treasure.name === 'WOODEN_CART') {
-        maxHand += 1;
-      }
-      const needed = me.hand.length - maxHand;
+      const needed = me.hand.length - me.hp;
       const count = needed - selectedDiscardIds.length;
       discardNeededCount.textContent = count > 0 ? count : 0;
     } else {
@@ -1146,14 +1111,9 @@
       btnLiuBeiSkill.classList.add('hidden');
       btnDiaoChanSkill.classList.add('hidden');
       btnZhouYuSkill.classList.add('hidden');
-      if (btnSerpentSpear) btnSerpentSpear.classList.add('hidden');
 
       const me = gameState.players[myPlayerId];
-      let maxHand = me.hp;
-      if (me.equipment && me.equipment.treasure && me.equipment.treasure.name === 'WOODEN_CART') {
-        maxHand += 1;
-      }
-      const needed = me.hand.length - maxHand;
+      const needed = me.hand.length - me.hp;
       btnDiscardConfirm.disabled = selectedDiscardIds.length !== needed;
     } else {
       btnPlayCard.classList.remove('hidden');
@@ -1198,16 +1158,6 @@
         btnZhouYuSkill.disabled = selectedDiscardIds.length !== 1;
       } else {
         btnZhouYuSkill.classList.add('hidden');
-      }
-
-      // Show Serpent Spear button when player has it equipped (during their PLAY turn)
-      if (me && me.equipment && me.equipment.weapon && me.equipment.weapon.name === 'SERPENT_SPEAR' && isTurn && phase === 'PLAY') {
-        if (btnSerpentSpear) {
-          btnSerpentSpear.classList.remove('hidden');
-          btnSerpentSpear.disabled = selectedDiscardIds.length !== 2;
-        }
-      } else {
-        if (btnSerpentSpear) btnSerpentSpear.classList.add('hidden');
       }
     }
 
@@ -1288,7 +1238,6 @@
     selectedDiscardIds = [];
     awaitingTarget = false;
     currentLobbyAction = null;
-    borrowedSwordTargetB = null;
     targetHint.classList.add('hidden');
     renderHand();
     renderOpponents();
@@ -1332,55 +1281,11 @@
       return;
     }
 
-    if (currentLobbyAction === 'SERPENT_SPEAR_SKILL') {
-      if (selectedDiscardIds.length !== 2) return;
-      socket.emit('use_serpent_spear', {
-        roomId: myRoomId,
-        targetPlayerId: targetPlayerId,
-        cardIds: selectedDiscardIds
-      });
-      clearSelection();
-      selectedDiscardIds = [];
-      return;
-    }
-
-
     const cardIdToPlay = selectedCardId || (selectedDiscardIds.length === 1 ? selectedDiscardIds[0] : null);
     if (!cardIdToPlay || !awaitingTarget) return;
 
     const me = gameState.players[myPlayerId];
     const card = me.hand.find(c => c.id === cardIdToPlay);
-    
-    if (card && card.name === 'BORROWED_SWORD') {
-       if (!borrowedSwordTargetB) {
-          const tB = gameState.players[targetPlayerId];
-          if (!tB || !tB.equipment || !tB.equipment.weapon) {
-             showToast('เป้าหมายต้องมีอาวุธสวมใส่อยู่!', true);
-             return;
-          }
-          borrowedSwordTargetB = targetPlayerId;
-          targetHintText.textContent = `เลือกเป้าหมายที่ ${tB.name} จะต้องโจมตี`;
-          return;
-       } else {
-          const tB = gameState.players[borrowedSwordTargetB];
-          const weaponRange = tB.equipment && tB.equipment.weapon ? tB.equipment.weapon.range : 1;
-          const distFromBtoC = calculateDistance(gameState, borrowedSwordTargetB, targetPlayerId);
-          if (distFromBtoC > weaponRange || borrowedSwordTargetB === targetPlayerId) {
-             showToast('เป้าหมายไม่อยู่ในระยะอาวุธของผู้ถูกยืมดาบ!', true);
-             return;
-          }
-          
-          drawTargetLine(borrowedSwordTargetB, targetPlayerId, true);
-          socket.emit('use_card', {
-            roomId: myRoomId,
-            cardId: cardIdToPlay,
-            targetPlayerId: borrowedSwordTargetB,
-            secondaryTargetId: targetPlayerId
-          });
-          clearSelection();
-          return;
-       }
-    }
     
     let playAs = null;
     if (hasCharacter(me.character, 'GUAN_YU') && (card.suit === 'HEART' || card.suit === 'DIAMOND')) {
@@ -1520,27 +1425,6 @@
           });
           stealChoiceOptions.appendChild(btnArmor);
         }
-        // treasure option
-        const hasTreasure = !!targetPlayer.equipment.treasure;
-        if (hasTreasure) {
-          const btnTreasure = document.createElement('button');
-          btnTreasure.className = 'btn-play';
-          btnTreasure.style.width = '100%';
-          btnTreasure.style.background = 'var(--accent-gold)';
-          btnTreasure.style.color = '#000';
-          btnTreasure.textContent = `💎 สมบัติ [${targetPlayer.equipment.treasure.name}]`;
-          btnTreasure.addEventListener('click', () => {
-            socket.emit('use_card', {
-              roomId: myRoomId,
-              cardId: cardIdToPlay,
-              targetPlayerId: targetPlayerId,
-              targetZone: 'TREASURE'
-            });
-            stealChoiceOverlay.classList.add('hidden');
-            clearSelection();
-          });
-          stealChoiceOptions.appendChild(btnTreasure);
-        }
         // Cancel option
         const btnCancel = document.createElement('button');
         btnCancel.className = 'btn-take-damage';
@@ -1582,10 +1466,10 @@
     const isZhaoYunSlash = hasCharacter(me.character, 'ZHAO_YUN') && card.name === 'DODGE';
     const isEffectiveSlash = card.name === 'SLASH' || isGuanYuSlash || isZhaoYunSlash;
 
-    if (isEffectiveSlash || card.name === 'THUNDER_ATTACK' || card.name === 'STEAL' || card.name === 'SABOTAGE' || card.name === 'DUEL' || card.name === 'INDULGENCE' || card.name === 'STARVATION') {
+    if (isEffectiveSlash || card.name === 'STEAL' || card.name === 'SABOTAGE' || card.name === 'DUEL' || card.name === 'INDULGENCE' || card.name === 'STARVATION') {
       awaitingTarget = true;
       let text = '🎯 เลือกเป้าหมาย';
-      if (isEffectiveSlash || card.name === 'THUNDER_ATTACK') text = '🎯 เลือกเป้าหมายที่ต้องการโจมตีจากผู้เล่นด้านบน';
+      if (isEffectiveSlash) text = '🎯 เลือกเป้าหมายที่ต้องการโจมตีจากผู้เล่นด้านบน';
       else if (card.name === 'STEAL') text = '🎯 เลือกเป้าหมายที่ต้องการขโมยการ์ดจากผู้เล่นด้านบน (ระยะ 1)';
       else if (card.name === 'SABOTAGE') text = '🎯 เลือกเป้าหมายที่ต้องการทำลายการ์ด';
       else if (card.name === 'DUEL') text = '🎯 เลือกเป้าหมายที่ต้องการ DUEL (ประลองกำลัง)';
@@ -1689,85 +1573,38 @@
     updateActionButtons();
   });
 
-  // Serpent Spear skill event
-  if (btnSerpentSpear) {
-    btnSerpentSpear.addEventListener('click', () => {
-      if (selectedDiscardIds.length !== 2) {
-        showToast('กรุณาเลือกการ์ด 2 ใบก่อนใช้หอกงู!', 'error');
-        return;
-      }
-      awaitingTarget = true;
-      targetHint.classList.remove('hidden');
-      targetHintText.textContent = '🐍 เลือกเป้าหมายที่ต้องการโจมตีด้วยหอกงู';
-      currentLobbyAction = 'SERPENT_SPEAR_SKILL';
-      renderOpponents();
-      updateActionButtons();
-    });
-  }
-
   // --- REACTION / DODGE OVERLAYS ---
 
   function renderPendingAction() {
     const pending = gameState.pendingAction;
     
     // 1. Dodge / Reaction overlay
-    const isWeaponSkillPending = pending && (
-      ['WAITING_FOR_GREEN_DRAGON', 'WAITING_FOR_AXE_DISCARD', 'WAITING_FOR_TRIDENT_DISCARD', 'WAITING_FOR_FROST_DISCARD'].includes(pending.type) && 
-      pending.sourcePlayerId === myPlayerId
-    );
-    
-    const isFireSkillPending = pending && (
-      (pending.type === 'WAITING_FOR_FIRE_REVEAL' && pending.targetPlayerId === myPlayerId) ||
-      (pending.type === 'WAITING_FOR_FIRE_MATCH' && pending.sourcePlayerId === myPlayerId)
-    );
-    
     const isReactionPending = pending && (
-      ((pending.type === 'WAITING_FOR_DODGE' || pending.type === 'DIAO_CHAN_SEDUCTION' || pending.type === 'ZHOU_YU_DISCORD' || pending.type === 'WAITING_FOR_YINYANG_CHOICE') && pending.targetPlayerId === myPlayerId) ||
+      ((pending.type === 'WAITING_FOR_DODGE' || pending.type === 'DIAO_CHAN_SEDUCTION' || pending.type === 'ZHOU_YU_DISCORD') && pending.targetPlayerId === myPlayerId) ||
       (pending.type === 'WAITING_FOR_SLASH_DUEL' && pending.currentPlayerToSlash === myPlayerId) ||
-      (pending.type === 'WAITING_FOR_AOE' && pending.targets && pending.targets[pending.currentTargetIndex] === myPlayerId) ||
-      isWeaponSkillPending ||
-      isFireSkillPending ||
-      pending.type === 'WAITING_FOR_NEGATE' ||
-      pending.type === 'WAITING_FOR_BUMPER_PICK' ||
-      (pending.type === 'WAITING_FOR_BORROW_SLASH' && pending.targetPlayerId === myPlayerId)
+      (pending.type === 'WAITING_FOR_AOE' && pending.targets && pending.targets[pending.currentTargetIndex] === myPlayerId)
     );
     
     if (isReactionPending) {
       pendingOverlay.classList.remove('hidden');
       
-      const bumperContainer = document.getElementById('bumper-cards-container');
-      if (bumperContainer) {
-         bumperContainer.classList.add('hidden');
-         bumperContainer.innerHTML = '';
-      }
-      btnDodge.classList.remove('hidden');
-      btnTakeDamage.classList.remove('hidden');
-      
       const attacker = gameState.players[pending.sourcePlayerId];
-      const target = pending.targetPlayerId ? gameState.players[pending.targetPlayerId] : null;
-
-      if (pendingTitle) pendingTitle.textContent = 'คุณถูกโจมตี!'; // Default title
-
       if (pending.type === 'DIAO_CHAN_SEDUCTION') {
-        if (pendingTitle) pendingTitle.textContent = 'โดนบ่วงเสน่หา!';
         pendingAttackerName.textContent = `บ่วงเสน่หา (🌸 สกิลของ ${attacker ? attacker.name : 'เตียวเสี้ยน'})`;
         btnDodge.textContent = '🗡️ ทิ้งการ์ด SLASH เพื่อสยบเสน่หา';
         btnTakeDamage.textContent = '💔 ยอมรับความเสียหาย (1 HP)';
       } else if (pending.type === 'ZHOU_YU_DISCORD') {
-        if (pendingTitle) pendingTitle.textContent = 'โดนบ่มเพลิง!';
         const colorName = pending.requiredColor === 'RED' ? 'แดง (❤️/♦️)' : 'ดำ (♠️/♣️)';
         pendingAttackerName.textContent = `บ่มเพลิง (🔥 สกิลของ ${attacker ? attacker.name : 'จิวยี่'})`;
         btnDodge.textContent = `🃏 ทิ้งการ์ดสี ${colorName} 1 ใบ`;
         btnTakeDamage.textContent = '💔 ยอมรับความเสียหาย (1 HP)';
       } else if (pending.type === 'WAITING_FOR_SLASH_DUEL') {
-        if (pendingTitle) pendingTitle.textContent = 'ประลอง (DUEL)!';
         const opponentId = myPlayerId === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
         const opponent = gameState.players[opponentId];
         pendingAttackerName.textContent = `กำลังดวล (DUEL) กับ ${opponent ? opponent.name : 'ศัตรู'}`;
         btnDodge.textContent = 'สู้กลับด้วย SLASH 1 ใบ';
         btnTakeDamage.textContent = 'ยอมแพ้และรับความเสียหาย (1 HP)';
       } else if (pending.type === 'WAITING_FOR_AOE') {
-        if (pendingTitle) pendingTitle.textContent = 'ภัยหมู่มาเยือน!';
         const aoeName = pending.aoeType === 'BARBARIAN_INVASION' ? 'คนเถื่อนบุกรุก' : 'ธนูหมื่นดอก';
         pendingAttackerName.textContent = `รับมือการโจมตีหมู่: ${aoeName} (จาก ${attacker ? attacker.name : 'ศัตรู'})`;
         if (pending.aoeType === 'BARBARIAN_INVASION') {
@@ -1776,103 +1613,8 @@
           btnDodge.textContent = 'หลบด้วย DODGE 1 ใบ';
         }
         btnTakeDamage.textContent = 'ยอมรับความเสียหาย (1 HP)';
-      } else if (pending.type === 'WAITING_FOR_GREEN_DRAGON') {
-        if (pendingTitle) pendingTitle.textContent = 'ฟันต่อเนื่อง!';
-        pendingAttackerName.textContent = `ง้าวมังกรเขียว (ฟันต่อเนื่องใส่ ${target ? target.name : 'เป้าหมาย'})`;
-        btnDodge.textContent = '🗡️ ใช้ SLASH ฟันซ้ำ';
-        btnTakeDamage.textContent = '❌ ยกเลิก / ปล่อยผ่าน';
-      } else if (pending.type === 'WAITING_FOR_AXE_DISCARD') {
-        if (pendingTitle) pendingTitle.textContent = 'ขวานผ่าหิน!';
-        pendingAttackerName.textContent = `ขวานผ่าหิน (บังคับให้ ${target ? target.name : 'เป้าหมาย'} โดนดาเมจ)`;
-        btnDodge.textContent = '🪓 ทิ้งการ์ด 2 ใบ เพื่อบังคับดาเมจ';
-        btnTakeDamage.textContent = '❌ ยกเลิก / ปล่อยผ่าน';
-      } else if (pending.type === 'WAITING_FOR_TRIDENT_DISCARD') {
-        if (pendingTitle) pendingTitle.textContent = 'ง้าวสองง่าม!';
-        pendingAttackerName.textContent = `ง้าวสองง่าม (บังคับให้ ${target ? target.name : 'เป้าหมาย'} โดนดาเมจ)`;
-        btnDodge.textContent = '🔱 ทิ้งการ์ดมือ 1 ใบ เพื่อบังคับดาเมจ';
-        btnTakeDamage.textContent = '❌ ยกเลิก / ปล่อยผ่าน';
-      } else if (pending.type === 'WAITING_FOR_FROST_DISCARD') {
-        if (pendingTitle) pendingTitle.textContent = 'ดาบน้ำแข็ง!';
-        pendingAttackerName.textContent = `ดาบน้ำแข็ง (โจมตีสำเร็จใส่ ${target ? target.name : 'เป้าหมาย'})`;
-        btnDodge.textContent = '❄️ เลือกให้เป้าหมายทิ้ง 2 ใบ (แทนดาเมจ)';
-        btnTakeDamage.textContent = '💔 ทำดาเมจตามปกติ';
-      } else if (pending.type === 'WAITING_FOR_FIRE_REVEAL') {
-        if (pendingTitle) pendingTitle.textContent = 'โดนโจมตีด้วยไฟ!';
-        pendingAttackerName.textContent = `โจมตีด้วยไฟ (🔥 จาก ${attacker ? attacker.name : 'ศัตรู'})`;
-        btnDodge.textContent = '👀 โชว์การ์ดที่คลิกเลือกไว้บนมือ';
-        btnTakeDamage.textContent = '🎲 สุ่มโชว์การ์ด 1 ใบ';
-      } else if (pending.type === 'WAITING_FOR_FIRE_MATCH') {
-        if (pendingTitle) pendingTitle.textContent = 'จุดไฟเผา!';
-        const suitSymbol = pending.requiredSuit === 'HEART' ? '❤️' : pending.requiredSuit === 'DIAMOND' ? '♦️' : pending.requiredSuit === 'SPADE' ? '♠️' : '♣️';
-        pendingAttackerName.textContent = `โจมตีด้วยไฟ (${target ? target.name : 'เป้าหมาย'} โชว์ไพ่ดอก ${suitSymbol})`;
-        btnDodge.textContent = `🔥 ยืนยันใช้ไพ่ที่คลิกเลือกไว้ทำดาเมจ`;
-        btnTakeDamage.textContent = '❌ ยกเลิก (ไม่ทำดาเมจ)';
-      } else if (pending.type === 'WAITING_FOR_YINYANG_CHOICE') {
-        if (pendingTitle) pendingTitle.textContent = 'กระบี่คู่หยินหยาง!';
-        pendingAttackerName.textContent = `กระบี่คู่หยินหยาง (หลบสำเร็จ)`;
-        btnDodge.textContent = '🗡️ ทิ้งไพ่ 1 ใบที่คลิกเลือกไว้บนมือ';
-        btnTakeDamage.textContent = `🎁 ให้ ${attacker ? attacker.name : 'ศัตรู'} จั่วการ์ด 1 ใบ`;
-      } else if (pending.type === 'WAITING_FOR_NEGATE') {
-        if (pendingTitle) pendingTitle.textContent = 'โอกาสขัดขวาง!';
-        let actionDesc = 'ใช้ไพ่ไร้ข้อกังขา';
-        if (pending.cardUsedName) {
-            const cardData = CARD_DICT[pending.cardUsedName];
-            const cName = cardData ? cardData.name : pending.cardUsedName;
-            actionDesc = `เพื่อยกเลิกไพ่ <strong>${cName}</strong>`;
-        }
-        pendingAttackerName.innerHTML = `รอการใช้ ไร้ข้อกังขา (NEGATE)<br>${actionDesc}`;
-        btnDodge.textContent = `⛔ ขัดขวางด้วย NEGATE`;
-        btnTakeDamage.textContent = `⏭️ ปล่อยผ่าน`;
-      } else if (pending.type === 'WAITING_FOR_BUMPER_PICK') {
-        if (pendingTitle) pendingTitle.textContent = 'เลือกการ์ด!';
-        const picker = gameState.players[pending.currentPickerId];
-        pendingAttackerName.textContent = `เสบียงอุดมสมบูรณ์: กำลังรอ ${picker ? picker.name : pending.currentPickerId} เลือกไพ่`;
-        btnDodge.classList.add('hidden');
-        btnTakeDamage.classList.add('hidden');
-        
-        const bumperContainer = document.getElementById('bumper-cards-container');
-        if (bumperContainer) {
-          bumperContainer.classList.remove('hidden');
-          bumperContainer.innerHTML = '';
-          if (gameState.bumperHarvestCards) {
-            gameState.bumperHarvestCards.forEach(card => {
-              const cardData = CARD_DICT[card.name];
-              const cardEl = document.createElement('div');
-              cardEl.className = `card ${cardData ? cardData.theme : 'card-peach'}`;
-              cardEl.style.width = '80px';
-              cardEl.style.height = '112px';
-              cardEl.style.cursor = pending.currentPickerId === myPlayerId ? 'pointer' : 'default';
-              cardEl.style.position = 'relative';
-              
-              const suitColor = (card.suit === 'HEART' || card.suit === 'DIAMOND') ? '#ef4444' : '#1f2937';
-              const suitSymbol = card.suit === 'HEART' ? '♥' : card.suit === 'DIAMOND' ? '♦' : card.suit === 'SPADE' ? '♠' : '♣';
-              const rankDisplay = card.rank === 1 ? 'A' : card.rank === 11 ? 'J' : card.rank === 12 ? 'Q' : card.rank === 13 ? 'K' : card.rank;
-              
-              cardEl.innerHTML = `
-                <div class="card-value" style="color: ${suitColor}; top: 4px; left: 4px; font-size: 14px;">${rankDisplay}${suitSymbol}</div>
-                <div class="card-icon" style="font-size: 24px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">${cardData ? cardData.icon : '🃏'}</div>
-              `;
-              
-              if (pending.currentPickerId === myPlayerId) {
-                cardEl.onclick = () => {
-                  socket.emit('pick_bumper_card', { roomId: myRoomId, cardId: card.id });
-                  pendingOverlay.classList.add('hidden');
-                };
-              }
-              bumperContainer.appendChild(cardEl);
-            });
-          }
-        }
-      } else if (pending.type === 'WAITING_FOR_BORROW_SLASH') {
-        if (pendingTitle) pendingTitle.textContent = 'ยืมดาบฆ่าคน!';
-        const victim = gameState.players[pending.victimId];
-        pendingAttackerName.textContent = `ยืมดาบฆ่าคน: ${attacker ? attacker.name : 'ศัตรู'} สั่งให้คุณใช้ SLASH โจมตี ${victim ? victim.name : 'เป้าหมาย'}!`;
-        btnDodge.textContent = `🗡️ ใช้การ์ด SLASH (โจมตี ${victim ? victim.name : ''})`;
-        btnTakeDamage.textContent = `❌ ยอมโดนริบอาวุธ`;
       } else {
-        if (pendingTitle) pendingTitle.textContent = 'คุณถูกโจมตี!';
-        const attackerName = attacker ? attacker.name : pending.sourcePlayerId;
-        pendingAttackerName.innerHTML = `<strong>${attackerName}</strong> ใช้การ์ดโจมตีคุณ!<br>เลือกป้องกันหรือรับความเสียหาย`;
+        pendingAttackerName.textContent = attacker ? attacker.name : pending.sourcePlayerId;
         const dodgeText = (pending.dodgeNeeded && pending.dodgeNeeded > 1) ? `ทิ้งการ์ด DODGE (${pending.dodgeNeeded} ใบ)` : 'ทิ้งการ์ด DODGE เพื่อหลบ';
         btnDodge.textContent = `🛡️ ${dodgeText}`;
         btnTakeDamage.textContent = '💔 ยอมรับความเสียหาย';
@@ -1951,110 +1693,6 @@
     const pending = gameState.pendingAction;
     if (!pending) return;
 
-    // --- WEAPON SKILLS (Attacker responding) ---
-    if (['WAITING_FOR_GREEN_DRAGON', 'WAITING_FOR_AXE_DISCARD', 'WAITING_FOR_TRIDENT_DISCARD', 'WAITING_FOR_FROST_DISCARD'].includes(pending.type) && pending.sourcePlayerId === myPlayerId) {
-      if (pending.type === 'WAITING_FOR_GREEN_DRAGON') {
-        let slashCard = me.hand.find(c => c.name === 'SLASH' || c.name === 'THUNDER_ATTACK');
-        if (!slashCard) {
-          showToast('คุณไม่มีการ์ด SLASH หรือสายฟ้าโจมตี ที่จะใช้ฟันต่อเนื่อง!', 'error');
-          return;
-        }
-        socket.emit('resolve_weapon_skill', { roomId: myRoomId, accept: true, cardIds: [slashCard.id] });
-      } else if (pending.type === 'WAITING_FOR_TRIDENT_DISCARD') {
-        if (me.hand.length < 1) {
-          showToast('คุณไม่มีการ์ดบนมือเพื่อทิ้ง!', 'error');
-          return;
-        }
-        socket.emit('resolve_weapon_skill', { roomId: myRoomId, accept: true, cardIds: [me.hand[0].id] }); // Auto pick first card for simplicity
-      } else if (pending.type === 'WAITING_FOR_AXE_DISCARD') {
-        const totalCards = me.hand.length + (me.equipment ? Object.values(me.equipment).filter(v=>v).length : 0);
-        if (totalCards < 3) { // 3 because the axe itself is 1
-          showToast('การ์ดไม่พอทิ้ง (ต้องการ 2 ใบไม่รวมขวานผ่าหินเอง)!', 'error');
-          return;
-        }
-        // Auto pick 2 cards (prioritize hand, then non-axe equips)
-        let toDiscard = [];
-        for (let i = 0; i < me.hand.length && toDiscard.length < 2; i++) {
-          toDiscard.push(me.hand[i].id);
-        }
-        if (toDiscard.length < 2) {
-           const equips = Object.values(me.equipment).filter(v => v && v.name !== 'ROCK_CLEAVING_AXE');
-           for (let i = 0; i < equips.length && toDiscard.length < 2; i++) {
-             toDiscard.push(equips[i].id);
-           }
-        }
-        socket.emit('resolve_weapon_skill', { roomId: myRoomId, accept: true, cardIds: toDiscard });
-      } else if (pending.type === 'WAITING_FOR_FROST_DISCARD') {
-        socket.emit('resolve_weapon_skill', { roomId: myRoomId, accept: true });
-      }
-      pendingOverlay.classList.add('hidden');
-      return;
-    }
-
-    // --- FIRE ATTACK SKILLS ---
-    if (pending.type === 'WAITING_FOR_NEGATE') {
-      const negateCard = me.hand.find(c => c.name === 'NEGATE');
-      if (!negateCard) {
-        showToast('คุณไม่มีการ์ด ไร้ข้อกังขา (NEGATE)!', 'error');
-        return;
-      }
-      socket.emit('play_negate', { roomId: myRoomId, cardId: negateCard.id });
-      pendingOverlay.classList.add('hidden');
-      return;
-    }
-    
-    if (pending.type === 'WAITING_FOR_FIRE_REVEAL' && pending.targetPlayerId === myPlayerId) {
-      if (!selectedCardId) {
-        showToast('กรุณาคลิกเลือกไพ่บนมือก่อนกดยืนยัน!', 'error');
-        return;
-      }
-      socket.emit('resolve_fire_reveal', { roomId: myRoomId, cardId: selectedCardId });
-      pendingOverlay.classList.add('hidden');
-      return;
-    }
-    
-    if (pending.type === 'WAITING_FOR_FIRE_MATCH' && pending.sourcePlayerId === myPlayerId) {
-      if (!selectedCardId) {
-        showToast('กรุณาคลิกเลือกไพ่บนมือก่อนกดยืนยัน!', 'error');
-        return;
-      }
-      const selectedCard = me.hand.find(c => c.id === selectedCardId);
-      if (selectedCard.suit !== pending.requiredSuit) {
-        showToast(`กรุณาเลือกไพ่ที่เป็นดอก ${pending.requiredSuit} เท่านั้น`, 'error');
-        return;
-      }
-      socket.emit('resolve_fire_match', { roomId: myRoomId, cardId: selectedCardId });
-      pendingOverlay.classList.add('hidden');
-      return;
-    }
-
-    if (pending.type === 'WAITING_FOR_YINYANG_CHOICE' && pending.targetPlayerId === myPlayerId) {
-      if (!selectedCardId) {
-        showToast('กรุณาคลิกเลือกไพ่บนมือก่อนกดยืนยัน!', 'error');
-        return;
-      }
-      socket.emit('resolve_yinyang_choice', { roomId: myRoomId, action: 'DISCARD', cardId: selectedCardId });
-      pendingOverlay.classList.add('hidden');
-      return;
-    }
-
-    if (pending.type === 'WAITING_FOR_BORROW_SLASH' && pending.targetPlayerId === myPlayerId) {
-      let slashCard = me.hand.find(c => c.name === 'SLASH' || c.name === 'THUNDER_ATTACK');
-      if (!slashCard && hasCharacter(me.character, 'ZHAO_YUN')) {
-        slashCard = me.hand.find(c => c.name === 'DODGE');
-      }
-      
-      if (!slashCard) {
-        showToast('คุณไม่มีการ์ด SLASH หรือการ์ดที่สามารถใช้แทน SLASH ได้!', 'error');
-        return;
-      }
-      
-      socket.emit('resolve_borrowed_sword', { roomId: myRoomId, cardId: slashCard.id });
-      pendingOverlay.classList.add('hidden');
-      return;
-    }
-
-    // --- REACTION SKILLS (Target responding) ---
     if (pending.type === 'DIAO_CHAN_SEDUCTION') {
       let slashCard = me.hand.find(c => c.name === 'SLASH');
       if (!slashCard && hasCharacter(me.character, 'ZHAO_YUN')) {
@@ -2122,28 +1760,10 @@
   });
 
   btnTakeDamage.addEventListener('click', () => {
-    const pending = gameState.pendingAction;
-    if (pending && ['WAITING_FOR_GREEN_DRAGON', 'WAITING_FOR_AXE_DISCARD', 'WAITING_FOR_TRIDENT_DISCARD', 'WAITING_FOR_FROST_DISCARD'].includes(pending.type) && pending.sourcePlayerId === myPlayerId) {
-       socket.emit('resolve_weapon_skill', { roomId: myRoomId, accept: false });
-    } else if (pending && pending.type === 'WAITING_FOR_FIRE_MATCH' && pending.sourcePlayerId === myPlayerId) {
-       socket.emit('resolve_fire_match', { roomId: myRoomId, cancel: true });
-    } else if (pending && pending.type === 'WAITING_FOR_FIRE_REVEAL' && pending.targetPlayerId === myPlayerId) {
-       // Randomly reveal if they just press cancel
-       const me = gameState.players[myPlayerId];
-       const rCard = me.hand[Math.floor(Math.random() * me.hand.length)];
-       socket.emit('resolve_fire_reveal', { roomId: myRoomId, cardId: rCard.id });
-    } else if (pending && pending.type === 'WAITING_FOR_YINYANG_CHOICE' && pending.targetPlayerId === myPlayerId) {
-       socket.emit('resolve_yinyang_choice', { roomId: myRoomId, action: 'DRAW' });
-    } else if (pending && pending.type === 'WAITING_FOR_NEGATE') {
-       socket.emit('pass_negate', { roomId: myRoomId });
-    } else if (pending && pending.type === 'WAITING_FOR_BORROW_SLASH' && pending.targetPlayerId === myPlayerId) {
-       socket.emit('resolve_borrowed_sword', { roomId: myRoomId });
-    } else {
-       socket.emit('resolve_pending', {
-         roomId: myRoomId,
-         action: 'TAKE_DAMAGE'
-       });
-    }
+    socket.emit('resolve_pending', {
+      roomId: myRoomId,
+      action: 'TAKE_DAMAGE'
+    });
     pendingOverlay.classList.add('hidden');
   });
 
@@ -2226,7 +1846,7 @@
             ((prev.pendingAction.type === 'WAITING_FOR_DODGE' && prev.pendingAction.targetPlayerId === pId) || 
              (prev.pendingAction.type === 'WAITING_FOR_AOE' && prev.pendingAction.targets && prev.pendingAction.targets[prev.pendingAction.currentTargetIndex] === pId)) &&
             (!next.pendingAction || next.pendingAction.targetPlayerId !== pId || next.pendingAction.type !== prev.pendingAction.type || (next.pendingAction.type === 'WAITING_FOR_AOE' && next.pendingAction.currentTargetIndex !== prev.pendingAction.currentTargetIndex)) &&
-            nextP.hp >= prevP.hp) {
+            nextP.hp >= prevP.hp && !recentlyDamaged.has(pId)) {
           const avatarEl = pId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${pId}`);
           if (avatarEl) {
             const popup = document.createElement('div');
