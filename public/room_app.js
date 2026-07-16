@@ -228,26 +228,45 @@
   const CARD_DICT = {
     'SLASH': { name: 'โจมตี (Slash)', desc: 'โจมตีเป้าหมาย 1 คนในระยะ (หากเป้าหมายไม่มี DODGE จะเสีย 1 HP)', icon: '⚔️', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014284266ed161a63759.jpg' },
     'DODGE': { name: 'หลบ (Dodge)', desc: 'ยกเลิกผลของการโจมตี (SLASH)', icon: '🛡️', theme: 'card-dodge', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014233766ed14e9bebdb.jpg' },
-    'PEACH': { name: 'สวนท้อ (Peach)', desc: 'ฟื้นฟู 1 HP หรือช่วยชีวิตตัวเอง/ผู้อื่น', icon: '🍑', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014270466ed15b8dfbbe.jpg' },
+    'PEACH': { name: 'สวนท้อ (Peach)', desc: 'ฟื้นฟู 1 HP หรือช่วยชีวิตตัวเอง/ผู้อื่น', icon: '🍑', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014400566ed18c590b33.jpg' },
     'WINE': { name: 'สุรา (Wine)', desc: 'เพิ่มดาเมจ SLASH เป็น 2 ดาเมจ หรือใช้ฟื้นฟู 1 HP เมื่อเลือดหมด', icon: '🍶', theme: 'card-wine', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014452766ed1a07699f7.jpg' },
-    'STEAL': { name: 'ขโมย (Steal)', desc: 'ขโมยการ์ด 1 ใบจากผู้เล่นในระยะ 1 (บนมือหรือในช่องสวมใส่)', icon: '🖐️', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014363066ed17eed2877.jpg' },
-    'SABOTAGE': { name: 'ทำลาย (Sabotage)', desc: 'เลือกทิ้งการ์ด 1 ใบของเป้าหมาย (บนมือหรือในช่องสวมใส่)', icon: '🔥', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014290866ed1634c9083.jpg' },
+    'FIRE_ATTACK': { name: 'โจมตีด้วยไฟ (Fire Attack)', desc: 'เป้าหมายโดน 1 ดาเมจไฟ', icon: '🔥', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014394766ed18b3abfd2.jpg' },
+    'THUNDER_ATTACK': { name: 'สายฟ้าโจมตี (Thunder Attack)', desc: 'โจมตีด้วยดาเมจสายฟ้า', icon: '⚡', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014444466ed19dc0749a.jpg' },
+    'BUMPER_HARVEST': { name: 'เสบียงอุดมสมบูรณ์', desc: 'จั่วการ์ดเข้ากองกลางเท่ากับจำนวนผู้เล่น', icon: '🌾', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014241966ed1513d7125.jpg' },
+    'PEACH_GARDEN': { name: 'สวนท้อสาบาน', desc: 'ฟื้นฟู 1 HP ให้ทุกคนที่บาดเจ็บ', icon: '🌸', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014165366ed1355169ef.jpg' },
+    'NEGATE': { name: 'ไร้ข้อกังขา (Negate)', desc: 'ยกเลิกผลของการ์ดเวทมนตร์หรือดีเลย์ที่เพิ่งถูกใช้', icon: '⛔', theme: 'card-dodge', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013323166ed08efecc76.jpg' },
+    'IRON_CHAIN': { name: 'โซ่เหล็ก (Iron Chain)', desc: 'เชื่อมโยงเป้าหมาย', icon: '🔗', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916341066ebe20225755.jpg' },
+    'BARBARIAN_INVASION': { name: 'วันฟ้าทลายศัตรู', desc: 'ทุกคนต้องออก SLASH 1 ใบ ไม่เช่นนั้นเสีย 1 HP', icon: '🐘', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014305266ed169cc2b59.jpg' },
+    'BORROWED_SWORD': { name: 'ยืมดาบฆ่าคน', desc: 'สั่งให้เป้าหมายที่มีอาวุธโจมตีอีกคนหนึ่ง หากไม่ทำ จะยึดอาวุธนั้นมา', icon: '🗡️', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014312966ed16c1789af.jpg' },
+    'ARROW_BARRAGE': { name: 'ฝนธนู (Archery)', desc: 'ทุกคนต้องออก DODGE 1 ใบ ไม่เช่นนั้นเสีย 1 HP', icon: '🏹', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014340966ed1761909c6.jpg' },
     'EX_NIHILO': { name: 'ไร้กลางมี (Ex Nihilo)', desc: 'จั่วการ์ด 2 ใบจากกอง', icon: '✨', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014343666ed177cc16a3.jpg' },
     'DUEL': { name: 'ประลอง (Duel)', desc: 'ผลัดกันออก SLASH ผู้ที่ไม่มี SLASH จะโดน 1 ดาเมจ', icon: '🤺', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014345866ed1792871c0.jpg' },
-    'BARBARIAN_INVASION': { name: 'วันฟ้าทลายศัตรู', desc: 'ทุกคนต้องออก SLASH 1 ใบ ไม่เช่นนั้นเสีย 1 HP', icon: '🐘', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014305266ed169cc2b59.jpg' },
-    'ARROW_BARRAGE': { name: 'ฝนธนู (Archery)', desc: 'ทุกคนต้องออก DODGE 1 ใบ ไม่เช่นนั้นเสีย 1 HP', icon: '🏹', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014340966ed1761909c6.jpg' },
-    'PEACH_GARDEN': { name: 'สวนท้อสาบาน', desc: 'ฟื้นฟู 1 HP ให้ทุกคนที่บาดเจ็บ', icon: '🌸', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014165366ed1355169ef.jpg' },
+    'STEAL': { name: 'ขโมย (Steal)', desc: 'ขโมยการ์ด 1 ใบจากผู้เล่นในระยะ 1', icon: '🖐️', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014363066ed17eed2877.jpg' },
+    'SABOTAGE': { name: 'ทำลาย (Sabotage)', desc: 'เลือกทิ้งการ์ด 1 ใบของเป้าหมาย', icon: '🔥', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014290866ed1634c9083.jpg' },
     'LIGHTNING': { name: 'สายฟ้า (Lightning)', desc: 'ตัดสินชะตา: โพดำ 2-9 รับ 3 ดาเมจ', icon: '⚡', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014180066ed13985ce62.jpg' },
     'INDULGENCE': { name: 'สุขไม่คิดกลับ', desc: 'ข้ามเฟส Play ถ้าเปิดไม่ได้ โพแดง', icon: '🍷', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014302766ed1683b32cf.jpg' },
     'STARVATION': { name: 'เสบียงขาด', desc: 'ข้ามเฟส Draw ถ้าเปิดไม่ได้ ดอกจิก', icon: '🍚', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014441566ed19bfae6cc.jpg' },
+    'FROST_SWORD': { name: 'ดาบน้ำแข็ง (Frost Sword)', desc: 'ระยะโจมตี 2', icon: '❄️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013400466ed0ab4a08ad.jpg' },
+    'SIX_SWORDS_WU': { name: 'ดาบหกเหล่าอู๋ (Six Swords of Wu)', desc: 'ระยะโจมตี 2', icon: '⚔️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916341566ebe207e0b9b.jpg' },
+    'TWO_BLADED_TRIDENT': { name: 'ง้าวสองง่าม (Two-bladed Trident)', desc: 'ระยะโจมตี 3', icon: '🔱', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916342466ebe210ebc3d.jpg' },
+    'KIRIN_BOW': { name: 'ธนูกิเลน (Kirin Bow)', desc: 'ระยะโจมตี 5', icon: '🏹', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014281666ed1600db743.jpg' },
     'ZHUGE_CROSSBOW': { name: 'หน้าไม้จูกัด', desc: 'อาวุธระยะ 1: SLASH ได้ไม่จำกัด', icon: '🏹', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014293266ed164c8ef28.jpg' },
+    'GREEN_DRAGON_BLADE': { name: 'ง้าวมังกรเขียว', desc: 'ระยะโจมตี 3', icon: '🐉', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014323066ed16fe2df5b.jpg' },
+    'SERPENT_SPEAR': { name: 'หอกงู', desc: 'ระยะโจมตี 3', icon: '🐍', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014330566ed172177f08.jpg' },
+    'ROCK_CLEAVING_AXE': { name: 'ขวานผ่าหิน', desc: 'ระยะโจมตี 3', icon: '🪓', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014352166ed17a9aefbc.jpg' },
+    'SKY_PIERCING_HALBERD': { name: 'ทวนกรีดฟ้า', desc: 'ระยะโจมตี 4', icon: '⚔️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014354466ed17c0bfab7.jpg' },
+    'YIN_YANG_SWORDS': { name: 'กระบี่คู่หยินหยาง', desc: 'ระยะโจมตี 2', icon: '⚔️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014360566ed17d5469de.jpg' },
     'BLUE_STEEL_SWORD': { name: 'ง้าวมังกร', desc: 'อาวุธระยะ 2: เพิกเฉยเกราะ', icon: '🗡️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014371866ed181e49171.jpg' },
-    'LIGHTNING_HOOF': { name: 'ม้าบุก (-1)', desc: 'ลดระยะการโจมตีลง 1', icon: '🏇', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014365066ed1802e8169.jpg' },
-    'RED_HARE': { name: 'ม้าหมอบ (+1)', desc: 'เพิ่มระยะป้องกันขึ้น 1', icon: '🐴', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014334766ed174b2c963.jpg' },
+    'FEATHERED_FAN': { name: 'พัดขนนก', desc: 'ระยะโจมตี 4', icon: '🪶', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014403066ed18deeb3d4.jpg' },
     'NIO_SHIELD': { name: 'โล่หนี่หวัง', desc: 'ป้องกัน Attack สัญลักษณ์สีดำ', icon: '🛡️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013365666ed09f899277.jpg' },
     'EIGHT_TRIGRAMS_FORMATION': { name: 'ประยุทธ์แปดทิศ', desc: 'ชุดเกราะพิเศษ', icon: '☯️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014300366ed166b24f71.jpg' },
     'SILVER_LION_HELMET': { name: 'หมวกสิงโตเงิน', desc: 'ลดดาเมจเหลือ 1 เสมอ', icon: '🦁', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014405366ed18f572589.jpg' },
     'RATTAN_ARMOR': { name: 'เกราะหวาย', desc: 'กัน Attack ปกติ แต่รับดาเมจไฟ +1', icon: '🥋', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014435266ed19a85192a.jpg' },
+    'FERGANA_STEED': { name: 'ม้าเฟอร์กาน่า', desc: 'ม้าหนี (+1)', icon: '🐎', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014334766ed174b2c963.jpg' },
+    'SHADOWRUNNER': { name: 'ม้าเงา', desc: 'ม้าหนี (+1)', icon: '🌑', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014365066ed1802e8169.jpg' },
+    'RED_HARE': { name: 'ม้าหมอบ (+1)', desc: 'เพิ่มระยะป้องกันขึ้น 1', icon: '🐴', theme: 'card-weapon', pic: 'https://static.wtkgames.com/icons/cards/default.png' },
+    'LIGHTNING_HOOF': { name: 'ม้าบุก (-1)', desc: 'ลดระยะการโจมตีลง 1', icon: '🏇', theme: 'card-weapon', pic: 'https://static.wtkgames.com/icons/cards/default.png' },
+    'WOODEN_CART': { name: 'ม้าไม้จ๊กก๊ก', desc: 'สมบัติ', icon: '🛒', theme: 'card-equip', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014385466ed187eeca06.jpg' }
   };
 
   const CHAR_ICONS = {
@@ -1898,9 +1917,12 @@
         if (englishName === 'ATTACK') englishName = 'SLASH';
         if (englishName === 'OVERINDULGENCE') englishName = 'INDULGENCE';
         if (englishName === 'SOMETHING_OUT_OF_NOTHING') englishName = 'EX_NIHILO';
-        if (englishName === 'IRON_CHAINS') englishName = 'IRON_CHAIN';
+        if (englishName === 'IRON_CHAINS' || englishName === 'ALLIANCE') englishName = 'IRON_CHAIN';
         if (englishName === 'RAINING_ARROWS') englishName = 'ARROW_BARRAGE';
         if (englishName === 'OATH_OF_THE_PEACH_GARDEN') englishName = 'PEACH_GARDEN';
+        if (englishName === 'NEGATION') englishName = 'NEGATE';
+        if (englishName === 'RATIONS_DEPLETED') englishName = 'STARVATION';
+        if (englishName === 'FLAME_TACTIC') englishName = 'FIRE_ATTACK';
 
         globalThis.CARD_NAME_MAPPING[englishName] = c.card_name;
         globalThis.CARD_IMAGES[englishName] = c.pic_url || c.pic || '';
