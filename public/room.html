@@ -63,6 +63,8 @@
     <div class="draft-container glass-panel">
       <h1 class="draft-title">เลือกขุนพลของคุณ (Choose General)</h1>
       <p class="draft-subtitle">ระบบสุ่มขุนพล 3 คนมาให้คุณเลือกตามกติกาจริง คลิกที่การ์ดเพื่อสวมบทบาทขุนพลคนนั้น</p>
+
+      <div id="draft-role-banner" class="role-badge" style="position:static; top:auto; right:auto; display:inline-block; margin: 4px auto 18px; font-size: 15px; padding: 8px 18px;"></div>
       
       <div class="draft-cards-grid" id="draft-cards-grid">
         <!-- Dynamically populated -->
@@ -134,6 +136,7 @@
           <button class="btn-action btn-primary hidden" id="btn-liu-bei-skill" style="background: var(--hp-full); color: #000;">💝 สกิล: ปันสุข</button>
           <button class="btn-action btn-primary hidden" id="btn-diao-chan-skill" style="background: #ec4899; color: #fff;">🌸 สกิล: บ่วงเสน่หา</button>
           <button class="btn-action btn-primary hidden" id="btn-zhou-yu-skill" style="background: #3b82f6; color: #fff;">🔥 สกิล: บ่มเพลิง</button>
+          <button class="btn-action btn-primary hidden" id="btn-serpent-spear" style="background: #7c3aed; color: #fff;">🐍 หอกงู: ทิ้ง 2 โจมตี</button>
           <button class="btn-action btn-end-turn" id="btn-end-turn" disabled>จบช่วงร่าย</button>
           <button class="btn-action btn-discard hidden" id="btn-discard-confirm">ยืนยันการทิ้งการ์ด</button>
         </div>
@@ -148,10 +151,9 @@
   <div class="pending-overlay hidden" id="pending-overlay">
     <div class="pending-modal glass-panel">
       <span class="pending-icon">⚔️</span>
-      <h2 class="pending-title">คุณถูกโจมตี!</h2>
-      <p class="pending-subtitle">
-        <span class="pending-attacker" id="pending-attacker-name">???</span> ใช้ SLASH โจมตีคุณ!<br>
-        เลือกป้องกันหรือรับความเสียหาย
+      <h2 class="pending-title" id="pending-title">คุณถูกโจมตี!</h2>
+      <p class="pending-subtitle" id="pending-subtitle">
+        <!-- Content set dynamically by room_app.js -->
       </p>
 
       <div class="countdown-container">
@@ -165,6 +167,11 @@
       <div class="pending-actions">
         <button class="btn-dodge" id="btn-dodge">🛡️ หลบ (DODGE)</button>
         <button class="btn-take-damage" id="btn-take-damage">💔 รับดาเมจ</button>
+      </div>
+
+      <div id="bumper-cards-container" class="hidden" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px;">
+        <!-- Bumper Harvest cards injected here -->
+      </div>
       </div>
     </div>
   </div>

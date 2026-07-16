@@ -2081,3 +2081,295 @@ body::before {
 .chat-msg.heal { border-left: 3px solid #22c55e; background: rgba(34, 197, 94, 0.1); }
 .chat-msg.turn { border-left: 3px solid #fbbf24; color: #fbbf24; background: rgba(251, 191, 36, 0.05); }
 
+/* ==========================================
+   MOBILE / TABLET RESPONSIVE (V2 Board)
+   ========================================== */
+
+/* --- Tablet (<=900px) --- */
+@media (max-width: 900px) {
+  #game-screen {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .top-bar {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .top-bar .game-title {
+    font-size: 15px;
+  }
+
+  .top-bar .room-id {
+    display: none;
+  }
+
+  .game-container {
+    height: calc(100vh - 60px);
+    padding: 8px;
+    gap: 10px;
+  }
+
+  /* Opponent cards */
+  .opponent-card {
+    width: 190px;
+    padding: 10px;
+  }
+  .opponent-header {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .opponent-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 15px;
+  }
+  .opponent-name {
+    font-size: 12px;
+  }
+  .opponent-role {
+    font-size: 9px;
+  }
+  .hp-bar-container {
+    margin-bottom: 8px;
+  }
+  .meta-tag {
+    font-size: 9px;
+    padding: 3px 7px;
+  }
+
+  /* Self plate (own status) */
+  .self-plate {
+    width: 220px;
+    height: 130px;
+    padding: 10px;
+    gap: 10px;
+    bottom: calc(100% + 24px);
+  }
+  .self-avatar {
+    width: 60px;
+  }
+  .self-name {
+    font-size: 15px;
+  }
+
+  /* Hand cards */
+  .self-area {
+    height: 180px;
+    gap: 12px;
+  }
+  .card-v2 {
+    width: 88px;
+    height: 128px;
+    padding: 5px;
+  }
+  .card-name-v2 {
+    font-size: 14px;
+  }
+
+  /* Action bar */
+  .action-bar {
+    width: 110px;
+  }
+  .btn-action {
+    padding: 9px 6px;
+    font-size: 11px;
+  }
+
+  /* Draft screen */
+  .draft-container {
+    padding: 28px 20px;
+    max-width: 100%;
+  }
+  .draft-title {
+    font-size: 22px;
+  }
+  .draft-cards-grid {
+    gap: 16px;
+  }
+  .draft-card .draft-avatar {
+    width: 84px;
+    height: 100px;
+  }
+}
+
+/* --- Phone (<=560px) --- */
+@media (max-width: 560px) {
+  .top-bar .phase-badge {
+    font-size: 10px;
+    padding: 5px 10px;
+  }
+
+  .game-container {
+    height: auto;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* Opponents: shrink further and allow horizontal scroll fallback
+     so cards never get clipped off the edge of the table */
+  .opponents-area {
+    overflow: visible;
+  }
+  .opponent-card {
+    width: 148px;
+    padding: 8px;
+    border-radius: var(--radius-md);
+  }
+  .opponent-header {
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .opponent-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+  }
+  .opponent-name {
+    font-size: 11px;
+  }
+  .opponent-role {
+    font-size: 8px;
+  }
+  .hp-label {
+    font-size: 9px;
+  }
+  .hp-bar-track {
+    height: 6px;
+  }
+  .opponent-meta {
+    gap: 4px;
+  }
+  .meta-tag {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+
+  /* Stack self area vertically: plate on top, hand in middle,
+     action buttons as a full-width wrapping row at the bottom */
+  .self-area {
+    flex-direction: column;
+    height: auto;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+  .self-plate {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    width: 100%;
+    max-width: 340px;
+    height: auto;
+    min-height: 90px;
+  }
+  .role-badge {
+    top: -8px;
+    right: -8px;
+    font-size: 10px;
+    padding: 3px 9px;
+  }
+  .self-avatar {
+    width: 54px;
+  }
+
+  .hand-area {
+    flex: none;
+    width: 100%;
+    height: 150px;
+    padding-bottom: 8px;
+  }
+  .card-v2 {
+    width: 74px;
+    height: 108px;
+    padding: 4px;
+  }
+  .card-top {
+    font-size: 13px;
+  }
+  .card-suit {
+    font-size: 11px;
+  }
+  .card-name-v2 {
+    font-size: 12px;
+    letter-spacing: -1px;
+  }
+
+  .action-bar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn-action {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 80px;
+    padding: 10px 8px;
+    font-size: 11px;
+    min-height: 40px;
+  }
+
+  .play-area .deck-zone {
+    width: 60px;
+    height: 86px;
+    font-size: 11px;
+  }
+
+  /* Lobby & draft screens */
+  .lobby-container {
+    padding: 32px 20px;
+  }
+  .draft-container {
+    padding: 20px 14px;
+  }
+  .draft-title {
+    font-size: 19px;
+  }
+  .draft-subtitle {
+    font-size: 12px;
+    margin-bottom: 24px;
+  }
+  .draft-cards-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .draft-card {
+    padding: 14px;
+  }
+  .draft-card .draft-avatar {
+    width: 100%;
+    height: 130px;
+  }
+  .menu-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modals */
+  .pending-modal {
+    max-width: 92vw;
+    padding: 24px 18px;
+  }
+}
+
+/* --- Very small phones (<=380px) --- */
+@media (max-width: 380px) {
+  .opponent-card {
+    width: 128px;
+  }
+  .card-v2 {
+    width: 66px;
+    height: 96px;
+  }
+  .self-plate {
+    max-width: 280px;
+  }
+  .draft-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
