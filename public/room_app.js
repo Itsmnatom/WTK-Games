@@ -1,18 +1,51 @@
-
-//if (gameState.currentTurnPlayerId !== lastTurnPlayerId || gameState.currentPhase !== lastPhase) {(function() {
+(function() {
   // --- UTILS ---
+  function getWeaponRange(cardName) {
+    if (!cardName) return null;
+    const name = typeof cardName === 'object' ? (cardName.name || '') : cardName;
+    const ranges = {
+      'ZHUGE_CROSSBOW': 1,
+      'BLUE_STEEL_SWORD': 2,
+      'SIX_SWORDS_WU': 2,
+      'FROST_SWORD': 2,
+      'YIN_YANG_SWORDS': 2,
+      'TWO_BLADED_TRIDENT': 3,
+      'GREEN_DRAGON_BLADE': 3,
+      'SERPENT_SPEAR': 3,
+      'ROCK_CLEAVING_AXE': 3,
+      'FEATHERED_FAN': 4,
+      'SKY_PIERCING_HALBERD': 4,
+      'KIRIN_BOW': 5
+    };
+    return ranges[name] || null;
+  }
+
   function getEquipTooltip(cardName) {
-    if (cardName === 'ZHUGE_CROSSBOW') return 'หน้าไม้ขงเบ้ง (ระยะ 1)\nสามารถใช้การ์ด โจมตี (SLASH) ได้ไม่จำกัดจำนวนครั้งในเทิร์น';
-    if (cardName === 'BLUE_STEEL_SWORD') return 'ง้าวชิงกัง (ระยะ 2)\nโจมตีทะลุเกราะ (ไม่สนใจเกราะของเป้าหมาย)';
+    const wRange = getWeaponRange(cardName);
+    const rInfo = wRange ? ` (ระยะโจมตี: ${wRange})` : '';
+
+    if (cardName === 'ZHUGE_CROSSBOW') return `หน้าไม้จูกัด${rInfo}\nสามารถใช้การ์ด โจมตี (SLASH) ได้ไม่จำกัดจำนวนครั้งในเทิร์น`;
+    if (cardName === 'BLUE_STEEL_SWORD') return `ง้าวฟ้าสะท้าน / ดาบชิงกัง${rInfo}\nโจมตีทะลุผ่านเกราะทั้งหมด (ไม่สนใจเกราะของเป้าหมาย)`;
+    if (cardName === 'SIX_SWORDS_WU') return `ดาบหกเหล่าอู๋${rInfo}\nอาวุธประจำตัวแห่งง่อก๊ก เพิ่มระยะโจมตีเป็น 2`;
+    if (cardName === 'FROST_SWORD') return `ดาบน้ำแข็ง${rInfo}\nเมื่อตีโดน เลือกไม่ทำดาเมจแต่บังคับศัตรูทิ้งไพ่ 2 ใบแทน`;
+    if (cardName === 'YIN_YANG_SWORDS') return `กระบี่หยินหยาง${rInfo}\nเมื่อตีโดนคนต่างเพศ บังคับศัตรูทิ้งไพ่ 1 ใบ`;
+    if (cardName === 'TWO_BLADED_TRIDENT') return `ง้าวสองง่าม${rInfo}\nถ้าศัตรูหลบได้ ทิ้งไพ่ 1 ใบเพื่อบังคับตีโดน`;
+    if (cardName === 'GREEN_DRAGON_BLADE') return `ง้าวมังกรเขียว${rInfo}\nถ้าศัตรูหลบได้ สามารถร่าย SLASH ตีซ้ำได้อีกใบ`;
+    if (cardName === 'SERPENT_SPEAR') return `ทวนอสรพิษ${rInfo}\nทิ้งไพ่ 2 ใบในมือเพื่อร่ายเป็น SLASH`;
+    if (cardName === 'ROCK_CLEAVING_AXE') return `ขวานผ่าหิน${rInfo}\nถ้าศัตรูหลบได้ ทิ้งไพ่ 2 ใบเพื่อบังคับตีโดน`;
+    if (cardName === 'FEATHERED_FAN') return `พัดขนนก${rInfo}\nแปลงการโจมตีธรรมดาเป็น ดาเมจไฟ`;
+    if (cardName === 'SKY_PIERCING_HALBERD') return `ทวนกรีดฟ้า${rInfo}\nหากใช้ SLASH เป็นใบสุดท้ายในมือ เลือกเป้าหมายได้ 3 คน`;
+    if (cardName === 'KIRIN_BOW') return `เกาฑัณฑ์กิเลน${rInfo}\nเมื่อตีโดน สามารถเลือกทำลายม้าของศัตรู 1 ตัว`;
     if (cardName === 'RED_HARE') return 'ม้าเซ็กเธาว์ (ม้าบุก -1)\nลดระยะห่างระหว่างคุณกับเป้าหมายลง 1 (เป้าหมายอยู่ใกล้ขึ้น)';
     if (cardName === 'LIGHTNING_HOOF') return 'ม้าเต็กเลา (ม้าหมอบ +1)\nเพิ่มระยะห่างระหว่างคุณกับศัตรู 1 (ศัตรูโจมตีคุณยากขึ้น)';
     if (cardName === 'RATTAN_ARMOR') return 'เกราะหวาย\nป้องกันการโจมตีปกติทั้งหมด แต่จะได้รับความเสียหายจากไฟแรงขึ้น +1';
     if (cardName === 'SILVER_LION_HELMET') return 'หมวกสิงโตเงิน\nลดความเสียหายทั้งหมดที่มากกว่า 1 ให้เหลือเพียง 1 เสมอ';
-    if (cardName === 'LIGHTNING') return 'อัสนีบาต (สายฟ้า)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากได้โพดำ 2-9 จะโดน 3 ดาเมจ ไม่งั้นส่งต่อให้คนถัดไป';
-    if (cardName === 'INDULGENCE') return 'สุขสำราญ (เว้นเทิร์น)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่หัวใจ จะถูกข้ามเฟสเล่นการ์ดทันที';
+    if (cardName === 'LIGHTNING') return 'อัสนีบาต (สายฟ้า)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากได้โพดำ 2-9 จะโดน 3 ดาเมจ ไม่งั้นส่งต่อ';
+    if (cardName === 'ACEDIA') return 'สุขไม่คิดกลับ (เว้นเทิร์น)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่หัวใจ จะถูกข้ามเฟสเล่นการ์ดทันที';
     if (cardName === 'STARVATION') return 'เสบียงขาด (ห้ามจั่ว)\nเมื่อเริ่มเทิร์น สุ่มจั่ว 1 ใบ หากไม่ใช่ดอกจิก จะถูกข้ามเฟสจั่วการ์ดทันที';
     if (cardName === 'NIO_SHIELD') return 'โล่หนี่หวัง\nป้องกันความเสียหายจากไพ่ Attack สัญลักษณ์สีดำ (♠/♣)';
-    if (cardName === 'EIGHT_TRIGRAMS_FORMATION') return 'ประยุทธ์แปดทิศ\n(ยังไม่เปิดใช้งานสกิลพิเศษ)';
+    if (cardName === 'EIGHT_TRIGRAMS_FORMATION') return 'ประยุทธ์แปดทิศ\nเมื่อโดนโจมตี สุ่มจั่วหากได้ไพ่สีแดง ถือว่าใช้ DODGE หลบสำเร็จ!';
+    if (wRange) return `${cardName}${rInfo}`;
     return cardName;
   }
   function calculateDistance(state, fromId, toId) {
@@ -134,6 +167,8 @@
   let selectedDiscardIds = [];
   let recentlyDamaged = new Set();
   let currentLobbyAction = null;
+  let borrowedSwordFirstTargetId = null;
+  let ironChainFirstTargetId = null;
 
   // --- DOM ELEMENTS ---
   const $ = (id) => document.getElementById(id);
@@ -185,11 +220,19 @@
   const previewCardImg = $('preview-card-img');
   const btnClosePreview = $('btn-close-preview');
 
+  // Card Guide Modal
+  const btnCardGuide = $('btn-card-guide');
+  const cardGuideModal = $('card-guide-modal');
+  const cardGuideList = $('card-guide-list');
+  const btnCloseCardGuide = $('btn-close-card-guide');
+
   // Reaction
   const pendingOverlay = $('pending-overlay');
-  const pendingAttackerName = $('pending-attacker-name');
+  const pendingTitle = $('pending-title');
+  const pendingAttackerName = $('pending-subtitle');
   const countdownBarFill = $('countdown-bar-fill');
   const countdownSeconds = $('countdown-seconds');
+  const btnEightTrigrams = $('btn-eight-trigrams');
   const btnDodge = $('btn-dodge');
   const btnTakeDamage = $('btn-take-damage');
   const toastContainer = $('toast-container');
@@ -207,6 +250,35 @@
   const btnDyingUsePeach = $('btn-dying-use-peach');
   const btnDyingPass = $('btn-dying-pass');
   const dyingWaitMessage = $('dying-wait-message');
+
+  // Fire Attack Reveal & Match Overlays
+  const fireRevealOverlay = $('fire-reveal-overlay');
+  const fireRevealCards = $('fire-reveal-cards');
+  const fireMatchOverlay = $('fire-match-overlay');
+  const fireMatchSuitText = $('fire-match-suit-text');
+  const fireMatchCards = $('fire-match-cards');
+  const btnFireMatchCancel = $('btn-fire-match-cancel');
+
+  // Yin-Yang Swords Overlay
+  const yinyangChoiceOverlay = $('yinyang-choice-overlay');
+  const btnYinyangDraw = $('btn-yinyang-draw');
+  const btnYinyangDiscardTrigger = $('btn-yinyang-discard-trigger');
+  const yinyangDiscardSection = $('yinyang-discard-section');
+  const yinyangDiscardCards = $('yinyang-discard-cards');
+
+  // Weapon Trigger Overlay
+  const weaponTriggerOverlay = $('weapon-trigger-overlay');
+  const weaponTriggerIcon = $('weapon-trigger-icon');
+  const weaponTriggerTitle = $('weapon-trigger-title');
+  const weaponTriggerDesc = $('weapon-trigger-desc');
+  const weaponTriggerCardSelector = $('weapon-trigger-card-selector');
+  const weaponTriggerCards = $('weapon-trigger-cards');
+  const weaponTriggerSelectorHint = $('weapon-trigger-selector-hint');
+  const btnWeaponTriggerYes = $('btn-weapon-trigger-yes');
+  const btnWeaponTriggerNo = $('btn-weapon-trigger-no');
+
+  // Bumper Harvest Container
+  const bumperCardsContainer = $('bumper-cards-container');
 
 
   // Hero Modal
@@ -232,7 +304,7 @@
     'WINE': { name: 'สุรา (Wine)', desc: 'เพิ่มดาเมจ SLASH เป็น 2 ดาเมจ หรือใช้ฟื้นฟู 1 HP เมื่อเลือดหมด', icon: '🍶', theme: 'card-wine', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014452766ed1a07699f7.jpg' },
     'FIRE_ATTACK': { name: 'โจมตีด้วยไฟ (Fire Attack)', desc: 'เป้าหมายโดน 1 ดาเมจไฟ', icon: '🔥', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014394766ed18b3abfd2.jpg' },
     'THUNDER_ATTACK': { name: 'สายฟ้าโจมตี (Thunder Attack)', desc: 'โจมตีด้วยดาเมจสายฟ้า', icon: '⚡', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014444466ed19dc0749a.jpg' },
-    'BUMPER_HARVEST': { name: 'เสบียงอุดมสมบูรณ์', desc: 'จั่วการ์ดเข้ากองกลางเท่ากับจำนวนผู้เล่น', icon: '🌾', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014241966ed1513d7125.jpg' },
+    'BUMPER_HARVEST': { name: 'เสบียงอุดมสมบูรณ์ (Bumper Harvest)', desc: 'จั่วการ์ดจากกองกลางเท่ากับจำนวนผู้เล่นที่ยังมีชีวิต โดยผลัดกันเลือกคนละ 1 ใบ', icon: '🌾', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014241966ed1513d7125.jpg' },
     'PEACH_GARDEN': { name: 'สวนท้อสาบาน', desc: 'ฟื้นฟู 1 HP ให้ทุกคนที่บาดเจ็บ', icon: '🌸', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014165366ed1355169ef.jpg' },
     'NEGATE': { name: 'ไร้ข้อกังขา (Negate)', desc: 'ยกเลิกผลของการ์ดเวทมนตร์หรือดีเลย์ที่เพิ่งถูกใช้', icon: '⛔', theme: 'card-dodge', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013323166ed08efecc76.jpg' },
     'IRON_CHAIN': { name: 'โซ่เหล็ก (Iron Chain)', desc: 'เชื่อมโยงเป้าหมาย', icon: '🔗', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916341066ebe20225755.jpg' },
@@ -241,11 +313,11 @@
     'ARROW_BARRAGE': { name: 'ฝนธนู (Archery)', desc: 'ทุกคนต้องออก DODGE 1 ใบ ไม่เช่นนั้นเสีย 1 HP', icon: '🏹', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014340966ed1761909c6.jpg' },
     'EX_NIHILO': { name: 'ไร้กลางมี (Ex Nihilo)', desc: 'จั่วการ์ด 2 ใบจากกอง', icon: '✨', theme: 'card-peach', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014343666ed177cc16a3.jpg' },
     'DUEL': { name: 'ประลอง (Duel)', desc: 'ผลัดกันออก SLASH ผู้ที่ไม่มี SLASH จะโดน 1 ดาเมจ', icon: '🤺', theme: 'card-slash', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014345866ed1792871c0.jpg' },
-    'STEAL': { name: 'ขโมย (Steal)', desc: 'ขโมยการ์ด 1 ใบจากผู้เล่นในระยะ 1', icon: '🖐️', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014363066ed17eed2877.jpg' },
-    'SABOTAGE': { name: 'ทำลาย (Sabotage)', desc: 'เลือกทิ้งการ์ด 1 ใบของเป้าหมาย', icon: '🔥', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014290866ed1634c9083.jpg' },
+    'STEAL': { name: 'ขโมย (Steal)', desc: 'ขโมยการ์ด 1 ใบจากผู้เล่นในระยะ 1 (จากมือ หรือเขตสวมใส่)', icon: '🖐️', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014363066ed17eed2877.jpg' },
+    'SABOTAGE': { name: 'ทำลาย (Sabotage)', desc: 'เลือกทิ้งการ์ด 1 ใบของเป้าหมาย (จากมือ หรือเขตสวมใส่)', icon: '🔥', theme: 'card-steal', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014290866ed1634c9083.jpg' },
     'LIGHTNING': { name: 'สายฟ้า (Lightning)', desc: 'ตัดสินชะตา: โพดำ 2-9 รับ 3 ดาเมจ', icon: '⚡', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014180066ed13985ce62.jpg' },
-    'INDULGENCE': { name: 'สุขไม่คิดกลับ', desc: 'ข้ามเฟส Play ถ้าเปิดไม่ได้ โพแดง', icon: '🍷', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014302766ed1683b32cf.jpg' },
-    'STARVATION': { name: 'เสบียงขาด', desc: 'ข้ามเฟส Draw ถ้าเปิดไม่ได้ ดอกจิก', icon: '🍚', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014441566ed19bfae6cc.jpg' },
+    'ACEDIA': { name: 'สุขไม่คิดกลับ (Acedia)', desc: 'เป้าหมายต้องข้ามเฟส Play หากจั่วตัดสินได้การ์ดที่ไม่ใช่โพแดง', icon: '🍷', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014302766ed1683b32cf.jpg' },
+    'STARVATION': { name: 'เสบียงขาด (Starvation)', desc: 'เป้าหมายต้องข้ามเฟส Draw หากจั่วตัดสินได้การ์ดที่ไม่ใช่ดอกจิก', icon: '🍚', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014441566ed19bfae6cc.jpg' },
     'FROST_SWORD': { name: 'ดาบน้ำแข็ง (Frost Sword)', desc: 'ระยะโจมตี 2', icon: '❄️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2013400466ed0ab4a08ad.jpg' },
     'SIX_SWORDS_WU': { name: 'ดาบหกเหล่าอู๋ (Six Swords of Wu)', desc: 'ระยะโจมตี 2', icon: '⚔️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916341566ebe207e0b9b.jpg' },
     'TWO_BLADED_TRIDENT': { name: 'ง้าวสองง่าม (Two-bladed Trident)', desc: 'ระยะโจมตี 3', icon: '🔱', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/1916342466ebe210ebc3d.jpg' },
@@ -262,10 +334,10 @@
     'EIGHT_TRIGRAMS_FORMATION': { name: 'ประยุทธ์แปดทิศ', desc: 'ชุดเกราะพิเศษ', icon: '☯️', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014300366ed166b24f71.jpg' },
     'SILVER_LION_HELMET': { name: 'หมวกสิงโตเงิน', desc: 'ลดดาเมจเหลือ 1 เสมอ', icon: '🦁', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014405366ed18f572589.jpg' },
     'RATTAN_ARMOR': { name: 'เกราะหวาย', desc: 'กัน Attack ปกติ แต่รับดาเมจไฟ +1', icon: '🥋', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014435266ed19a85192a.jpg' },
-    'FERGANA_STEED': { name: 'ม้าเฟอร์กาน่า', desc: 'ม้าหนี (+1)', icon: '🐎', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014334766ed174b2c963.jpg' },
+    'FERGANA_STEED': { name: 'ม้าเฟอร์กาน่า', desc: 'ม้าบุก (-1)', icon: '🐎', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014334766ed174b2c963.jpg' },
     'SHADOWRUNNER': { name: 'ม้าเงา', desc: 'ม้าหนี (+1)', icon: '🌑', theme: 'card-weapon', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014365066ed1802e8169.jpg' },
-    'RED_HARE': { name: 'ม้าหมอบ (+1)', desc: 'เพิ่มระยะป้องกันขึ้น 1', icon: '🐴', theme: 'card-weapon', pic: 'https://static.wtkgames.com/icons/cards/default.png' },
-    'LIGHTNING_HOOF': { name: 'ม้าบุก (-1)', desc: 'ลดระยะการโจมตีลง 1', icon: '🏇', theme: 'card-weapon', pic: 'https://static.wtkgames.com/icons/cards/default.png' },
+    'RED_HARE': { name: 'ม้าศึก (ม้าบุก -1)', desc: 'ลดระยะป้องกันลง 1', icon: '🐴', theme: 'card-weapon', pic: 'https://static.wtkgames.com/icons/cards/default.png' },
+    'LIGHTNING_HOOF': { name: 'ม้าหมอบ (+1)', desc: 'เพิ่มระยะป้องกันขึ้น 1', icon: '🏇', theme: 'card-weapon', pic: 'https://static.wtkgames.com/icons/cards/default.png' },
     'WOODEN_CART': { name: 'ม้าไม้จ๊กก๊ก', desc: 'สมบัติ', icon: '🛒', theme: 'card-equip', pic: 'https://sjsea-2cstatic.oss-cn-hongkong.aliyuncs.com/uploads/banner/2014385466ed187eeca06.jpg' }
   };
 
@@ -312,8 +384,8 @@
     'WINE': '/pdf_images/wine.png',
     'STEAL': '/pdf_images/steal.png',
     'ZHUGE_CROSSBOW': '/pdf_images/zhuge_crossbow.png',
-    'RED_HARE': '/pdf_images/red_hare.png',
-    'LIGHTNING_HOOF': '/pdf_images/lightning_hoof.png'
+    'RED_HARE': '/images/red_hare.png',
+    'LIGHTNING_HOOF': '/images/lightning_hoof.png'
   };
 
   function getHeroPic(characterId) {
@@ -469,15 +541,20 @@
     roomIdParam = params.get('id');
   }
 
-  let playerNameParam = sessionStorage.getItem('playerName') || params.get('name');
+  const isTestSandboxMode = params.get('test') === 'true' || pathname === '/test';
+  let playerNameParam = params.get('name') || sessionStorage.getItem('playerName');
   if (!playerNameParam) {
-    playerNameParam = prompt("กรุณาระบุชื่อผู้เล่น (Nickname):") || "Player_" + Math.floor(100 + Math.random() * 900);
+    if (isTestSandboxMode) {
+      playerNameParam = "Admin_Tester";
+    } else {
+      playerNameParam = prompt("กรุณาระบุชื่อผู้เล่น (Nickname):") || "Player_" + Math.floor(100 + Math.random() * 900);
+    }
     sessionStorage.setItem('playerName', playerNameParam);
   }
 
-  const modeParam = sessionStorage.getItem('gameMode') || params.get('mode') || 'ONLINE';
-  const actionParam = sessionStorage.getItem('roomAction') || params.get('action') || 'join';
-  const botCountParam = sessionStorage.getItem('botCount') || params.get('players') || '3';
+  const modeParam = params.get('mode') || sessionStorage.getItem('gameMode') || 'ONLINE';
+  const actionParam = params.get('action') || sessionStorage.getItem('roomAction') || 'join';
+  const botCountParam = params.get('players') || sessionStorage.getItem('botCount') || '3';
 
   if (!roomIdParam) {
     alert("กรุณาระบุรหัสห้อง!");
@@ -490,26 +567,63 @@
     displayLobbyRoomCode.textContent = myRoomId;
     lobbyRoomModeText.textContent = `โหมดเกม: ${modeParam === 'BOT' ? 'เล่นกับบอท' : 'เล่นออนไลน์'}`;
 
-    if (actionParam === 'create') {
+    if (actionParam === 'reconnect') {
+      const reconnectRoomId = sessionStorage.getItem('reconnectRoomId') || localStorage.getItem('activeRoomId');
+      const reconnectPlayerId = sessionStorage.getItem('reconnectPlayerId') || localStorage.getItem('activePlayerId');
+      socket.emit('reconnect_player', { roomId: reconnectRoomId, playerId: reconnectPlayerId });
+    } else if (actionParam === 'create') {
       socket.emit('create_room', { roomId: myRoomId, playerName: playerNameParam, mode: modeParam });
     } else {
       socket.emit('join_room', { roomId: myRoomId, playerName: playerNameParam });
     }
+
+    // Auto-authenticate Admin if in test mode or key parameter provided
+    const adminKey = params.get('admin_key') || (isTestSandboxMode ? 'admin123' : '');
+    if (adminKey) {
+      socket.emit('admin_authenticate', { secretKey: adminKey, roomId: myRoomId });
+    }
+  });
+
+  socket.on('admin_auth_status', ({ isAdmin, message }) => {
+    const btnAdminToggle = $('btn-admin-sandbox-toggle');
+    if (isAdmin) {
+      if (btnAdminToggle) btnAdminToggle.classList.remove('hidden');
+      showToast(message || '🔓 ได้รับสิทธิ์ Admin', 'info');
+    } else {
+      if (btnAdminToggle) btnAdminToggle.classList.add('hidden');
+      showToast(message || '🔒 ไม่มีสิทธิ์ Admin', 'warning');
+    }
+  });
+
+  socket.on('reconnect_success', ({ roomId, playerId }) => {
+    myRoomId = roomId;
+    myPlayerId = playerId;
+    displayLobbyRoomCode.textContent = myRoomId;
+    localStorage.setItem('activeRoomId', myRoomId);
+    localStorage.setItem('activePlayerId', myPlayerId);
+    showToast('เชื่อมต่อใหม่สำเร็จ!', 'success');
   });
 
   socket.on('room_created', ({ roomId, playerId }) => {
     myRoomId = roomId;
     myPlayerId = playerId;
+    localStorage.setItem('activeRoomId', myRoomId);
+    localStorage.setItem('activePlayerId', myPlayerId);
     displayLobbyRoomCode.textContent = myRoomId;
     btnLobbyStartGame.classList.remove('hidden');
     btnLobbyWaitingText.classList.add('hidden');
     const ctrl = document.getElementById('host-bot-controls');
     if (ctrl) ctrl.classList.remove('hidden');
+    if (isTestSandboxMode) {
+      socket.emit('start_game', { roomId: myRoomId, botCount: 4 });
+    }
   });
 
   socket.on('room_joined', ({ roomId, playerId }) => {
     myRoomId = roomId;
     myPlayerId = playerId;
+    localStorage.setItem('activeRoomId', myRoomId);
+    localStorage.setItem('activePlayerId', myPlayerId);
     displayLobbyRoomCode.textContent = myRoomId;
     btnLobbyStartGame.classList.add('hidden');
     btnLobbyWaitingText.classList.remove('hidden');
@@ -534,12 +648,33 @@
             cNameLocal = cNameLocal.split(' (')[0];
           }
 
-          let msg = `🃏 ${pName} ใช้ ${cNameLocal} (${cardName})`;
+          let msg = `🃏 ${pName} ใช้ ${cNameLocal}`;
           if (targetId && targetId !== playerId) {
             const tName = gameState.players[targetId] ? gameState.players[targetId].name : targetId;
             msg += ` ใส่ ${tName}`;
           }
           addLog(msg, 'system');
+
+          // --- Personal toast when you are the target (other player used a card on you) ---
+          if (playerId !== myPlayerId) {
+            const hostileCards = ['STEAL', 'SABOTAGE', 'DUEL', 'FIRE_ATTACK', 'BORROWED_SWORD'];
+            const delayedCards = ['LIGHTNING', 'ACEDIA', 'STARVATION'];
+            const aoeCards = ['BARBARIAN_INVASION', 'ARROW_BARRAGE'];
+
+            if (targetId === myPlayerId) {
+              if (hostileCards.includes(cardName)) {
+                showToast(`⚠️ ${pName} ใช้ ${cNameLocal} ใส่คุณ!`, 'error');
+              } else if (delayedCards.includes(cardName)) {
+                showToast(`⏳ ${pName} วาง ${cNameLocal} ใส่คุณ!`, 'error');
+              }
+            }
+            if (aoeCards.includes(cardName)) {
+              showToast(`🚨 ${pName} ใช้ ${cNameLocal}! ทุกคนต้องตอบสนอง!`, 'warning');
+            }
+            if (cardName === 'NEGATE') {
+              showToast(`⛔ ${pName} ใช้ไร้ข้อกังขา! (NEGATE)`, 'info');
+            }
+          }
         }
       } catch (e) {
         console.error('card_played handler error', e);
@@ -563,21 +698,87 @@
       
       msg += ` (พลังชีวิต: ${hp}/${maxHp})`;
       addLog(msg, 'damage');
+
+      // GSAP Damage Screen Shake & Flash Effect
+      if (typeof gsap !== 'undefined') {
+        const gameContainer = document.getElementById('game-screen');
+        if (gameContainer) {
+          gsap.to(gameContainer, {
+            duration: 0.04,
+            x: () => (Math.random() - 0.5) * 12,
+            y: () => (Math.random() - 0.5) * 12,
+            repeat: 5,
+            yoyo: true,
+            ease: 'power1.inOut',
+            onComplete: () => gsap.set(gameContainer, { x: 0, y: 0 })
+          });
+        }
+      }
     });
 
+    socket.on('judgement_result', (data) => {
+      const { title, card, isSuccess, targetPlayerName } = data;
+      showJudgementCardFlipAnimation(title, card, isSuccess, targetPlayerName);
+    });
+
+  function showJudgementCardFlipAnimation(title, card, isSuccess, playerName) {
+    if (!card) return;
+    let overlay = document.getElementById('judgement-card-flip-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'judgement-card-flip-overlay';
+      document.body.appendChild(overlay);
+    }
     
-    
-  
-  
+    const suitSymbol = card.suit === 'HEART' ? '♥️' : card.suit === 'DIAMOND' ? '♦️' : card.suit === 'SPADE' ? '♠️' : '♣️';
+    const suitColor = (card.suit === 'HEART' || card.suit === 'DIAMOND') ? '#ef4444' : '#f8fafc';
+    const badgeText = isSuccess ? '✨ สำเร็จ (SUCCESS)' : '❌ ล้มเหลว (FAILED)';
+    const badgeBg = isSuccess ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+    const badgeBorder = isSuccess ? '#4ade80' : '#f87171';
+    const badgeColor = isSuccess ? '#4ade80' : '#f87171';
+
+    overlay.innerHTML = `
+      <div class="judgement-card-title">🎲 คำพิจารณา: ${title}</div>
+      <div class="judgement-player-name" style="font-size: 13px; color: #94a3b8; margin-bottom: 10px;">${playerName || ''}</div>
+      <div class="judgement-card-box">
+        <div style="font-size: 36px; color: ${suitColor}; font-weight: bold;">${suitSymbol}</div>
+        <div style="font-size: 22px; color: ${suitColor}; font-weight: 800;">${card.rank || ''}</div>
+        <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px;">${card.name || ''}</div>
+      </div>
+      <div class="judgement-card-badge" style="background: ${badgeBg}; color: ${badgeColor}; border: 1.5px solid ${badgeBorder};">
+        ${badgeText}
+      </div>
+    `;
+
+    overlay.classList.remove('hidden');
+
+    if (typeof gsap !== 'undefined') {
+      gsap.fromTo(overlay, 
+        { scale: 0.3, rotationY: 90, opacity: 0 },
+        { scale: 1, rotationY: 0, opacity: 1, duration: 0.45, ease: 'back.out(1.5)' }
+      );
+    }
+
+    setTimeout(() => {
+      if (typeof gsap !== 'undefined') {
+        gsap.to(overlay, { scale: 0.8, opacity: 0, duration: 0.3, onComplete: () => overlay.classList.add('hidden') });
+      } else {
+        overlay.classList.add('hidden');
+      }
+    }, 2600);
+  }
 
   socket.on('game_error', (err) => {
     showToast(err.message, 'error');
+    if (isTestSandboxMode) return;
     
     // Only redirect if the error is critical (e.g. invalid room, full, etc.)
     const criticalMessages = ["ไม่พบห้อง", "เกมก้าวสู่การเล่นไปแล้ว", "ไม่พบผู้เล่น"];
     const isCritical = criticalMessages.some(msg => err.message.includes(msg)) || err.critical;
     
     if (isCritical) {
+      localStorage.removeItem('activeRoomId');
+      localStorage.removeItem('activePlayerId');
       setTimeout(() => {
         window.location.href = '/lobby';
       }, 1500);
@@ -614,6 +815,8 @@
   }
 
   btnReturnLobby.addEventListener('click', () => {
+    localStorage.removeItem('activeRoomId');
+    localStorage.removeItem('activePlayerId');
     window.location.href = '/lobby';
   });
 
@@ -621,6 +824,8 @@
   if (btnGameLeave) {
     btnGameLeave.addEventListener('click', () => {
       if (confirm('คุณต้องการออกจากห้องเกมนี้ใช่หรือไม่?')) {
+        localStorage.removeItem('activeRoomId');
+        localStorage.removeItem('activePlayerId');
         window.location.href = '/lobby';
       }
     });
@@ -632,9 +837,18 @@
     gameState = state;
 
     if (gameState.status === 'LOBBY') {
-      lobbyScreen.classList.remove('hidden');
+      if (isTestSandboxMode) {
+        lobbyScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        const topBar = document.querySelector('.top-bar');
+        if (topBar) topBar.classList.remove('hidden');
+        const handZone = document.querySelector('.hand-zone');
+        if (handZone) handZone.classList.remove('hidden');
+      } else {
+        lobbyScreen.classList.remove('hidden');
+        gameScreen.classList.add('hidden');
+      }
       draftScreen.classList.add('hidden');
-      gameScreen.classList.add('hidden');
       gameOverOverlay.classList.add('hidden');
       renderLobbyPlayers();
     } else if (gameState.status === 'DRAFTING') {
@@ -663,6 +877,8 @@
 
       detectEvents(prevState, gameState);
     } else if (gameState.status === 'ENDED') {
+      localStorage.removeItem('activeRoomId');
+      localStorage.removeItem('activePlayerId');
       lobbyScreen.classList.add('hidden');
       draftScreen.classList.add('hidden');
       gameScreen.classList.remove('hidden'); // Keep board visible
@@ -762,6 +978,14 @@
       });
       draftCardsGrid.appendChild(card);
     });
+
+    // GSAP 3D Hero Flip Entrance Animation
+    if (typeof gsap !== 'undefined') {
+      gsap.fromTo('.draft-card',
+        { rotationY: 90, opacity: 0, scale: 0.8 },
+        { rotationY: 0, opacity: 1, scale: 1, duration: 0.6, stagger: 0.12, ease: 'back.out(1.4)' }
+      );
+    }
   }
 
   function renderPhase() {
@@ -829,7 +1053,7 @@
       if (awaitingTarget && !isDead && selectedCard) {
         const isGuanYuSlash = hasCharacter(me.character, 'GUAN_YU') && (selectedCard.suit === 'HEART' || selectedCard.suit === 'DIAMOND');
         const isZhaoYunSlash = hasCharacter(me.character, 'ZHAO_YUN') && selectedCard.name === 'DODGE';
-        const isEffectiveSlash = selectedCard.name === 'SLASH' || isGuanYuSlash || isZhaoYunSlash;
+        const isEffectiveSlash = selectedCard.name === 'SLASH' || isGuanYuSlash || isZhaoYunSlash || selectedCard.name === 'THUNDER_ATTACK';
 
         if (isEffectiveSlash) {
           const wRange = (me.equipment && me.equipment.weapon) ? me.equipment.weapon.range : 1;
@@ -838,18 +1062,29 @@
         } else if (selectedCard.name === 'STEAL') {
           inRange = dist <= 1;
           rangeText = inRange ? `<span style="color: #4CAF50;">[อยู่ในระยะขโมย (${dist}/1)]</span>` : `<span style="color: #F44336;">[ไกลไป (${dist}/1)]</span>`;
-        } else if (selectedCard.name === 'SABOTAGE' || selectedCard.name === 'DUEL' || currentLobbyAction) {
+        } else if (currentLobbyAction === 'BORROWED_SWORD_STEP2' && borrowedSwordFirstTargetId) {
+          const wHolder = gameState.players[borrowedSwordFirstTargetId];
+          const wRange = (wHolder && wHolder.equipment && wHolder.equipment.weapon) ? wHolder.equipment.weapon.range : 1;
+          const distFromHolder = calculateClientDistance(borrowedSwordFirstTargetId, pId);
+          inRange = distFromHolder <= wRange;
+          rangeText = inRange ? `<span style="color: #4CAF50;">[ระยะดาบคนแรก (${distFromHolder}/${wRange})]</span>` : `<span style="color: #F44336;">[ไกลจากคนแรก (${distFromHolder}/${wRange})]</span>`;
+        } else if (selectedCard.name === 'SABOTAGE' || selectedCard.name === 'DUEL' || selectedCard.name === 'FIRE_ATTACK' || selectedCard.name === 'IRON_CHAIN' || selectedCard.name === 'ACEDIA' || selectedCard.name === 'STARVATION' || currentLobbyAction) {
           rangeText = `<span style="color: #2196F3;">[เลือกได้]</span>`;
         }
       }
 
       const isTargetCandidate = awaitingTarget && !isDead && inRange;
+      const isSelectedFirstTarget = (borrowedSwordFirstTargetId && pId === borrowedSwordFirstTargetId) || (ironChainFirstTargetId && pId === ironChainFirstTargetId);
 
       const card = document.createElement('div');
       card.className = 'opponent-card glass-panel';
       if (isCurrentTurn) card.classList.add('is-current-turn');
       if (isDead) card.classList.add('is-dead');
       if (isTargetCandidate) card.classList.add('is-target-candidate');
+      if (isSelectedFirstTarget) {
+        card.style.borderColor = 'var(--accent-gold)';
+        card.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.9)';
+      }
       if (awaitingTarget && !isDead && !inRange) card.style.opacity = '0.5';
       card.dataset.playerId = pId;
 
@@ -869,7 +1104,10 @@
 
       let equipTags = '';
       if (p.equipment) {
-        if (p.equipment.weapon) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${p.equipment.weapon.name}</span>`;
+        if (p.equipment.weapon) {
+          const wRange = getWeaponRange(p.equipment.weapon.name) || (p.equipment.weapon.range || 1);
+          equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${p.equipment.weapon.name} (ระยะ: ${wRange})</span>`;
+        }
         if (p.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ (+1)</span>`;
         if (p.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก (-1)</span>`;
         if (p.equipment.armor) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(p.equipment.armor.name)}"><span class="tag-icon">🛡️</span>${p.equipment.armor.name}</span>`;
@@ -878,7 +1116,7 @@
         p.delayedKitZone.forEach(c => {
           let icon = '⏳';
           if (c.name === 'LIGHTNING') icon = '⚡';
-          if (c.name === 'INDULGENCE') icon = '🍷';
+          if (c.name === 'ACEDIA') icon = '🍷';
           if (c.name === 'STARVATION') icon = '🍚';
           equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(c.name)}" style="background: rgba(244,67,54,0.2);"><span class="tag-icon">${icon}</span>${c.name}</span>`;
         });
@@ -923,22 +1161,33 @@
         if (numOpp === 1) {
           angle = Math.PI / 2; // Top center (90 deg)
         } else {
-          // Span from -15 deg to 195 deg (Bottom right arc over top to Bottom left)
-          const startAngle = -15 * (Math.PI / 180);
-          const endAngle = 195 * (Math.PI / 180);
+          // Span from 10 deg to 170 deg (Right to Left across top arc)
+          const startAngle = 10 * (Math.PI / 180);
+          const endAngle = 170 * (Math.PI / 180);
           const angleRange = endAngle - startAngle;
           const step = angleRange / (numOpp - 1);
           angle = startAngle + (i * step);
         }
         
-        const rx = 44; // % of table width 
-        const ry = 36; // reduced from 42 to bring them down
+        const rx = 42; // % of table width 
+        const ry = 32; // % of table height
         
         const left = 50 + Math.cos(angle) * rx;
-        const top = 52 - Math.sin(angle) * ry; // adjusted center from 48 to 52
+        const top = 44 - Math.sin(angle) * ry;
         
         card.style.left = `${left}%`;
         card.style.top = `${top}%`;
+
+        // Dynamic width scaling for 6-player and 8-player rooms so cards never overlap!
+        if (numOpp >= 5) {
+          card.style.width = '175px';
+          card.style.padding = '8px 10px';
+        } else if (numOpp >= 3) {
+          card.style.width = '215px';
+          card.style.padding = '10px 12px';
+        } else {
+          card.style.width = '250px';
+        }
       }
 
       opponentsZone.appendChild(card);
@@ -975,16 +1224,19 @@
 
     let equipTags = '';
     if (me.equipment) {
-      if (me.equipment.weapon) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${me.equipment.weapon.name}</span>`;
-      if (me.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ</span>`;
-      if (me.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก</span>`;
+      if (me.equipment.weapon) {
+        const wRange = getWeaponRange(me.equipment.weapon.name) || (me.equipment.weapon.range || 1);
+        equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.weapon.name)}"><span class="tag-icon">🗡️</span>${me.equipment.weapon.name} (ระยะ: ${wRange})</span>`;
+      }
+      if (me.equipment.defensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.defensiveHorse.name)}"><span class="tag-icon">🐴</span>ม้าหมอบ (+1)</span>`;
+      if (me.equipment.offensiveHorse) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.offensiveHorse.name)}"><span class="tag-icon">🏇</span>ม้าบุก (-1)</span>`;
       if (me.equipment.armor) equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(me.equipment.armor.name)}"><span class="tag-icon">🛡️</span>${me.equipment.armor.name}</span>`;
     }
     if (me.delayedKitZone && me.delayedKitZone.length > 0) {
       me.delayedKitZone.forEach(c => {
         let icon = '⏳';
         if (c.name === 'LIGHTNING') icon = '⚡';
-        if (c.name === 'INDULGENCE') icon = '🍷';
+        if (c.name === 'ACEDIA') icon = '🍷';
         if (c.name === 'STARVATION') icon = '🍚';
         equipTags += `<span class="meta-tag tooltip-container" data-tooltip="${getEquipTooltip(c.name)}" style="background: rgba(244,67,54,0.2);"><span class="tag-icon">${icon}</span>${c.name}</span>`;
       });
@@ -1044,7 +1296,8 @@
     me.hand.forEach(c => {
       const cardDiv = document.createElement('div');
       
-      const dictInfo = CARD_DICT[c.name] || { name: c.name, desc: '', icon: '🃏', theme: 'card-default' };
+      const globalDict = globalThis.CARD_DICT || {};
+      const dictInfo = globalDict[c.name] || CARD_DICT[c.name] || { name: c.name, desc: '', icon: '🃏', theme: 'card-default' };
       cardDiv.className = 'card-v2';
       
       const isLobbyOrPlay = !isDiscardPhase() && isMyTurn() && gameState.currentPhase === 'PLAY' && (
@@ -1063,7 +1316,11 @@
         }
       }
 
-      const displayName = dictInfo.name;
+      let displayName = dictInfo.name;
+      const wRange = getWeaponRange(c.name);
+      if (wRange > 0) {
+        displayName += ` <span style="color: var(--accent-gold); font-size: 10px; font-weight: bold;">(ระยะ: ${wRange})</span>`;
+      }
       const picHtml = dictInfo.pic ? `<div class="card-image-bg" style="background-image: url('${dictInfo.pic}');"></div>` : '';
       const suitClass = (c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade';
       const suitSymbol = c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣';
@@ -1107,6 +1364,16 @@
       cDiv.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${angle}deg)`;
       cDiv.style.zIndex = index;
     });
+
+    // GSAP Hand Card Entrance Animation (Animate container to preserve individual card fan transforms)
+    if (typeof gsap !== 'undefined' && cards.length > 0) {
+      gsap.from(handCards, {
+        duration: 0.4,
+        y: 35,
+        opacity: 0.3,
+        ease: 'power2.out'
+      });
+    }
 
     if (isDiscardPhase()) {
       discardInstruction.classList.remove('hidden');
@@ -1185,7 +1452,8 @@
     const actualCardId = selectedCardId || (selectedDiscardIds.length === 1 ? selectedDiscardIds[0] : null);
     if (actualCardId && me && me.hand) {
       const card = me.hand.find(c => c.id === actualCardId);
-      if (card && CARD_IMAGES[card.name]) {
+      const imgUrl = (card && CARD_IMAGES[card.name]) || (card && globalThis.CARD_IMAGES && globalThis.CARD_IMAGES[card.name]);
+      if (imgUrl) {
         if (btnPreviewCard) btnPreviewCard.classList.remove('hidden');
       }
     } else {
@@ -1257,6 +1525,8 @@
     selectedDiscardIds = [];
     awaitingTarget = false;
     currentLobbyAction = null;
+    borrowedSwordFirstTargetId = null;
+    ironChainFirstTargetId = null;
     targetHint.classList.add('hidden');
     renderHand();
     renderOpponents();
@@ -1297,6 +1567,78 @@
       });
       clearSelection();
       selectedDiscardIds = [];
+      return;
+    }
+
+    if (currentLobbyAction === 'IRON_CHAIN_STEP1') {
+      const me = gameState.players[myPlayerId];
+      const card = me.hand.find(c => c.id === selectedCardId);
+      if (!card) return;
+
+      ironChainFirstTargetId = targetPlayerId;
+      awaitingTarget = true;
+      targetHint.classList.remove('hidden');
+      targetHintText.textContent = `🔗 โซ่เหล็ก: เลือกเป้าหมายที่ 2 เพื่อล่ามโซ่คู่ (หรือคลิกที่ ${gameState.players[targetPlayerId]?.name || targetPlayerId} อีกครั้งเพื่อล่ามคนเดียว)`;
+      currentLobbyAction = 'IRON_CHAIN_STEP2';
+      renderOpponents();
+      updateActionButtons();
+      return;
+    }
+
+    if (currentLobbyAction === 'IRON_CHAIN_STEP2') {
+      const me = gameState.players[myPlayerId];
+      const card = me.hand.find(c => c.id === selectedCardId);
+      if (!card) return;
+
+      if (targetPlayerId === ironChainFirstTargetId) {
+        socket.emit('use_card', {
+          roomId: myRoomId,
+          cardId: card.id,
+          targetPlayerId: ironChainFirstTargetId
+        });
+      } else {
+        socket.emit('use_card', {
+          roomId: myRoomId,
+          cardId: card.id,
+          targetPlayerId: ironChainFirstTargetId,
+          secondaryTargetId: targetPlayerId
+        });
+      }
+      clearSelection();
+      ironChainFirstTargetId = null;
+      return;
+    }
+
+    if (currentLobbyAction === 'BORROWED_SWORD_STEP1') {
+      // We selected the first target (the weapon holder)
+      const me = gameState.players[myPlayerId];
+      const card = me.hand.find(c => c.id === selectedCardId);
+      if (!card) return;
+      
+      // Save first target and ask for second target (the target they should slash)
+      borrowedSwordFirstTargetId = targetPlayerId;
+      awaitingTarget = true;
+      targetHint.classList.remove('hidden');
+      targetHintText.textContent = `🎯 ยืมดาบฆ่าคน: เลือกเป้าหมายที่สอง (คนที่ต้องการให้ถูกฟัน) ที่อยู่ในระยะดาบของ ${gameState.players[targetPlayerId]?.name || targetPlayerId}`;
+      currentLobbyAction = 'BORROWED_SWORD_STEP2';
+      renderOpponents();
+      updateActionButtons();
+      return;
+    }
+
+    if (currentLobbyAction === 'BORROWED_SWORD_STEP2') {
+      const me = gameState.players[myPlayerId];
+      const card = me.hand.find(c => c.id === selectedCardId);
+      if (!card) return;
+
+      socket.emit('use_card', {
+        roomId: myRoomId,
+        cardId: card.id,
+        targetPlayerId: borrowedSwordFirstTargetId,
+        secondaryTargetId: targetPlayerId
+      });
+      clearSelection();
+      borrowedSwordFirstTargetId = null;
       return;
     }
 
@@ -1485,13 +1827,19 @@
     const isZhaoYunSlash = hasCharacter(me.character, 'ZHAO_YUN') && card.name === 'DODGE';
     const isEffectiveSlash = card.name === 'SLASH' || isGuanYuSlash || isZhaoYunSlash;
 
-    if (isEffectiveSlash || card.name === 'STEAL' || card.name === 'SABOTAGE' || card.name === 'DUEL' || card.name === 'INDULGENCE' || card.name === 'STARVATION') {
+    if (isEffectiveSlash || card.name === 'THUNDER_ATTACK' || card.name === 'FIRE_ATTACK' || card.name === 'IRON_CHAIN' || card.name === 'STEAL' || card.name === 'SABOTAGE' || card.name === 'DUEL' || card.name === 'ACEDIA' || card.name === 'STARVATION' || card.name === 'BORROWED_SWORD') {
       awaitingTarget = true;
       let text = '🎯 เลือกเป้าหมาย';
-      if (isEffectiveSlash) text = '🎯 เลือกเป้าหมายที่ต้องการโจมตีจากผู้เล่นด้านบน';
+      if (isEffectiveSlash || card.name === 'THUNDER_ATTACK') text = '🎯 เลือกเป้าหมายที่ต้องการโจมตีจากผู้เล่นด้านบน';
+      else if (card.name === 'FIRE_ATTACK') text = '🎯 เลือกเป้าหมายที่ต้องการโจมตีด้วยไฟ';
+      else if (card.name === 'IRON_CHAIN') text = '🎯 เลือกเป้าหมายที่ต้องการเชื่อมโซ่เหล็ก';
       else if (card.name === 'STEAL') text = '🎯 เลือกเป้าหมายที่ต้องการขโมยการ์ดจากผู้เล่นด้านบน (ระยะ 1)';
       else if (card.name === 'SABOTAGE') text = '🎯 เลือกเป้าหมายที่ต้องการทำลายการ์ด';
       else if (card.name === 'DUEL') text = '🎯 เลือกเป้าหมายที่ต้องการ DUEL (ประลองกำลัง)';
+      else if (card.name === 'BORROWED_SWORD') {
+        text = '🎯 ยืมดาบฆ่าคน: เลือกผู้เล่นคนแรก (เจ้าของอาวุธ) จากผู้เล่นด้านบน';
+        currentLobbyAction = 'BORROWED_SWORD_STEP1';
+      }
       
       targetHintText.textContent = text;
       renderOpponents();
@@ -1521,17 +1869,61 @@
       const actualCardId = selectedCardId || (selectedDiscardIds.length === 1 ? selectedDiscardIds[0] : null);
       if (!actualCardId || !me || !me.hand) return;
       const card = me.hand.find(c => c.id === actualCardId);
-      if (!card || !CARD_IMAGES[card.name]) return;
+      const imgSrc = (card && CARD_IMAGES[card.name]) || (card && globalThis.CARD_IMAGES && globalThis.CARD_IMAGES[card.name]);
+      if (!card || !imgSrc) return;
 
-
-    previewCardName.textContent = card.name;
-    previewCardImg.src = CARD_IMAGES[card.name];
-    cardPreviewModal.classList.remove('hidden');
+      previewCardName.textContent = card.name;
+      previewCardImg.src = imgSrc;
+      cardPreviewModal.classList.remove('hidden');
     });
   }
 
   btnClosePreview.addEventListener('click', () => {
     cardPreviewModal.classList.add('hidden');
+  });
+
+  // Card Guide listeners
+  btnCardGuide.addEventListener('click', () => {
+    cardGuideList.innerHTML = '';
+    
+    const dict = Object.assign({}, CARD_DICT, globalThis.CARD_DICT || {});
+    const keys = Object.keys(dict).sort();
+    
+    keys.forEach(key => {
+      const cardInfo = dict[key];
+      const item = document.createElement('div');
+      item.style.padding = '12px';
+      item.style.background = 'rgba(255, 255, 255, 0.03)';
+      item.style.border = '1.5px solid var(--border-glass)';
+      item.style.borderRadius = 'var(--radius-sm)';
+      item.style.display = 'flex';
+      item.style.alignItems = 'center';
+      item.style.gap = '15px';
+      
+      const wRange = getWeaponRange(key);
+      const rangeBadge = wRange ? `<span style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 4px; padding: 2px 6px; font-size: 11px; margin-left: 6px; font-weight: bold;">🎯 ระยะโจมตี: ${wRange}</span>` : '';
+      
+      item.innerHTML = `
+        <div style="font-size: 32px; background: rgba(255,255,255,0.05); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--border-glass); flex-shrink: 0;">
+          ${cardInfo.icon || '🃏'}
+        </div>
+        <div style="flex-grow: 1;">
+          <h3 style="color: var(--accent-gold); font-size: 15px; font-weight: 700; margin-bottom: 4px; margin-top: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+            ${cardInfo.name} <small style="color: var(--text-secondary); font-size: 11px;">(${key})</small> ${rangeBadge}
+          </h3>
+          <p style="color: var(--text-primary); font-size: 12px; line-height: 1.4; margin: 0;">
+            ${cardInfo.desc || 'ไม่มีคำอธิบาย'}
+          </p>
+        </div>
+      `;
+      cardGuideList.appendChild(item);
+    });
+    
+    cardGuideModal.classList.remove('hidden');
+  });
+
+  btnCloseCardGuide.addEventListener('click', () => {
+    cardGuideModal.classList.add('hidden');
   });
 
   // Luo River events
@@ -1596,12 +1988,15 @@
 
   function renderPendingAction() {
     const pending = gameState.pendingAction;
+    const me = gameState.players[myPlayerId];
     
     // 1. Dodge / Reaction overlay
     const isReactionPending = pending && (
       ((pending.type === 'WAITING_FOR_DODGE' || pending.type === 'DIAO_CHAN_SEDUCTION' || pending.type === 'ZHOU_YU_DISCORD') && pending.targetPlayerId === myPlayerId) ||
       (pending.type === 'WAITING_FOR_SLASH_DUEL' && pending.currentPlayerToSlash === myPlayerId) ||
-      (pending.type === 'WAITING_FOR_AOE' && pending.targets && pending.targets[pending.currentTargetIndex] === myPlayerId)
+      (pending.type === 'WAITING_FOR_AOE' && pending.targets && pending.targets[pending.currentTargetIndex] === myPlayerId) ||
+      (pending.type === 'WAITING_FOR_BORROW_SLASH' && pending.targetPlayerId === myPlayerId) ||
+      (pending.type === 'WAITING_FOR_NEGATE' && pending.sourcePlayerId !== myPlayerId && me && me.hand && me.hand.some(c => c.name === 'NEGATE')) // Only prompt to Negate others' plays if you actually have Negate!
     );
     
     if (isReactionPending) {
@@ -1609,36 +2004,64 @@
       
       const attacker = gameState.players[pending.sourcePlayerId];
       if (pending.type === 'DIAO_CHAN_SEDUCTION') {
-        pendingAttackerName.textContent = `บ่วงเสน่หา (🌸 สกิลของ ${attacker ? attacker.name : 'เตียวเสี้ยน'})`;
+        if (pendingTitle) pendingTitle.textContent = 'บ่วงเสน่หา!';
+        pendingAttackerName.textContent = `🌸 สกิลของ ${attacker ? attacker.name : 'เตียวเสี้ยน'}`;
         btnDodge.textContent = '🗡️ ทิ้งการ์ด SLASH เพื่อสยบเสน่หา';
         btnTakeDamage.textContent = '💔 ยอมรับความเสียหาย (1 HP)';
       } else if (pending.type === 'ZHOU_YU_DISCORD') {
+        if (pendingTitle) pendingTitle.textContent = 'บ่มเพลิง!';
         const colorName = pending.requiredColor === 'RED' ? 'แดง (❤️/♦️)' : 'ดำ (♠️/♣️)';
-        pendingAttackerName.textContent = `บ่มเพลิง (🔥 สกิลของ ${attacker ? attacker.name : 'จิวยี่'})`;
+        pendingAttackerName.textContent = `🔥 สกิลของ ${attacker ? attacker.name : 'จิวยี่'}`;
         btnDodge.textContent = `🃏 ทิ้งการ์ดสี ${colorName} 1 ใบ`;
         btnTakeDamage.textContent = '💔 ยอมรับความเสียหาย (1 HP)';
       } else if (pending.type === 'WAITING_FOR_SLASH_DUEL') {
+        if (pendingTitle) pendingTitle.textContent = 'การดวล (DUEL)!';
         const opponentId = myPlayerId === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
         const opponent = gameState.players[opponentId];
-        pendingAttackerName.textContent = `กำลังดวล (DUEL) กับ ${opponent ? opponent.name : 'ศัตรู'}`;
+        pendingAttackerName.textContent = `กำลังดวลกับ ${opponent ? opponent.name : 'ศัตรู'}`;
         btnDodge.textContent = 'สู้กลับด้วย SLASH 1 ใบ';
         btnTakeDamage.textContent = 'ยอมแพ้และรับความเสียหาย (1 HP)';
       } else if (pending.type === 'WAITING_FOR_AOE') {
-        const aoeName = pending.aoeType === 'BARBARIAN_INVASION' ? 'คนเถื่อนบุกรุก' : 'ธนูหมื่นดอก';
-        pendingAttackerName.textContent = `รับมือการโจมตีหมู่: ${aoeName} (จาก ${attacker ? attacker.name : 'ศัตรู'})`;
+        const aoeName = pending.aoeType === 'BARBARIAN_INVASION' ? 'คนเถื่อนบุกรุก!' : 'ธนูหมื่นดอก!';
+        if (pendingTitle) pendingTitle.textContent = aoeName;
+        pendingAttackerName.textContent = `การโจมตีหมู่จาก ${attacker ? attacker.name : 'ศัตรู'}`;
         if (pending.aoeType === 'BARBARIAN_INVASION') {
           btnDodge.textContent = 'ป้องกันด้วย SLASH 1 ใบ';
         } else {
           btnDodge.textContent = 'หลบด้วย DODGE 1 ใบ';
         }
         btnTakeDamage.textContent = 'ยอมรับความเสียหาย (1 HP)';
+      } else if (pending.type === 'WAITING_FOR_NEGATE') {
+        if (pendingTitle) pendingTitle.textContent = 'โอกาสขัดขวาง!';
+        const cardNameText = pending.cardUsedName ? `การ์ด ${pending.cardUsedName}` : 'ไพ่เวทมนตร์';
+        pendingAttackerName.textContent = `เพื่อยกเลิก ${cardNameText} ของ ${attacker ? attacker.name : 'ศัตรู'}`;
+        btnDodge.textContent = '⛔ ใช้ไร้ข้อกังขา (NEGATE)';
+        btnTakeDamage.textContent = 'ผ่าน (PASS)';
+      } else if (pending.type === 'WAITING_FOR_BORROW_SLASH') {
+        if (pendingTitle) pendingTitle.textContent = 'ยืมดาบฆ่าคน!';
+        const victim = gameState.players[pending.victimId];
+        pendingAttackerName.textContent = `${attacker ? attacker.name : 'ศัตรู'} สั่งให้คุณใช้ SLASH โจมตี ${victim ? victim.name : 'เป้าหมาย'}`;
+        btnDodge.textContent = '⚔️ ใช้ SLASH โจมตี';
+        btnTakeDamage.textContent = '💔 ยอมให้ยึดอาวุธ';
       } else {
-        pendingAttackerName.textContent = attacker ? attacker.name : pending.sourcePlayerId;
+        if (pendingTitle) pendingTitle.textContent = 'คุณถูกโจมตี!';
+        pendingAttackerName.textContent = `โดนโจมตีจาก ${attacker ? attacker.name : pending.sourcePlayerId}`;
         const dodgeText = (pending.dodgeNeeded && pending.dodgeNeeded > 1) ? `ทิ้งการ์ด DODGE (${pending.dodgeNeeded} ใบ)` : 'ทิ้งการ์ด DODGE เพื่อหลบ';
         btnDodge.textContent = `🛡️ ${dodgeText}`;
         btnTakeDamage.textContent = '💔 ยอมรับความเสียหาย';
       }
       
+      const me = gameState.players[myPlayerId];
+      if (me && me.equipment && me.equipment.armor && me.equipment.armor.name === 'EIGHT_TRIGRAMS_FORMATION' && !pending.eightTrigramsUsed) {
+        if (pending.type === 'WAITING_FOR_DODGE' || (pending.type === 'WAITING_FOR_AOE' && pending.aoeType === 'ARROW_BARRAGE')) {
+          btnEightTrigrams.classList.remove('hidden');
+        } else {
+          btnEightTrigrams.classList.add('hidden');
+        }
+      } else {
+        btnEightTrigrams.classList.add('hidden');
+      }
+
       const secondsLeft = Math.max(0, Math.ceil((pending.timeoutAt - Date.now()) / 1000));
       countdownSeconds.textContent = secondsLeft;
       countdownBarFill.style.width = '100%';
@@ -1703,7 +2126,409 @@
     } else {
       dyingOverlay.classList.add('hidden');
     }
+
+    // 4. Fire Attack Reveal Overlay
+    if (pending && pending.type === 'WAITING_FOR_FIRE_REVEAL' && pending.targetPlayerId === myPlayerId) {
+      fireRevealOverlay.classList.remove('hidden');
+      fireRevealCards.innerHTML = '';
+      const me = gameState.players[myPlayerId];
+      if (me && me.hand) {
+        me.hand.forEach(c => {
+          const cardBtn = document.createElement('button');
+          cardBtn.className = 'card-v2';
+          cardBtn.style.position = 'relative';
+          cardBtn.style.transform = 'none';
+          const globalDict = globalThis.CARD_DICT || {};
+          const pic = globalDict[c.name]?.pic || '';
+          cardBtn.innerHTML = `
+            ${pic ? `<div class="card-image-bg" style="background-image: url('${pic}');"></div>` : ''}
+            <div class="card-top ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade'}">
+              <span>${c.rank}</span>
+              <span class="card-suit">${c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣'}</span>
+            </div>
+            <div class="card-name-v2" style="font-size: 11px;">${c.name}</div>
+          `;
+          cardBtn.addEventListener('click', () => {
+            socket.emit('resolve_fire_reveal', { roomId: myRoomId, cardId: c.id });
+            fireRevealOverlay.classList.add('hidden');
+          });
+          fireRevealCards.appendChild(cardBtn);
+        });
+      }
+    } else {
+      fireRevealOverlay.classList.add('hidden');
+    }
+
+    // 5. Fire Attack Match Overlay
+    if (pending && pending.type === 'WAITING_FOR_FIRE_MATCH' && pending.sourcePlayerId === myPlayerId) {
+      fireMatchOverlay.classList.remove('hidden');
+      fireMatchSuitText.textContent = pending.requiredSuit;
+      fireMatchCards.innerHTML = '';
+      const me = gameState.players[myPlayerId];
+      if (me && me.hand) {
+        const matches = me.hand.filter(c => c.suit === pending.requiredSuit);
+        if (matches.length === 0) {
+          fireMatchCards.innerHTML = '<p style="color: var(--hp-low); font-size:12px;">คุณไม่มีการ์ดดอกตรงกันเพื่อใช้ทำความเสียหาย</p>';
+        } else {
+          matches.forEach(c => {
+            const cardBtn = document.createElement('button');
+            cardBtn.className = 'card-v2';
+            cardBtn.style.position = 'relative';
+            cardBtn.style.transform = 'none';
+            const globalDict = globalThis.CARD_DICT || {};
+            const pic = globalDict[c.name]?.pic || '';
+            cardBtn.innerHTML = `
+              ${pic ? `<div class="card-image-bg" style="background-image: url('${pic}');"></div>` : ''}
+              <div class="card-top ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade'}">
+                <span>${c.rank}</span>
+                <span class="card-suit">${c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣'}</span>
+              </div>
+              <div class="card-name-v2" style="font-size: 11px;">${c.name}</div>
+            `;
+            cardBtn.addEventListener('click', () => {
+              socket.emit('resolve_fire_match', { roomId: myRoomId, cardId: c.id });
+              fireMatchOverlay.classList.add('hidden');
+            });
+            fireMatchCards.appendChild(cardBtn);
+          });
+        }
+      }
+    } else {
+      fireMatchOverlay.classList.add('hidden');
+    }
+
+    // 6. Yin-Yang Swords Overlay
+    if (pending && pending.type === 'WAITING_FOR_YINYANG_CHOICE' && pending.targetPlayerId === myPlayerId) {
+      yinyangChoiceOverlay.classList.remove('hidden');
+      yinyangDiscardSection.classList.add('hidden');
+      yinyangDiscardCards.innerHTML = '';
+      
+      const me = gameState.players[myPlayerId];
+      if (me && me.hand) {
+        me.hand.forEach(c => {
+          const cardBtn = document.createElement('button');
+          cardBtn.className = 'card-v2';
+          cardBtn.style.position = 'relative';
+          cardBtn.style.transform = 'none';
+          const globalDict = globalThis.CARD_DICT || {};
+          const pic = globalDict[c.name]?.pic || '';
+          cardBtn.innerHTML = `
+            ${pic ? `<div class="card-image-bg" style="background-image: url('${pic}');"></div>` : ''}
+            <div class="card-top ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade'}">
+              <span>${c.rank}</span>
+              <span class="card-suit">${c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣'}</span>
+            </div>
+            <div class="card-name-v2" style="font-size: 11px;">${c.name}</div>
+          `;
+          cardBtn.addEventListener('click', () => {
+            socket.emit('resolve_yinyang_choice', { roomId: myRoomId, action: 'DISCARD', cardId: c.id });
+            yinyangChoiceOverlay.classList.add('hidden');
+          });
+          yinyangDiscardCards.appendChild(cardBtn);
+        });
+      }
+    } else {
+      yinyangChoiceOverlay.classList.add('hidden');
+    }
+
+    // 7. Weapon Trigger overlay (Green Dragon, Axe, Trident, Frost)
+    const isWeaponTriggerPending = pending && (
+      (pending.type === 'WAITING_FOR_GREEN_DRAGON' && pending.sourcePlayerId === myPlayerId) ||
+      (pending.type === 'WAITING_FOR_AXE_DISCARD' && pending.sourcePlayerId === myPlayerId) ||
+      (pending.type === 'WAITING_FOR_TRIDENT_DISCARD' && pending.sourcePlayerId === myPlayerId) ||
+      (pending.type === 'WAITING_FOR_FROST_DISCARD' && pending.sourcePlayerId === myPlayerId)
+    );
+
+    if (isWeaponTriggerPending) {
+      weaponTriggerOverlay.classList.remove('hidden');
+      weaponTriggerCardSelector.classList.add('hidden');
+      weaponTriggerCards.innerHTML = '';
+
+      let icon = '🗡️';
+      let title = 'ความสามารถอาวุธ';
+      let desc = '';
+      let requiresCardCount = 0;
+      let filterCardType = null;
+
+      if (pending.type === 'WAITING_FOR_GREEN_DRAGON') {
+        icon = '🐉';
+        title = 'ง้าวมังกรเขียว (Green Dragon)';
+        desc = 'การโจมตีของคุณถูกหลบหลีก! ต้องการทิ้งการ์ด SLASH 1 ใบเพื่อโจมตีซ้ำใส่เป้าหมายเดิมหรือไม่?';
+        requiresCardCount = 1;
+        filterCardType = 'SLASH';
+      } else if (pending.type === 'WAITING_FOR_AXE_DISCARD') {
+        icon = '🪓';
+        title = 'ขวานผ่าหิน (Rock Axe)';
+        desc = 'การโจมตีของคุณถูกหลบหลีก! ต้องการทิ้งการ์ดหรืออุปกรณ์ 2 ใบเพื่อบังคับให้การโจมตีผ่านทันทีหรือไม่?';
+        requiresCardCount = 2;
+      } else if (pending.type === 'WAITING_FOR_TRIDENT_DISCARD') {
+        icon = '🔱';
+        title = 'ง้าวสองง่าม (Trident)';
+        desc = 'การโจมตีของคุณถูกหลบหลีก! ต้องการทิ้งการ์ดบนมือ 1 ใบเพื่อบังคับให้การโจมตีโดนหรือไม่?';
+        requiresCardCount = 1;
+      } else if (pending.type === 'WAITING_FOR_FROST_DISCARD') {
+        icon = '❄️';
+        title = 'ดาบน้ำแข็ง (Frost Sword)';
+        desc = 'การโจมตีสำเร็จ! ต้องการยกเลิกความเสียหายเพื่อบังคับทิ้งการ์ด 2 ใบของเป้าหมายหรือไม่?';
+      }
+
+      weaponTriggerIcon.textContent = icon;
+      weaponTriggerTitle.textContent = title;
+      weaponTriggerDesc.textContent = desc;
+
+      const me = gameState.players[myPlayerId];
+      if (requiresCardCount > 0 && me) {
+        weaponTriggerCardSelector.classList.remove('hidden');
+        weaponTriggerSelectorHint.textContent = `กรุณาเลือกการ์ดให้ครบ ${requiresCardCount} ใบเพื่อเปิดใช้งาน:`;
+        
+        let selectable = [];
+        if (filterCardType === 'SLASH') {
+          selectable = (me.hand || []).filter(c => c.name === 'SLASH' || c.name === 'THUNDER_ATTACK');
+        } else {
+          // Hand cards
+          selectable = [...(me.hand || [])];
+          // Equipment cards (only for Axe)
+          if (pending.type === 'WAITING_FOR_AXE_DISCARD' && me.equipment) {
+            Object.values(me.equipment).forEach(eq => {
+              if (eq) selectable.push(eq);
+            });
+          }
+        }
+
+        const selectedWeaponStateIds = [];
+        selectable.forEach(c => {
+          const cardBtn = document.createElement('button');
+          cardBtn.className = 'card-v2';
+          cardBtn.style.position = 'relative';
+          cardBtn.style.transform = 'none';
+          const globalDict = globalThis.CARD_DICT || {};
+          const pic = globalDict[c.name]?.pic || '';
+          cardBtn.innerHTML = `
+            ${pic ? `<div class="card-image-bg" style="background-image: url('${pic}');"></div>` : ''}
+            <div class="card-top ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade'}">
+              <span>${c.rank}</span>
+              <span class="card-suit">${c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣'}</span>
+            </div>
+            <div class="card-name-v2" style="font-size: 11px;">${c.name}</div>
+          `;
+          cardBtn.addEventListener('click', () => {
+            const idx = selectedWeaponStateIds.indexOf(c.id);
+            if (idx !== -1) {
+              selectedWeaponStateIds.splice(idx, 1);
+              cardBtn.classList.remove('selected');
+            } else {
+              if (selectedWeaponStateIds.length < requiresCardCount) {
+                selectedWeaponStateIds.push(c.id);
+                cardBtn.classList.add('selected');
+              }
+            }
+          });
+          weaponTriggerCards.appendChild(cardBtn);
+        });
+
+        // Store selected values directly on the yes button's state object helper
+        btnWeaponTriggerYes.onclick = () => {
+          if (selectedWeaponStateIds.length !== requiresCardCount) {
+            showToast(`โปรดเลือกการ์ดให้ครบ ${requiresCardCount} ใบ`, 'error');
+            return;
+          }
+          socket.emit('resolve_weapon_skill', { roomId: myRoomId, accept: true, cardIds: selectedWeaponStateIds });
+          weaponTriggerOverlay.classList.add('hidden');
+        };
+      } else {
+        btnWeaponTriggerYes.onclick = () => {
+          socket.emit('resolve_weapon_skill', { roomId: myRoomId, accept: true });
+          weaponTriggerOverlay.classList.add('hidden');
+        };
+      }
+    } else {
+      weaponTriggerOverlay.classList.add('hidden');
+    }
+
+    // 8. Bumper Harvest picking area
+    if (pending && pending.type === 'WAITING_FOR_BUMPER_PICK') {
+      const isMyPick = pending.currentPickerId === myPlayerId;
+      pendingOverlay.classList.remove('hidden');
+      if (pendingTitle) pendingTitle.textContent = isMyPick ? '🌾 ถึงตาคุณหยิบการ์ด!' : '🌾 รอคู่ต่อสู้หยิบการ์ด...';
+      const pickerName = gameState.players[pending.currentPickerId] ? gameState.players[pending.currentPickerId].name : pending.currentPickerId;
+      pendingAttackerName.textContent = isMyPick ? 'โปรดเลือกการ์ด 1 ใบจากกองกลางด้านล่างนี้:' : `กำลังรอให้ ${pickerName} เลือกการ์ด`;
+
+      btnDodge.classList.add('hidden');
+      btnTakeDamage.classList.add('hidden');
+      bumperCardsContainer.classList.remove('hidden');
+      bumperCardsContainer.innerHTML = '';
+
+      if (gameState.bumperHarvestCards) {
+        gameState.bumperHarvestCards.forEach(c => {
+          const cardBtn = document.createElement('button');
+          cardBtn.className = 'card-v2';
+          cardBtn.style.position = 'relative';
+          cardBtn.style.transform = 'none';
+          if (!isMyPick) cardBtn.disabled = true;
+          
+          const globalDict = globalThis.CARD_DICT || {};
+          const pic = globalDict[c.name]?.pic || '';
+          cardBtn.innerHTML = `
+            ${pic ? `<div class="card-image-bg" style="background-image: url('${pic}');"></div>` : ''}
+            <div class="card-top ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade'}">
+              <span>${c.rank}</span>
+              <span class="card-suit">${c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣'}</span>
+            </div>
+            <div class="card-name-v2" style="font-size: 11px;">${c.name}</div>
+          `;
+          cardBtn.addEventListener('click', () => {
+            socket.emit('pick_bumper_card', { roomId: myRoomId, cardId: c.id });
+          });
+          bumperCardsContainer.appendChild(cardBtn);
+        });
+      }
+    } else {
+      // Re-enable default overlay buttons when not WAITING_FOR_BUMPER_PICK
+      btnDodge.classList.remove('hidden');
+      btnTakeDamage.classList.remove('hidden');
+      bumperCardsContainer.classList.add('hidden');
+    }
   }
+
+  // Register Event Listeners for new overlays
+  btnFireMatchCancel.addEventListener('click', () => {
+    socket.emit('resolve_fire_match', { roomId: myRoomId, cancel: true });
+    fireMatchOverlay.classList.add('hidden');
+  });
+
+  btnYinyangDraw.addEventListener('click', () => {
+    socket.emit('resolve_yinyang_choice', { roomId: myRoomId, action: 'DRAW' });
+    yinyangChoiceOverlay.classList.add('hidden');
+  });
+
+  // --- ADMIN SANDBOX CONTROLS ---
+  const btnAdminToggle = $('btn-admin-sandbox-toggle');
+  const adminModal = $('admin-sandbox-modal');
+  const btnAdminClose = $('btn-close-admin-sandbox');
+  const btnAdminSpawnCard = $('btn-admin-spawn-card');
+  const btnAdminChangeHero = $('btn-admin-change-hero');
+  const btnAdminHpPlus = $('btn-admin-hp-plus');
+  const btnAdminHpMinus = $('btn-admin-hp-minus');
+  const btnAdminHpDying = $('btn-admin-hp-dying');
+  const btnAdminSpawnBot = $('btn-admin-spawn-bot');
+
+  if (btnAdminToggle && adminModal) {
+    if (isTestSandboxMode) {
+      btnAdminToggle.classList.remove('hidden');
+      setTimeout(() => {
+        adminModal.classList.remove('hidden');
+      }, 1000);
+    }
+    btnAdminToggle.addEventListener('click', () => {
+      adminModal.classList.remove('hidden');
+    });
+  }
+  if (btnAdminClose && adminModal) {
+    btnAdminClose.addEventListener('click', () => {
+      adminModal.classList.add('hidden');
+    });
+  }
+  if (btnAdminSpawnCard) {
+    btnAdminSpawnCard.addEventListener('click', () => {
+      const cardSelect = $('admin-card-select');
+      if (!cardSelect || !myRoomId) return;
+      socket.emit('admin_spawn_card', { roomId: myRoomId, cardName: cardSelect.value });
+      showToast(`🛠️ เสกการ์ด ${cardSelect.value} ขึ้นมือเรียบร้อย!`, 'info');
+    });
+  }
+  if (btnAdminChangeHero) {
+    btnAdminChangeHero.addEventListener('click', () => {
+      const heroSelect = $('admin-hero-select');
+      if (!heroSelect || !myRoomId) return;
+      socket.emit('admin_change_hero', { roomId: myRoomId, character: heroSelect.value });
+      showToast(`🧙‍♂️ เปลี่ยนขุนพลเป็น ${heroSelect.value} เรียบร้อย!`, 'info');
+    });
+  }
+  if (btnAdminHpPlus) {
+    btnAdminHpPlus.addEventListener('click', () => {
+      const me = gameState && gameState.players ? gameState.players[myPlayerId] : null;
+      if (!me || !myRoomId) return;
+      socket.emit('admin_set_hp', { roomId: myRoomId, hp: me.hp + 1 });
+    });
+  }
+  if (btnAdminHpMinus) {
+    btnAdminHpMinus.addEventListener('click', () => {
+      const me = gameState && gameState.players ? gameState.players[myPlayerId] : null;
+      if (!me || !myRoomId) return;
+      socket.emit('admin_set_hp', { roomId: myRoomId, hp: me.hp - 1 });
+    });
+  }
+  if (btnAdminHpDying) {
+    btnAdminHpDying.addEventListener('click', () => {
+      if (!myRoomId) return;
+      socket.emit('admin_set_hp', { roomId: myRoomId, hp: 1 });
+      showToast('⚠️ ตั้งพลังชีวิตเป็น 1 (ทดสอบสถานะวิกฤต/ใกล้ตาย)', 'warning');
+    });
+  }
+  const btnAdminRemoveBot = $('btn-admin-remove-bot');
+  const btnAdminToggleBotAi = $('btn-admin-toggle-bot-ai');
+  const btnAdminBotPass = $('btn-admin-bot-pass');
+  const btnAdminBotSlash = $('btn-admin-bot-slash');
+
+  let isBotPassiveState = true;
+
+  if (btnAdminSpawnBot) {
+    btnAdminSpawnBot.addEventListener('click', () => {
+      if (!myRoomId) return;
+      socket.emit('admin_spawn_bot', { roomId: myRoomId });
+      showToast('➕ เสกบอทคู่ต่อสู้เรียบร้อย!', 'info');
+    });
+  }
+  if (btnAdminRemoveBot) {
+    btnAdminRemoveBot.addEventListener('click', () => {
+      if (!myRoomId) return;
+      socket.emit('admin_remove_bot', { roomId: myRoomId });
+      showToast('➖ สั่งลบบอทออกเรียบร้อย!', 'warning');
+    });
+  }
+  if (btnAdminToggleBotAi) {
+    btnAdminToggleBotAi.addEventListener('click', () => {
+      if (!myRoomId) return;
+      isBotPassiveState = !isBotPassiveState;
+      socket.emit('admin_toggle_bot_ai', { roomId: myRoomId, isPassive: isBotPassiveState });
+      btnAdminToggleBotAi.textContent = isBotPassiveState ? '⏸️ บอทอยู่เฉยๆ (Passive)' : '▶️ บอทเล่นเอง (Auto AI)';
+      btnAdminToggleBotAi.style.background = isBotPassiveState ? '#8b5cf6' : '#22c55e';
+      showToast(isBotPassiveState ? '⏸️ บอทเข้าสู่โหมดอยู่เฉยๆ (Passive)' : '▶️ บอทเข้าสู่โหมดเล่นเอง (Auto AI)', 'info');
+    });
+  }
+  if (btnAdminBotPass) {
+    btnAdminBotPass.addEventListener('click', () => {
+      if (!myRoomId) return;
+      socket.emit('admin_bot_pass_turn', { roomId: myRoomId });
+      showToast('⏩ สั่งให้บอทผ่านเทิร์นเรียบร้อย!', 'info');
+    });
+  }
+  if (btnAdminBotSlash) {
+    btnAdminBotSlash.addEventListener('click', () => {
+      if (!myRoomId) return;
+      socket.emit('admin_bot_slash', { roomId: myRoomId, targetId: myPlayerId });
+      showToast('⚔️ สั่งให้บอทฟันใส่คุณเรียบร้อย!', 'info');
+    });
+  }
+
+  btnYinyangDiscardTrigger.addEventListener('click', () => {
+    yinyangDiscardSection.classList.remove('hidden');
+  });
+
+  btnWeaponTriggerNo.addEventListener('click', () => {
+    socket.emit('resolve_weapon_skill', { roomId: myRoomId, accept: false });
+    weaponTriggerOverlay.classList.add('hidden');
+  });
+
+  btnEightTrigrams.addEventListener('click', () => {
+    socket.emit('resolve_pending', {
+      roomId: myRoomId,
+      action: 'EIGHT_TRIGRAMS'
+    });
+    // Don't close pendingOverlay here because they might need to use it multiple times if LV_BU, or if it fails they need to dodge manually.
+    // The server will update the state and the UI will refresh automatically.
+    btnEightTrigrams.classList.add('hidden'); // Hide it so they don't spam click while waiting
+  });
 
   btnDodge.addEventListener('click', () => {
     const me = gameState.players[myPlayerId];
@@ -1724,6 +2549,39 @@
       }
       
       socket.emit('resolve_pending', {
+        roomId: myRoomId,
+        action: 'DODGE',
+        cardId: slashCard.id,
+        playAs: hasCharacter(me.character, 'ZHAO_YUN') && slashCard.name === 'DODGE' ? 'SLASH' : null
+      });
+      pendingOverlay.classList.add('hidden');
+      return;
+    }
+
+    if (pending.type === 'WAITING_FOR_NEGATE') {
+      const negateCard = me.hand.find(c => c.name === 'NEGATE');
+      if (!negateCard) {
+        showToast('คุณไม่มีการ์ด ไร้ข้อกังขา (NEGATE)!', 'error');
+        return;
+      }
+      socket.emit('play_negate', {
+        roomId: myRoomId,
+        cardId: negateCard.id
+      });
+      pendingOverlay.classList.add('hidden');
+      return;
+    }
+
+    if (pending.type === 'WAITING_FOR_BORROW_SLASH') {
+      let slashCard = me.hand.find(c => c.name === 'SLASH');
+      if (!slashCard && hasCharacter(me.character, 'ZHAO_YUN')) {
+        slashCard = me.hand.find(c => c.name === 'DODGE');
+      }
+      if (!slashCard) {
+        showToast('คุณไม่มีการ์ด SLASH หรือการ์ดที่สามารถใช้แทน SLASH ได้!', 'error');
+        return;
+      }
+      socket.emit('resolve_borrowed_sword', {
         roomId: myRoomId,
         action: 'DODGE',
         cardId: slashCard.id,
@@ -1779,10 +2637,22 @@
   });
 
   btnTakeDamage.addEventListener('click', () => {
-    socket.emit('resolve_pending', {
-      roomId: myRoomId,
-      action: 'TAKE_DAMAGE'
-    });
+    const pending = gameState.pendingAction;
+    if (pending && pending.type === 'WAITING_FOR_NEGATE') {
+      socket.emit('pass_negate', {
+        roomId: myRoomId
+      });
+    } else if (pending && pending.type === 'WAITING_FOR_BORROW_SLASH') {
+      socket.emit('resolve_borrowed_sword', {
+        roomId: myRoomId,
+        action: 'TAKE_DAMAGE'
+      });
+    } else {
+      socket.emit('resolve_pending', {
+        roomId: myRoomId,
+        action: 'TAKE_DAMAGE'
+      });
+    }
     pendingOverlay.classList.add('hidden');
   });
 
@@ -1915,7 +2785,7 @@
       cards.forEach(c => {
         let englishName = (c.card_name || '').toUpperCase().replace(/\s+/g, '_');
         if (englishName === 'ATTACK') englishName = 'SLASH';
-        if (englishName === 'OVERINDULGENCE') englishName = 'INDULGENCE';
+        if (englishName === 'OVERINDULGENCE') englishName = 'ACEDIA';
         if (englishName === 'SOMETHING_OUT_OF_NOTHING') englishName = 'EX_NIHILO';
         if (englishName === 'IRON_CHAINS' || englishName === 'ALLIANCE') englishName = 'IRON_CHAIN';
         if (englishName === 'RAINING_ARROWS') englishName = 'ARROW_BARRAGE';
@@ -1925,16 +2795,31 @@
         if (englishName === 'FLAME_TACTIC') englishName = 'FIRE_ATTACK';
 
         globalThis.CARD_NAME_MAPPING[englishName] = c.card_name;
-        globalThis.CARD_IMAGES[englishName] = c.pic_url || c.pic || '';
-        globalThis.CARD_DICT[englishName] = {
+        let picUrl = c.pic_url || c.pic || '';
+        if ((!picUrl || picUrl.includes('default.png')) && CARD_IMAGES[englishName]) {
+          picUrl = CARD_IMAGES[englishName];
+        }
+
+        globalThis.CARD_IMAGES[englishName] = picUrl;
+        if (typeof CARD_IMAGES !== 'undefined') {
+          CARD_IMAGES[englishName] = picUrl;
+        }
+
+        const cardData = {
           name: c.card_name,
           desc: c.description || c.desc || '',
           icon: c.main_type === 'Basic Card' ? '🃏' : (c.main_type === 'Stratagem Card' ? '📜' : '🔧'),
           theme: c.main_type === 'Basic Card' ? 'card-default' : (c.main_type === 'Stratagem Card' ? 'card-orange' : 'card-blue'),
-          pic: c.pic_url || c.pic || null
+          pic: picUrl || null
         };
+
+        globalThis.CARD_DICT[englishName] = cardData;
+        if (typeof CARD_DICT !== 'undefined') {
+          CARD_DICT[englishName] = cardData;
+        }
       });
     })
     .catch(err => {
       console.error('Error loading cards database:', err);
     });
+})();

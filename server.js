@@ -6,15 +6,24 @@ try {
     dbData.forEach(c => {
         let englishName = c.card_name.toUpperCase().replace(/\s+/g, '_');
         if (englishName === "ATTACK") englishName = "SLASH";
-        if (englishName === "OVERINDULGENCE") englishName = "INDULGENCE";
+        if (englishName === "OVERINDULGENCE") englishName = "ACEDIA";
         if (englishName === "SOMETHING_OUT_OF_NOTHING") englishName = "EX_NIHILO";
         if (englishName === "ALLIANCE" || englishName === "IRON_CHAINS") englishName = "IRON_CHAIN";
         if (englishName === "BARBARIAN_INVASION") englishName = "BARBARIAN_INVASION";
         if (englishName === "RAINING_ARROWS") englishName = "ARROW_BARRAGE";
         if (englishName === "OATH_OF_THE_PEACH_GARDEN") englishName = "PEACH_GARDEN";
+        if (englishName === "NEGATION") englishName = "NEGATE";
+        if (englishName === "RATIONS_DEPLETED") englishName = "STARVATION";
+        if (englishName === "FLAME_TACTIC") englishName = "FIRE_ATTACK";
         SERVER_CARD_DB[englishName] = c;
     });
 } catch(e) { console.error("Could not load cards_db.json on server", e); }
+
+const { initDatabase, recordPlayerStats, saveMatchHistory, getLeaderboard } = require('./db/database');
+const pluginManager = require('./plugins/plugin_manager');
+
+// Initialize SQL Database
+initDatabase().catch(err => console.error('SQL DB Init Error:', err));
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -25,6 +34,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
+global.io = io;
 
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -56,10 +66,25 @@ app.get('/room/:roomId', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'room.html'));
 });
 
+app.get('/test', (req, res) => {
+  res.redirect('/app/ROOM_TEST?test=true&mode=BOT&action=create');
+});
+
+// API Leaderboard Route (SQL Query)
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const leaderboard = await getLeaderboard(10);
+    res.json({ success: true, data: leaderboard });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ==========================================
 // 1. DATABASE & CONFIG
 // ==========================================
 const gameRooms = {};
+const reconnectTimeouts = {};
 let allHeroes = [];
 
 try {
@@ -149,7 +174,9 @@ function getSanitizedRoomState(room, targetPlayerId) {
     players: maskedPlayers,
     turnOrder: room.turnOrder,
     winnerRole: room.winnerRole || null,
-    winnerText: room.winnerText || null
+    winnerText: room.winnerText || null,
+    bumperHarvestCards: room.bumperHarvestCards || [],
+    chat: room.chat || []
   };
 }
 
@@ -171,7 +198,7 @@ function getCardLocalName(cardName) {
     'SLASH': 'โจมตี', 'DODGE': 'หลบหลีก', 'PEACH': 'ลูกท้อ', 'WINE': 'สุรา',
     'STEAL': 'ขโมย', 'SABOTAGE': 'ทำลาย', 'EX_NIHILO': 'สร้างจากความว่างเปล่า',
     'DUEL': 'ดวล', 'BARBARIAN_INVASION': 'คนเถื่อนบุก', 'ARROW_BARRAGE': 'ธนูหมื่นดอก',
-    'PEACH_GARDEN': 'สวนท้อ', 'LIGHTNING': 'อัสนีบาต', 'INDULGENCE': 'สุขสำราญ',
+    'PEACH_GARDEN': 'สวนท้อ', 'LIGHTNING': 'อัสนีบาต', 'ACEDIA': 'สุขสำราญ',
     'STARVATION': 'เสบียงขาด', 'ZHUGE_CROSSBOW': 'หน้าไม้จูกัด', 'BLUE_STEEL_SWORD': 'ง้าวฟ้าสะท้าน'
   };
   return dict[cardName] || cardName;
@@ -329,15 +356,19 @@ function initDeck() {
   for (let i = 0; i < 10; i++) {
     deck.push({ id: `c_${idCounter++}`, name: 'PEACH_GARDEN', suit: 'HEART', rank: 1, type: 'KIT' });
   }
+  // Iron Chain (6 cards)
+  for (let i = 0; i < 6; i++) {
+    deck.push({ id: `c_${idCounter++}`, name: 'IRON_CHAIN', suit: i % 2 === 0 ? 'SPADE' : 'CLUB', rank: Math.floor(Math.random() * 13) + 1, type: 'KIT' });
+  }
 
   // Lightning (4 cards)
   deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING', suit: 'SPADE', rank: 1, type: 'DELAYED' });
   deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING', suit: 'HEART', rank: 12, type: 'DELAYED' });
   deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING', suit: 'CLUB', rank: 10, type: 'DELAYED' });
   deck.push({ id: `c_${idCounter++}`, name: 'LIGHTNING', suit: 'DIAMOND', rank: 11, type: 'DELAYED' });
-  // Indulgence (10 cards)
+  // Indulgence / Acedia (10 cards)
   for (let i = 0; i < 10; i++) {
-    deck.push({ id: `c_${idCounter++}`, name: 'INDULGENCE', suit: 'SPADE', rank: 6, type: 'DELAYED' });
+    deck.push({ id: `c_${idCounter++}`, name: 'ACEDIA', suit: 'SPADE', rank: 6, type: 'DELAYED' });
   }
   // Starvation (10 cards)
   for (let i = 0; i < 10; i++) {
@@ -476,7 +507,7 @@ function assignRoles(room) {
 
   if (count === 2) {
     roles = ['LORD', 'REBEL'];
-  } if (count === 3) {
+  } else if (count === 3) {
     roles = ['LORD', 'REBEL', 'RENEGADE'];
   } else if (count === 4) {
     roles = ['LORD', 'LOYALIST', 'REBEL', 'RENEGADE'];
@@ -556,14 +587,17 @@ function checkDyingAskerBot(room) {
   
   if (asker && asker.isAlive && asker.isBot) {
     setTimeout(() => {
-      let peachIdx = asker.hand.findIndex(c => c.name === 'PEACH');
       const dyingPlayer = room.players[pending.targetPlayerId];
-      
       let shouldSave = (askerId === pending.targetPlayerId);
       if (!shouldSave) {
         if ((asker.role === 'LORD' || asker.role === 'LOYALIST') && dyingPlayer.role === 'LORD') {
           shouldSave = true;
         }
+      }
+
+      let peachIdx = asker.hand.findIndex(c => c.name === 'PEACH');
+      if (askerId === pending.targetPlayerId && peachIdx === -1) {
+        peachIdx = asker.hand.findIndex(c => c.name === 'WINE');
       }
       
       if (shouldSave && peachIdx !== -1) {
@@ -652,8 +686,8 @@ function advanceDyingAsker(room) {
     const isGameOver = checkGameOver(room);
     broadcastRoomState(room);
     if (!isGameOver) {
-      if (room.currentTurnPlayerId === pending.targetPlayerId) {
-        nextTurn(room);
+      if (room.turnOrder[room.currentTurnIndex] === pending.targetPlayerId) {
+        endPlayerTurn(room);
       } else {
         resumeAfterAttack(room);
       }
@@ -784,6 +818,24 @@ function startPlayerTurn(room) {
       
       console.log(`Judgement for ${card.name}: drew ${judgeCard.suit} ${judgeCard.rank}`);
       
+      let isSuccess = false;
+      let titleName = card.name === 'LIGHTNING' ? 'อัสนีบาต (สายฟ้า)' : (card.name === 'ACEDIA' ? 'สุขไม่คิดกลับ' : 'เสบียงขาด');
+      if (card.name === 'LIGHTNING') {
+        isSuccess = !(judgeCard.suit === 'SPADE' && judgeCard.rank >= 2 && judgeCard.rank <= 9);
+      } else if (card.name === 'ACEDIA') {
+        isSuccess = (judgeCard.suit === 'HEART');
+      } else if (card.name === 'STARVATION') {
+        isSuccess = (judgeCard.suit === 'CLUB');
+      }
+
+      io.to(room.id).emit('judgement_result', {
+        title: titleName,
+        card: judgeCard,
+        isSuccess: isSuccess,
+        targetPlayerId: player.id,
+        targetPlayerName: player.name
+      });
+      
       if (card.name === 'LIGHTNING') {
         if (judgeCard.suit === 'SPADE' && judgeCard.rank >= 2 && judgeCard.rank <= 9) {
           console.log(`LIGHTNING struck ${player.name}! 3 Damage!`);
@@ -805,10 +857,10 @@ function startPlayerTurn(room) {
           room.discardPile.pop(); // remove from discard
           console.log(`LIGHTNING passed to ${nextPlayer.name}`);
         }
-      } else if (card.name === 'INDULGENCE') {
+      } else if (card.name === 'ACEDIA') {
         if (judgeCard.suit !== 'HEART') {
           skipPlayPhase = true;
-          console.log(`${player.name} skips Play phase due to INDULGENCE`);
+          console.log(`${player.name} skips Play phase due to ACEDIA`);
         }
       } else if (card.name === 'STARVATION') {
         if (judgeCard.suit !== 'CLUB') {
@@ -886,7 +938,10 @@ function checkDiscardRequirement(room) {
   const player = room.players[playerId];
   
   const handCount = player.hand.length;
-  const maxHand = player.hp;
+  let maxHand = player.hp;
+  if (player.equipment && player.equipment.treasure && player.equipment.treasure.name === 'WOODEN_CART') {
+    maxHand += 1;
+  }
   
   if (handCount <= maxHand) {
     endPlayerTurn(room);
@@ -945,6 +1000,13 @@ function botWantsToAttack(bot, target, room) {
 function runBotTurn(room, botId) {
   const bot = room.players[botId];
   if (!bot || !bot.isAlive || room.status !== 'PLAYING') return;
+
+  // In test sandbox mode or when bot passive toggle is enabled, bots stay passive
+  const isTestRoom = room.roomId === 'ROOM_TEST' || room.roomId.startsWith('ROOM_TEST');
+  if (room.isBotPassive || (isTestRoom && room.isBotPassive !== false)) {
+    console.log(`🤖 Bot Passive Mode: ${bot.name} stays passive.`);
+    return;
+  }
   
   let actionTaken = false;
   
@@ -952,7 +1014,8 @@ function runBotTurn(room, botId) {
   if (bot.hp < bot.maxHp) {
     const peachIdx = bot.hand.findIndex(c => c.name === 'PEACH');
     if (peachIdx !== -1) {
-      bot.hand.splice(peachIdx, 1);
+      const peachCard = bot.hand.splice(peachIdx, 1)[0];
+      room.discardPile.push(peachCard);
       bot.hp += 1;
       notifyCardPlayed(room, botId, 'PEACH');
       logHeal(bot.name, 1, bot.hp, bot.maxHp);
@@ -977,13 +1040,18 @@ function runBotTurn(room, botId) {
   
   // 3. Equip Weapon/Mounts
   if (!actionTaken) {
-    const weaponIdx = bot.hand.findIndex(c => ['ZHUGE_CROSSBOW', 'BLUE_STEEL_SWORD', 'SIX_SWORDS_WU', 'KIRIN_BOW', 'FEATHERED_FAN', 'SERPENT_SPEAR'].includes(c.name));
+    const weaponIdx = bot.hand.findIndex(c => ['ZHUGE_CROSSBOW', 'BLUE_STEEL_SWORD', 'SIX_SWORDS_WU', 'KIRIN_BOW', 'FEATHERED_FAN', 'SERPENT_SPEAR', 'FROST_SWORD', 'TWO_BLADED_TRIDENT', 'ROCK_CLEAVING_AXE', 'GREEN_DRAGON_BLADE', 'SKY_PIERCING_HALBERD', 'YIN_YANG_SWORDS'].includes(c.name));
     if (weaponIdx !== -1) {
       const w = bot.hand[weaponIdx];
       if (!bot.equipment.weapon || bot.equipment.weapon.name !== w.name) {
         bot.hand.splice(weaponIdx, 1);
         if (bot.equipment.weapon) room.discardPile.push(bot.equipment.weapon);
-        const rangeMap = { 'ZHUGE_CROSSBOW': 1, 'BLUE_STEEL_SWORD': 2, 'SIX_SWORDS_WU': 2, 'KIRIN_BOW': 5, 'FEATHERED_FAN': 4, 'SERPENT_SPEAR': 3 };
+        const rangeMap = { 
+          'ZHUGE_CROSSBOW': 1, 'BLUE_STEEL_SWORD': 2, 'SIX_SWORDS_WU': 2, 
+          'KIRIN_BOW': 5, 'FEATHERED_FAN': 4, 'SERPENT_SPEAR': 3,
+          'FROST_SWORD': 2, 'TWO_BLADED_TRIDENT': 3, 'ROCK_CLEAVING_AXE': 3,
+          'GREEN_DRAGON_BLADE': 3, 'SKY_PIERCING_HALBERD': 4, 'YIN_YANG_SWORDS': 2
+        };
         w.range = rangeMap[w.name] || 1;
         bot.equipment.weapon = w;
         notifyCardPlayed(room, botId, w.name);
@@ -1007,6 +1075,107 @@ function runBotTurn(room, botId) {
         bot.hand.splice(horseIdx, 1);
         bot.equipment.defensiveHorse = h;
         logCardPlay(bot.name, h.name);
+        actionTaken = true;
+      }
+    }
+  }
+
+  // 3b. Equip Armor
+  if (!actionTaken) {
+    const armorIdx = bot.hand.findIndex(c => ['NIO_SHIELD', 'EIGHT_TRIGRAMS_FORMATION', 'SILVER_LION_HELMET', 'RATTAN_ARMOR'].includes(c.name));
+    if (armorIdx !== -1) {
+      const arm = bot.hand[armorIdx];
+      if (!bot.equipment.armor || bot.equipment.armor.name !== arm.name) {
+        bot.hand.splice(armorIdx, 1);
+        if (bot.equipment.armor) {
+          room.discardPile.push(bot.equipment.armor);
+          if (bot.equipment.armor.name === 'SILVER_LION_HELMET') {
+            bot.hp = Math.min(bot.maxHp, bot.hp + 1);
+          }
+        }
+        bot.equipment.armor = arm;
+        logCardPlay(bot.name, arm.name);
+        actionTaken = true;
+      }
+    }
+  }
+
+  // 3b. Play AOE (BARBARIAN_INVASION, ARROW_BARRAGE)
+  if (!actionTaken) {
+    const aoeIdx = bot.hand.findIndex(c => ['BARBARIAN_INVASION', 'ARROW_BARRAGE'].includes(c.name));
+    if (aoeIdx !== -1) {
+      const aoeCard = bot.hand.splice(aoeIdx, 1)[0];
+      room.discardPile.push(aoeCard);
+      
+      let turnOrderIdx = room.turnOrder.indexOf(botId);
+      let targets = [];
+      for (let i = 1; i < room.turnOrder.length; i++) {
+        let nIdx = (turnOrderIdx + i) % room.turnOrder.length;
+        let pid = room.turnOrder[nIdx];
+        if (room.players[pid].isAlive) targets.push(pid);
+      }
+      
+      if (targets.length > 0) {
+        room.pendingAction = {
+          type: 'WAITING_FOR_AOE',
+          aoeType: aoeCard.name,
+          sourcePlayerId: botId,
+          targets: targets,
+          currentTargetIndex: 0,
+          cardUsedId: aoeCard.id,
+          timeoutAt: Date.now() + 15000
+        };
+        logCardPlay(bot.name, aoeCard.name);
+        notifyCardPlayed(room, botId, aoeCard.name);
+        broadcastRoomState(room);
+        actionTaken = true;
+        
+        if (room.players[targets[0]].isBot) {
+          setTimeout(() => handleBotAOE(room), 1200);
+        } else {
+          setTimeout(() => {
+            if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE' && room.pendingAction.currentTargetIndex === 0) {
+              const cardUsedForTimeout = getCardById(room, aoeCard.id);
+              dealDamage(room, targets[0], 1, cardUsedForTimeout, botId);
+              if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE') {
+                handleBotAOE(room);
+              } else {
+                broadcastRoomState(room);
+              }
+            }
+          }, 15000);
+        }
+        return;
+      }
+    }
+  }
+
+  // 3c. Play Delayed (ACEDIA / STARVATION)
+  if (!actionTaken) {
+    const delayedIdx = bot.hand.findIndex(c => ['ACEDIA', 'STARVATION'].includes(c.name));
+    if (delayedIdx !== -1) {
+      const cardName = bot.hand[delayedIdx].name;
+      let targetId = null;
+      for (const pid of room.turnOrder) {
+        if (pid === botId) continue;
+        const target = room.players[pid];
+        if (botWantsToAttack(bot, target, room)) {
+          const alreadyHas = target.delayedKitZone && target.delayedKitZone.some(c => c.name === cardName);
+          const isInvalidTarget = (cardName === 'ACEDIA' && hasCharacter(target, 'LU_XUN')); // Acedia immune
+          if (!alreadyHas && !isInvalidTarget) {
+            targetId = pid;
+            break;
+          }
+        }
+      }
+      if (targetId) {
+        const delayedCard = bot.hand.splice(delayedIdx, 1)[0];
+        const target = room.players[targetId];
+        target.delayedKitZone = target.delayedKitZone || [];
+        target.delayedKitZone.push(delayedCard);
+        notifyCardPlayed(room, botId, cardName, targetId);
+        logCardPlay(bot.name, cardName, target.name);
+        broadcastRoomState(room);
         actionTaken = true;
       }
     }
@@ -1136,7 +1305,8 @@ function runBotTurn(room, botId) {
       }
       if (enemyInRange) {
         const wineIdx = bot.hand.findIndex(c => c.name === 'WINE');
-        bot.hand.splice(wineIdx, 1);
+        const wineCard = bot.hand.splice(wineIdx, 1)[0];
+        room.discardPile.push(wineCard);
         bot.wineActive = true;
         console.log(`Bot ${bot.name} used WINE`);
         actionTaken = true;
@@ -1167,16 +1337,17 @@ function runBotTurn(room, botId) {
       }
       
       if (targetId) {
-        const attackCard = bot.hand[slashIdx];
+        const attackCard = bot.hand.splice(slashIdx, 1)[0];
+        room.discardPile.push(attackCard);
         const isThunder = attackCard.name === 'THUNDER_ATTACK';
         const damage = bot.wineActive ? 2 : 1;
         bot.wineActive = false;
         
-        bot.hand.splice(slashIdx, 1);
         room.attacksPlayedInTurn += 1;
         bot.slashedThisTurn = true;
         
-        const cardUsedId = `bot_slash_${Date.now()}`;
+        notifyCardPlayed(room, botId, attackCard.name, targetId);
+        const cardUsedId = attackCard.id;
         const timeoutMs = 15000;
         const dodgeNeeded = hasCharacter(bot, 'LV_BU') ? 2 : 1;
         
@@ -1234,7 +1405,10 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
   let finalDamage = damage;
 
   // Armor processing
-  if (targetPlayer.equipment && targetPlayer.equipment.armor) {
+  const attacker = attackerId && room.players[attackerId] ? room.players[attackerId] : null;
+  const attackerHasBlueSteel = attacker && attacker.equipment && attacker.equipment.weapon && attacker.equipment.weapon.name === 'BLUE_STEEL_SWORD';
+  
+  if (!attackerHasBlueSteel && targetPlayer.equipment && targetPlayer.equipment.armor) {
     const armorName = targetPlayer.equipment.armor.name;
     if (armorName === 'SILVER_LION_HELMET') {
       if (finalDamage > 1) {
@@ -1339,6 +1513,30 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
 function handleBotDodge(room, botId, damage) {
   const bot = room.players[botId];
   if (!bot || !bot.isAlive || !room.pendingAction) return;
+  const pending = room.pendingAction;
+  
+  if (bot.equipment && bot.equipment.armor && bot.equipment.armor.name === 'EIGHT_TRIGRAMS_FORMATION' && !pending.eightTrigramsUsed) {
+    const judgeCard = drawCards(room, 1)[0];
+    room.discardPile.push(judgeCard);
+    const isRed = judgeCard.suit === 'HEART' || judgeCard.suit === 'DIAMOND';
+    room.chat = room.chat || [];
+    const msg = `🔮 (Bot) ${bot.name} ใช้ประยุทธ์แปดทิศ ทอยได้ ${judgeCard.name}(${judgeCard.suit}) - ${isRed ? 'สำเร็จ!' : 'ล้มเหลว'}`;
+    room.chat.push({ sender: 'System', text: msg, time: new Date().toLocaleTimeString('th-TH') });
+
+    if (isRed) {
+      pending.dodgeNeeded = (pending.dodgeNeeded || 1) - 1;
+      pending.eightTrigramsUsed = true;
+      if (pending.dodgeNeeded <= 0) {
+        room.pendingAction = null;
+        console.log(`Bot ${bot.name} dodged with Eight Trigrams!`);
+        broadcastRoomState(room);
+        resumeAfterAttack(room);
+        return;
+      }
+    } else {
+      pending.eightTrigramsUsed = true;
+    }
+  }
   
   let dodgeIdx = bot.hand.findIndex(c => c.name === 'DODGE');
   if (dodgeIdx === -1 && (hasCharacter(bot, 'ZHEN_JI') || hasCharacter(bot, 'LADY_ZHEN'))) {
@@ -1349,7 +1547,6 @@ function handleBotDodge(room, botId, damage) {
     const card = bot.hand.splice(dodgeIdx, 1)[0];
     room.discardPile.push(card);
     
-    const pending = room.pendingAction;
     pending.dodgeNeeded = (pending.dodgeNeeded || 1) - 1;
     if (pending.dodgeNeeded <= 0) {
       room.pendingAction = null;
@@ -1364,7 +1561,7 @@ function handleBotDodge(room, botId, damage) {
       }, 600);
     }
   } else {
-    const pending = room.pendingAction;
+    pending.currentTargetIndex = undefined;
     const attackerId = pending ? pending.sourcePlayerId : null;
     const cardUsed = pending ? getCardById(room, pending.cardUsedId) : null;
     room.pendingAction = null;
@@ -1450,14 +1647,14 @@ function handleBotBorrowSlash(room) {
       cardUsedId: slashCard.id,
       originalAttackerId: pending.sourcePlayerId,
       timeoutAt: Date.now() + 15000,
-      dodgeNeeded: (slashCard.name === 'SLASH' && hasCharacter(bot, 'LU_BU')) ? 2 : 1,
+      dodgeNeeded: (slashCard.name === 'SLASH' && hasCharacter(bot, 'LV_BU')) ? 2 : 1,
       attackType: (bot.equipment && bot.equipment.weapon && bot.equipment.weapon.name === 'FEATHERED_FAN') ? 'FIRE' : 'NORMAL'
     };
     broadcastRoomState(room);
     
     const victim = room.players[pending.victimId];
     if (victim && victim.isBot) {
-       setTimeout(() => handleBotDodge(room), 1200);
+       setTimeout(() => handleBotDodge(room, pending.victimId, damage), 1200);
     }
   } else {
     // Bot doesn't have SLASH, loses weapon to sourcePlayerId
@@ -1539,9 +1736,10 @@ function handleBotAOE(room) {
       if (room.players[pending.targets[pending.currentTargetIndex]].isBot) {
         setTimeout(() => handleBotAOE(room), 1200);
       } else {
+        const capturedIndex = pending.currentTargetIndex;
         setTimeout(() => {
-          if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE' && room.pendingAction.currentTargetIndex === pending.currentTargetIndex) {
-            const tId = pending.targets[pending.currentTargetIndex];
+          if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE' && room.pendingAction.currentTargetIndex === capturedIndex) {
+            const tId = pending.targets[capturedIndex];
             const cardUsed = getCardById(room, pending.cardUsedId);
             dealDamage(room, tId, 1, cardUsed, pending.sourcePlayerId);
             if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE') {
@@ -1600,9 +1798,10 @@ function handleBotAOE(room) {
         if (room.players[pending.targets[pending.currentTargetIndex]].isBot) {
           setTimeout(() => handleBotAOE(room), 1200);
         } else {
+          const capturedIndex = pending.currentTargetIndex;
           setTimeout(() => {
-            if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE' && room.pendingAction.currentTargetIndex === pending.currentTargetIndex) {
-              const tId = pending.targets[pending.currentTargetIndex];
+            if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE' && room.pendingAction.currentTargetIndex === capturedIndex) {
+              const tId = pending.targets[capturedIndex];
               const cardUsed = getCardById(room, pending.cardUsedId);
               dealDamage(room, tId, 1, cardUsed, pending.sourcePlayerId);
               if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE') {
@@ -1678,7 +1877,11 @@ io.on('connection', (socket) => {
     const rId = roomId || 'ROOM_' + Math.random().toString(36).substr(2, 4).toUpperCase();
     
     if (gameRooms[rId] && roomId) {
-      return socket.emit('game_error', { message: "ห้องนี้ถูกสร้างไปแล้ว กรุณาเข้าร่วมแทน" });
+      if (rId === 'ROOM_TEST' || rId.startsWith('ROOM_TEST')) {
+        delete gameRooms[rId];
+      } else {
+        return socket.emit('game_error', { message: "ห้องนี้ถูกสร้างไปแล้ว กรุณาเข้าร่วมแทน" });
+      }
     }
 
     gameRooms[rId] = {
@@ -1717,13 +1920,50 @@ io.on('connection', (socket) => {
     
     socket.join(rId);
     socket.emit('room_created', { roomId: rId, playerId });
-    broadcastRoomState(gameRooms[rId]);
+
+    if (rId === 'ROOM_TEST' || rId.startsWith('ROOM_TEST')) {
+      gameRooms[rId].mode = 'BOT';
+      const botNames = ['Zhuge Liang (Bot)', 'Guan Yu (Bot)', 'Cao Cao (Bot)'];
+      for (let i = 0; i < 3; i++) {
+        const bId = 'p' + (i + 2);
+        gameRooms[rId].players[bId] = {
+          id: bId,
+          name: botNames[i],
+          socketId: '',
+          role: 'UNKNOWN',
+          character: '',
+          characterChoices: [],
+          maxHp: 4,
+          hp: 4,
+          hand: [],
+          equipment: { weapon: null, armor: null, offensiveHorse: null, defensiveHorse: null, treasure: null },
+          delayedKitZone: [],
+          isAlive: true,
+          wineActive: false,
+          isBot: true
+        };
+        gameRooms[rId].turnOrder.push(bId);
+      }
+      assignRoles(gameRooms[rId]);
+      startDraftPhase(gameRooms[rId]);
+    } else {
+      broadcastRoomState(gameRooms[rId]);
+    }
   });
   
   socket.on('join_room', ({ roomId, playerName }) => {
     const room = gameRooms[roomId];
     if (!room) return socket.emit('game_error', { message: "ไม่พบห้องนี้" });
-    if (room.status !== 'LOBBY') return socket.emit('game_error', { message: "เกมก้าวสู่การเล่นไปแล้ว" });
+    if (room.status !== 'LOBBY') {
+      if (roomId === 'ROOM_TEST' || roomId.startsWith('ROOM_TEST')) {
+        const p1 = room.players['p1'];
+        if (p1) p1.socketId = socket.id;
+        socket.join(roomId);
+        socket.emit('reconnect_success', { roomId, playerId: 'p1' });
+        return broadcastRoomState(room);
+      }
+      return socket.emit('game_error', { message: "เกมก้าวสู่การเล่นไปแล้ว" });
+    }
     if (room.turnOrder.length >= 10) return socket.emit('game_error', { message: "ห้องนี้เต็มแล้ว (สูงสุด 10 คน)" });
     
     const nextIdx = room.turnOrder.length + 1;
@@ -1750,6 +1990,27 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     socket.emit('room_joined', { roomId, playerId });
     broadcastRoomState(room);
+  });
+
+  socket.on('reconnect_player', ({ roomId, playerId }) => {
+    const room = gameRooms[roomId];
+    if (!room) return socket.emit('game_error', { message: "ไม่พบห้องนี้หรือเกมจบไปแล้ว", critical: true });
+    const player = room.players[playerId];
+    if (!player) return socket.emit('game_error', { message: "ไม่พบผู้เล่นในห้องนี้", critical: true });
+    
+    // Clear the disconnect timeout
+    if (reconnectTimeouts[roomId] && reconnectTimeouts[roomId][playerId]) {
+      clearTimeout(reconnectTimeouts[roomId][playerId]);
+      delete reconnectTimeouts[roomId][playerId];
+    }
+    
+    player.socketId = socket.id;
+    player.isDisconnected = false;
+    
+    socket.join(roomId);
+    socket.emit('reconnect_success', { roomId, playerId });
+    broadcastRoomState(room);
+    console.log(`Player ${player.name} successfully reconnected (socket: ${socket.id})`);
   });
   
   socket.on('start_game', ({ roomId, botCount }) => {
@@ -1822,7 +2083,7 @@ io.on('connection', (socket) => {
   // ==========================================
   function startNegateWindow(room, actionData) {
     room.actionChain = [actionData];
-    room.negatePasses = 0;
+    room.negatePassedPlayers = [];
     
     room.pendingAction = {
       type: 'WAITING_FOR_NEGATE',
@@ -1839,9 +2100,11 @@ io.on('connection', (socket) => {
        if (p.isBot && p.isAlive) {
           setTimeout(() => {
              if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_NEGATE') {
-                room.negatePasses = (room.negatePasses || 0) + 1;
+                if (!room.negatePassedPlayers.includes(p.id)) {
+                   room.negatePassedPlayers.push(p.id);
+                }
                 const alivePlayersCount = Object.values(room.players).filter(pl => pl.isAlive).length;
-                if (room.negatePasses >= alivePlayersCount) {
+                if (room.negatePassedPlayers.length >= alivePlayersCount) {
                   resolveActionChain(room);
                 }
              }
@@ -2068,6 +2331,22 @@ io.on('connection', (socket) => {
          setTimeout(() => handleBotBorrowSlash(room), 1200);
       }
     }
+    else if (type === 'IRON_CHAIN') {
+      if (targetPlayer && targetPlayer.isAlive) {
+        targetPlayer.isChained = !targetPlayer.isChained;
+        room.chat = room.chat || [];
+        const msg = targetPlayer.isChained ? `🔗 ${targetPlayer.name} ถูกล่ามโซ่เหล็ก!` : `🔓 ${targetPlayer.name} หลุดจากโซ่เหล็ก!`;
+        room.chat.push({ sender: 'System', text: msg, time: new Date().toLocaleTimeString('th-TH') });
+      }
+      if (pending.victimId && room.players[pending.victimId] && room.players[pending.victimId].isAlive) {
+        const secPlayer = room.players[pending.victimId];
+        secPlayer.isChained = !secPlayer.isChained;
+        const msg2 = secPlayer.isChained ? `🔗 ${secPlayer.name} ถูกล่ามโซ่เหล็ก!` : `🔓 ${secPlayer.name} หลุดจากโซ่เหล็ก!`;
+        room.chat.push({ sender: 'System', text: msg2, time: new Date().toLocaleTimeString('th-TH') });
+      }
+      resumeAfterAttack(room);
+      broadcastRoomState(room);
+    }
   }
 
   socket.on('play_negate', (data) => {
@@ -2093,7 +2372,7 @@ io.on('connection', (socket) => {
       cardUsed: cardUsed
     });
     
-    room.negatePasses = 0; // reset passes
+    room.negatePassedPlayers = []; // reset passes on new negate
     room.pendingAction.timeoutAt = Date.now() + 5000;
     broadcastRoomState(room);
     
@@ -2111,13 +2390,15 @@ io.on('connection', (socket) => {
     const room = gameRooms[roomId];
     if (!room || !room.pendingAction || room.pendingAction.type !== 'WAITING_FOR_NEGATE') return;
 
-    // Check if this pass makes everyone pass
-    // For simplicity, we just count passes. In a real game, you track who passed.
-    // Assuming everyone has to pass.
-    room.negatePasses = (room.negatePasses || 0) + 1;
+    const playerId = getPlayerIdBySocket(room, socket.id);
+    if (!playerId) return;
+
+    if (!room.negatePassedPlayers.includes(playerId)) {
+      room.negatePassedPlayers.push(playerId);
+    }
     
     const alivePlayersCount = Object.values(room.players).filter(p => p.isAlive).length;
-    if (room.negatePasses >= alivePlayersCount) {
+    if (room.negatePassedPlayers.length >= alivePlayersCount) {
       resolveActionChain(room);
     }
   });
@@ -2276,13 +2557,25 @@ io.on('connection', (socket) => {
       room.discardPile.push(stealCard);
       startNegateWindow(room, { type: 'STEAL', sourceId: playerId, targetId: targetPlayerId, targetZone: targetZone, cardUsed: stealCard });
 
-    } else if (['ZHUGE_CROSSBOW', 'BLUE_STEEL_SWORD', 'SIX_SWORDS_WU', 'KIRIN_BOW', 'FEATHERED_FAN', 'SERPENT_SPEAR'].includes(cardUsed.name)) {
+    } else if (['ZHUGE_CROSSBOW', 'BLUE_STEEL_SWORD', 'SIX_SWORDS_WU', 'KIRIN_BOW', 'FEATHERED_FAN', 'SERPENT_SPEAR', 'FROST_SWORD', 'TWO_BLADED_TRIDENT', 'ROCK_CLEAVING_AXE', 'GREEN_DRAGON_BLADE', 'SKY_PIERCING_HALBERD', 'YIN_YANG_SWORDS'].includes(cardUsed.name)) {
       notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
       const equipCard = player.hand.splice(cardIndex, 1)[0];
-      const weaponRangeMap = { 'ZHUGE_CROSSBOW': 1, 'BLUE_STEEL_SWORD': 2, 'SIX_SWORDS_WU': 2, 'KIRIN_BOW': 5, 'FEATHERED_FAN': 4, 'SERPENT_SPEAR': 3 };
+      const weaponRangeMap = { 
+        'ZHUGE_CROSSBOW': 1, 'BLUE_STEEL_SWORD': 2, 'SIX_SWORDS_WU': 2, 
+        'KIRIN_BOW': 5, 'FEATHERED_FAN': 4, 'SERPENT_SPEAR': 3,
+        'FROST_SWORD': 2, 'TWO_BLADED_TRIDENT': 3, 'ROCK_CLEAVING_AXE': 3,
+        'GREEN_DRAGON_BLADE': 3, 'SKY_PIERCING_HALBERD': 4, 'YIN_YANG_SWORDS': 2
+      };
       equipCard.range = weaponRangeMap[cardUsed.name] || 1;
       if (player.equipment.weapon) room.discardPile.push(player.equipment.weapon);
       player.equipment.weapon = equipCard;
+      broadcastRoomState(room);
+
+    } else if (cardUsed.name === 'WOODEN_CART') {
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
+      const equipCard = player.hand.splice(cardIndex, 1)[0];
+      if (player.equipment.treasure) room.discardPile.push(player.equipment.treasure);
+      player.equipment.treasure = equipCard;
       broadcastRoomState(room);
 
     } else if (cardUsed.name === 'LIGHTNING_HOOF' || cardUsed.name === 'SHADOWRUNNER') {
@@ -2349,10 +2642,28 @@ io.on('connection', (socket) => {
       room.discardPile.push(fireCard);
       startNegateWindow(room, { type: 'FIRE_ATTACK', sourceId: playerId, targetId: targetPlayerId, cardUsed: fireCard });
 
+    } else if (cardUsed.name === 'IRON_CHAIN') {
+      if (!targetPlayerId) {
+        // Reforge: discard and draw 1
+        notifyCardPlayed(room, playerId, cardUsed.name);
+        const ironCard = player.hand.splice(cardIndex, 1)[0];
+        room.discardPile.push(ironCard);
+        const drawn = drawCards(room, 1);
+        player.hand.push(...drawn);
+        broadcastRoomState(room);
+        return;
+      }
+      const targetPlayer = room.players[targetPlayerId];
+      if (!targetPlayer || !targetPlayer.isAlive) return socket.emit('game_error', { message: "เป้าหมายไม่มีผล" });
+      notifyCardPlayed(room, playerId, cardUsed.name, targetPlayerId);
+      const ironCard = player.hand.splice(cardIndex, 1)[0];
+      room.discardPile.push(ironCard);
+      startNegateWindow(room, { type: 'IRON_CHAIN', sourceId: playerId, targetId: targetPlayerId, victimId: data.secondaryTargetId, cardUsed: ironCard });
+
     } else if (cardUsed.type === 'DELAYED') {
       let targetPlayerIdForDelayed = targetPlayerId;
       if (cardUsed.name === 'LIGHTNING') targetPlayerIdForDelayed = playerId;
-      else if (cardUsed.name === 'INDULGENCE' || cardUsed.name === 'STARVATION') {
+      else if (cardUsed.name === 'ACEDIA' || cardUsed.name === 'STARVATION') {
         if (targetPlayerIdForDelayed === playerId) return socket.emit('game_error', { message: `ไม่สามารถใช้ ${cardUsed.name} ใส่ตัวเองได้` });
       }
       if (!targetPlayerIdForDelayed) return socket.emit('game_error', { message: "กรุณาเลือกเป้าหมาย" });
@@ -2527,7 +2838,80 @@ io.on('connection', (socket) => {
     const cardId = data.cardId || (data.payload && data.payload.cardId);
     const damage = pending.damage || 1;
 
-    if (response === 'DODGE' || response === 'USE_CARD') {
+    if (response === 'EIGHT_TRIGRAMS') {
+      if (!targetPlayer.equipment || !targetPlayer.equipment.armor || targetPlayer.equipment.armor.name !== 'EIGHT_TRIGRAMS_FORMATION') {
+        return socket.emit('game_error', { message: "คุณไม่ได้สวมใส่เกราะประยุทธ์แปดทิศ" });
+      }
+      if (pending && pending.eightTrigramsUsed) {
+        return socket.emit('game_error', { message: "คุณใช้เกราะนี้ไปแล้วสำหรับการโจมตีครั้งนี้" });
+      }
+
+      const judgeCard = drawCards(room, 1)[0];
+      room.discardPile.push(judgeCard);
+      const isRed = judgeCard.suit === 'HEART' || judgeCard.suit === 'DIAMOND';
+      
+      io.to(room.id).emit('judgement_result', {
+        title: 'เกราะประยุทธ์แปดทิศ',
+        card: judgeCard,
+        isSuccess: isRed,
+        targetPlayerId: targetPlayer.id,
+        targetPlayerName: targetPlayer.name
+      });
+
+      room.chat = room.chat || [];
+      const msg = `🔮 ${targetPlayer.name} ใช้ประยุทธ์แปดทิศ ทอยได้ ${judgeCard.name}(${judgeCard.suit}) - ${isRed ? 'หลบสำเร็จ!' : 'ล้มเหลว'}`;
+      room.chat.push({ sender: 'System', text: msg, time: new Date().toLocaleTimeString('th-TH') });
+
+      if (isRed) {
+        pending.eightTrigramsUsed = true;
+        if (pending.type === 'WAITING_FOR_AOE') {
+          pending.currentTargetIndex++;
+          if (pending.currentTargetIndex >= pending.targets.length) {
+            room.pendingAction = null;
+            broadcastRoomState(room);
+            resumeAfterAttack(room);
+          } else {
+            pending.timeoutAt = Date.now() + 15000;
+            broadcastRoomState(room);
+            if (room.players[pending.targets[pending.currentTargetIndex]].isBot) {
+              setTimeout(() => handleBotAOE(room), 1200);
+            } else {
+              const capturedIndex = pending.currentTargetIndex;
+              setTimeout(() => {
+                if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE' && room.pendingAction.currentTargetIndex === capturedIndex) {
+                  const tId = pending.targets[capturedIndex];
+                  const cardUsedForTimeout = getCardById(room, pending.cardUsedId);
+                  dealDamage(room, tId, 1, cardUsedForTimeout, pending.sourcePlayerId);
+                  if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE') {
+                    handleBotAOE(room);
+                  } else {
+                    broadcastRoomState(room);
+                  }
+                }
+              }, 15000);
+            }
+          }
+          return;
+        }
+
+        pending.dodgeNeeded = (pending.dodgeNeeded || 1) - 1;
+        if (pending.dodgeNeeded <= 0) {
+          room.pendingAction = null;
+          broadcastRoomState(room);
+          resumeAfterAttack(room);
+          return;
+        } else {
+          room.pendingAction.timeoutAt = Date.now() + 15000;
+          broadcastRoomState(room);
+          return;
+        }
+      } else {
+        pending.eightTrigramsUsed = true;
+        room.pendingAction.timeoutAt = Date.now() + 15000;
+        broadcastRoomState(room);
+        return;
+      }
+    } else if (response === 'DODGE' || response === 'USE_CARD') {
       if (!cardId) return socket.emit('game_error', { message: "กรุณาระบุการ์ดป้องกัน" });
       const cardIdx = targetPlayer.hand.findIndex(c => c.id === cardId);
       if (cardIdx === -1) return socket.emit('game_error', { message: "การ์ดไม่อยู่บนมือ" });
@@ -2600,9 +2984,10 @@ io.on('connection', (socket) => {
           if (room.players[pending.targets[pending.currentTargetIndex]].isBot) {
             setTimeout(() => handleBotAOE(room), 1200);
           } else {
+            const capturedIndex = pending.currentTargetIndex;
             setTimeout(() => {
-              if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE' && room.pendingAction.currentTargetIndex === pending.currentTargetIndex) {
-                const tId = pending.targets[pending.currentTargetIndex];
+              if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE' && room.pendingAction.currentTargetIndex === capturedIndex) {
+                const tId = pending.targets[capturedIndex];
                 const cardUsedForTimeout = getCardById(room, pending.cardUsedId);
                 dealDamage(room, tId, 1, cardUsedForTimeout, pending.sourcePlayerId);
                 if (room.pendingAction && room.pendingAction.type === 'WAITING_FOR_AOE') {
@@ -2851,6 +3236,199 @@ io.on('connection', (socket) => {
     executeDrawPhase(room, player, pending.skipDrawPhase, pending.skipPlayPhase);
   });
 
+  // ==========================================
+  // ADMIN / SANDBOX DEBUG SOCKET EVENTS (RBAC AUTHORIZED)
+  // ==========================================
+  const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY || 'admin123';
+
+  socket.on('admin_authenticate', ({ secretKey, roomId }) => {
+    if (secretKey === ADMIN_SECRET_KEY || roomId === 'ROOM_TEST') {
+      socket.isAdmin = true;
+      socket.emit('admin_auth_status', { isAdmin: true, message: '🔓 ยืนยันสิทธิ์ Admin สำเร็จ!' });
+    } else {
+      socket.isAdmin = false;
+      socket.emit('admin_auth_status', { isAdmin: false, message: '🔒 รหัสผ่าน Admin ไม่ถูกต้อง!' });
+    }
+  });
+
+  socket.on('admin_spawn_card', ({ roomId, cardName }) => {
+    const room = gameRooms[roomId];
+    if (!room) return;
+    if (!socket.isAdmin && roomId !== 'ROOM_TEST') {
+      return socket.emit('game_error', { message: "⚠️ ปฏิเสธสิทธิ์: ต้องใช้สิทธิ์ Admin ในการเสกการ์ด" });
+    }
+    const playerId = getPlayerIdBySocket(room, socket.id);
+    if (!playerId) return;
+    const player = room.players[playerId];
+    if (!player) return;
+
+    let idCounter = Date.now();
+    let cardType = 'BASIC';
+    if (['ACEDIA', 'STARVATION', 'LIGHTNING'].includes(cardName)) cardType = 'DELAYED';
+    else if (['ZHUGE_CROSSBOW', 'GREEN_DRAGON_BLADE', 'SERPENT_SPEAR', 'ROCK_CLEAVING_AXE', 'KIRIN_BOW', 'BLUE_STEEL_SWORD', 'YIN_YANG_SWORDS', 'FEATHERED_FAN', 'NIO_SHIELD', 'EIGHT_TRIGRAMS_FORMATION', 'SILVER_LION_HELMET', 'RATTAN_ARMOR', 'RED_HARE'].includes(cardName)) cardType = 'EQUIPMENT';
+    else if (['STEAL', 'SABOTAGE', 'DUEL', 'FIRE_ATTACK', 'IRON_CHAIN', 'EX_NIHILO', 'BARBARIAN_INVASION', 'ARROW_BARRAGE', 'PEACH_GARDEN', 'BUMPER_HARVEST', 'BORROWED_SWORD', 'NEGATE'].includes(cardName)) cardType = 'STRATAGEM';
+
+    const newCard = {
+      id: `admin_c_${idCounter}`,
+      name: cardName,
+      suit: 'HEART',
+      rank: 7,
+      type: cardType
+    };
+
+    player.hand = player.hand || [];
+    player.hand.push(newCard);
+    room.chat = room.chat || [];
+    room.chat.push({ sender: 'Admin', text: `🛠️ เสกการ์ด [${cardName}] ขึ้นมือสำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
+    broadcastRoomState(room);
+  });
+
+  socket.on('admin_change_hero', ({ roomId, character }) => {
+    const room = gameRooms[roomId];
+    if (!room) return;
+    if (!socket.isAdmin && roomId !== 'ROOM_TEST') {
+      return socket.emit('game_error', { message: "⚠️ ปฏิเสธสิทธิ์: ต้องใช้สิทธิ์ Admin ในการเปลี่ยนขุนพล" });
+    }
+    const playerId = getPlayerIdBySocket(room, socket.id);
+    if (!playerId) return;
+    const player = room.players[playerId];
+    if (!player) return;
+
+    player.character = character;
+    const heroInfo = allHeroes.find(h => h.id === character || h.name === character);
+    if (heroInfo) {
+      player.maxHp = heroInfo.hp || 4;
+      player.hp = Math.min(player.hp, player.maxHp);
+    }
+    room.chat = room.chat || [];
+    room.chat.push({ sender: 'Admin', text: `🧙‍♂️ เปลี่ยนขุนพลเป็น [${character}] สำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
+    broadcastRoomState(room);
+  });
+
+  socket.on('admin_set_hp', ({ roomId, hp }) => {
+    const room = gameRooms[roomId];
+    if (!room) return;
+    if (!socket.isAdmin && roomId !== 'ROOM_TEST') {
+      return socket.emit('game_error', { message: "⚠️ ปฏิเสธสิทธิ์: ต้องใช้สิทธิ์ Admin ในการปรับ HP" });
+    }
+    const playerId = getPlayerIdBySocket(room, socket.id);
+    if (!playerId) return;
+    const player = room.players[playerId];
+    if (!player) return;
+
+    player.hp = Math.max(0, Math.min(hp, player.maxHp || 5));
+    if (player.hp > 0) player.isAlive = true;
+    room.chat = room.chat || [];
+    room.chat.push({ sender: 'Admin', text: `❤️ ปรับพลังชีวิตเป็น [${player.hp}/${player.maxHp}]`, time: new Date().toLocaleTimeString('th-TH') });
+    broadcastRoomState(room);
+  });
+
+  socket.on('admin_spawn_bot', ({ roomId }) => {
+    const room = gameRooms[roomId];
+    if (!room) return;
+    if (!socket.isAdmin && roomId !== 'ROOM_TEST') {
+      return socket.emit('game_error', { message: "⚠️ ปฏิเสธสิทธิ์: ต้องใช้สิทธิ์ Admin ในการเสกบอท" });
+    }
+    const botId = `bot_${Date.now().toString().slice(-4)}`;
+    const botName = `บอททดสอบ_${botId.slice(-3)}`;
+    const heroes = allHeroes.length > 0 ? allHeroes : [{ id: 'GUAN_YU', hp: 4 }];
+    const randHero = heroes[Math.floor(Math.random() * heroes.length)];
+
+    room.players[botId] = {
+      id: botId,
+      name: botName,
+      role: 'Rebel',
+      character: randHero.id,
+      hp: randHero.hp || 4,
+      maxHp: randHero.hp || 4,
+      hand: drawCards(room, 4),
+      equipment: {},
+      delayedKitZone: [],
+      isAlive: true,
+      isBot: true
+    };
+    if (!room.turnOrder.includes(botId)) room.turnOrder.push(botId);
+
+    room.chat = room.chat || [];
+    room.chat.push({ sender: 'Admin', text: `🤖 เพิ่มบอททดสอบ [${botName}] สำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
+    broadcastRoomState(room);
+  });
+
+  socket.on('admin_remove_bot', ({ roomId, botId }) => {
+    const room = gameRooms[roomId];
+    if (!room) return;
+    if (!socket.isAdmin && roomId !== 'ROOM_TEST') {
+      return socket.emit('game_error', { message: "⚠️ ปฏิเสธสิทธิ์: ต้องใช้สิทธิ์ Admin ในการลบบอท" });
+    }
+    
+    // Find bot to remove
+    let targetBotId = botId;
+    if (!targetBotId) {
+      const bots = Object.values(room.players).filter(p => p.isBot);
+      if (bots.length > 0) targetBotId = bots[bots.length - 1].id;
+    }
+    if (!targetBotId || !room.players[targetBotId]) {
+      return socket.emit('game_error', { message: "ไม่พบบอทที่ต้องการลบ" });
+    }
+
+    const botName = room.players[targetBotId].name;
+    delete room.players[targetBotId];
+    room.turnOrder = room.turnOrder.filter(id => id !== targetBotId);
+    if (room.currentTurnIndex >= room.turnOrder.length) {
+      room.currentTurnIndex = 0;
+    }
+
+    room.chat = room.chat || [];
+    room.chat.push({ sender: 'Admin', text: `🗑️ ลบบอท [${botName}] ออกจากห้องสำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
+    broadcastRoomState(room);
+  });
+
+  socket.on('admin_toggle_bot_ai', ({ roomId, isPassive }) => {
+    const room = gameRooms[roomId];
+    if (!room) return;
+    if (!socket.isAdmin && roomId !== 'ROOM_TEST') return;
+
+    room.isBotPassive = isPassive;
+    room.chat = room.chat || [];
+    room.chat.push({ sender: 'Admin', text: `🤖 โหมดบอท: ${isPassive ? '⏸️ อยู่เฉยๆ (Passive)' : '▶️ เล่นอัตโนมัติ (Auto AI)'}`, time: new Date().toLocaleTimeString('th-TH') });
+    broadcastRoomState(room);
+  });
+
+  socket.on('admin_bot_pass_turn', ({ roomId }) => {
+    const room = gameRooms[roomId];
+    if (!room) return;
+    if (!socket.isAdmin && roomId !== 'ROOM_TEST') return;
+
+    const currentId = room.turnOrder[room.currentTurnIndex];
+    const currentP = room.players[currentId];
+    if (currentP && currentP.isBot) {
+      room.chat = room.chat || [];
+      room.chat.push({ sender: 'Admin', text: `⏩ สั่งให้บอท [${currentP.name}] ผ่านเทิร์น`, time: new Date().toLocaleTimeString('th-TH') });
+      endPlayerTurn(room);
+    }
+  });
+
+  socket.on('admin_bot_slash', ({ roomId, botId, targetId }) => {
+    const room = gameRooms[roomId];
+    if (!room) return;
+    if (!socket.isAdmin && roomId !== 'ROOM_TEST') return;
+
+    const bot = room.players[botId] || Object.values(room.players).find(p => p.isBot);
+    if (!bot) return;
+    const target = room.players[targetId] || room.players['p1'];
+    if (!target) return;
+
+    room.chat = room.chat || [];
+    room.chat.push({ sender: 'Admin', text: `⚔️ สั่งให้บอท [${bot.name}] ฟัน [${target.name}] ด้วย SLASH`, time: new Date().toLocaleTimeString('th-TH') });
+    
+    // Perform Slash
+    let slashCard = bot.hand.find(c => c.name === 'SLASH');
+    if (!slashCard) {
+      slashCard = { id: `admin_bot_slash_${Date.now()}`, name: 'SLASH', suit: 'SPADE', rank: 8, type: 'BASIC' };
+    }
+    dealDamage(room, target.id, 1, slashCard, bot.id, 'NORMAL');
+  });
+
   socket.on('use_peach_dying', ({ roomId, usePeach }) => {
     const room = gameRooms[roomId];
     if (!room || !room.pendingAction || room.pendingAction.type !== 'DYING') return;
@@ -2865,8 +3443,11 @@ io.on('connection', (socket) => {
     const dyingPlayer = room.players[pending.targetPlayerId];
     
     if (usePeach) {
-      const peachIdx = asker.hand.findIndex(c => c.name === 'PEACH');
-      if (peachIdx === -1) return socket.emit('game_error', { message: "คุณไม่มีการ์ด PEACH" });
+      let peachIdx = asker.hand.findIndex(c => c.name === 'PEACH');
+      if (askerId === pending.targetPlayerId && peachIdx === -1) {
+        peachIdx = asker.hand.findIndex(c => c.name === 'WINE');
+      }
+      if (peachIdx === -1) return socket.emit('game_error', { message: "คุณไม่มีการ์ด PEACH หรือ WINE สำหรับฟื้นชีวิต" });
       
       const card = asker.hand.splice(peachIdx, 1)[0];
       room.discardPile.push(card);
@@ -2953,12 +3534,12 @@ io.on('connection', (socket) => {
           cardUsedId: slashCard.id,
           originalAttackerId: room.pendingAction.sourcePlayerId, // A (for tracking if needed)
           timeoutAt: Date.now() + 15000,
-          dodgeNeeded: (slashCard.name === 'SLASH' && hasCharacter(playerB, 'LU_BU')) ? 2 : 1,
+          dodgeNeeded: (slashCard.name === 'SLASH' && hasCharacter(playerB, 'LV_BU')) ? 2 : 1,
           attackType: (slashCard.name === 'THUNDER_ATTACK') ? 'THUNDER' : (playerB.equipment && playerB.equipment.weapon && playerB.equipment.weapon.name === 'FEATHERED_FAN') ? 'FIRE' : 'NORMAL'
         };
         broadcastRoomState(room);
         if (playerC && playerC.isBot) {
-           setTimeout(() => handleBotDodge(room), 1200);
+           setTimeout(() => handleBotDodge(room, room.pendingAction.victimId, damage), 1200);
         }
         return;
       }
@@ -3550,37 +4131,61 @@ io.on('connection', (socket) => {
     if (foundRoom && foundRoom.status !== 'LOBBY') {
       const player = foundRoom.players[foundPlayerId];
       if (player && player.isAlive) {
-        console.log(`[INSTANT DEATH] Player ${player.name} disconnected during game!`);
-        player.hp = 0;
-        player.isAlive = false;
+        console.log(`Player ${player.name} disconnected. Starting 45s grace period for reconnect...`);
+        player.isDisconnected = true;
+        broadcastRoomState(foundRoom);
         
-        if (player.hand) { foundRoom.discardPile.push(...player.hand); player.hand = []; }
-        if (player.delayedKitZone) { foundRoom.discardPile.push(...player.delayedKitZone); player.delayedKitZone = []; }
-        if (player.equipment) {
-          if (player.equipment.weapon) { foundRoom.discardPile.push(player.equipment.weapon); player.equipment.weapon = null; }
-          if (player.equipment.armor) { foundRoom.discardPile.push(player.equipment.armor); player.equipment.armor = null; }
-          if (player.equipment.defensiveHorse) { foundRoom.discardPile.push(player.equipment.defensiveHorse); player.equipment.defensiveHorse = null; }
-          if (player.equipment.offensiveHorse) { foundRoom.discardPile.push(player.equipment.offensiveHorse); player.equipment.offensiveHorse = null; }
+        if (!reconnectTimeouts[foundRoom.roomId]) {
+          reconnectTimeouts[foundRoom.roomId] = {};
         }
         
-        const isGameOver = checkGameOver(foundRoom);
-        if (!isGameOver) {
-          if (foundRoom.turnOrder[foundRoom.currentTurnIndex] === foundPlayerId) {
-            foundRoom.currentPhase = 'DISCARD';
-            checkDiscardRequirement(foundRoom);
-          } else {
-            broadcastRoomState(foundRoom);
+        reconnectTimeouts[foundRoom.roomId][foundPlayerId] = setTimeout(() => {
+          console.log(`[TIMEOUT DEATH] Player ${player.name} failed to reconnect in time!`);
+          player.hp = 0;
+          player.isAlive = false;
+          player.isDisconnected = false;
+          
+          if (player.hand) { foundRoom.discardPile.push(...player.hand); player.hand = []; }
+          if (player.delayedKitZone) { foundRoom.discardPile.push(...player.delayedKitZone); player.delayedKitZone = []; }
+          if (player.equipment) {
+            if (player.equipment.weapon) { foundRoom.discardPile.push(player.equipment.weapon); player.equipment.weapon = null; }
+            if (player.equipment.armor) { foundRoom.discardPile.push(player.equipment.armor); player.equipment.armor = null; }
+            if (player.equipment.defensiveHorse) { foundRoom.discardPile.push(player.equipment.defensiveHorse); player.equipment.defensiveHorse = null; }
+            if (player.equipment.offensiveHorse) { foundRoom.discardPile.push(player.equipment.offensiveHorse); player.equipment.offensiveHorse = null; }
           }
-        }
+          
+          const isGameOver = checkGameOver(foundRoom);
+          if (!isGameOver) {
+            if (foundRoom.turnOrder[foundRoom.currentTurnIndex] === foundPlayerId) {
+              foundRoom.currentPhase = 'DISCARD';
+              checkDiscardRequirement(foundRoom);
+            } else {
+              broadcastRoomState(foundRoom);
+            }
+          }
+          
+          delete reconnectTimeouts[foundRoom.roomId][foundPlayerId];
+        }, 45000);
       }
 
       // Check if ANY human players are left connected
-      const humanPlayersLeft = Object.values(foundRoom.players).filter(p => !p.isBot && p.isAlive).length;
-      if (humanPlayersLeft === 0) {
+      const connectedHumans = Object.values(foundRoom.players).filter(p => !p.isBot && p.isAlive && !p.isDisconnected).length;
+      if (connectedHumans === 0) {
         console.log(`All human players disconnected. Deleting room ${foundRoom.roomId}...`);
+        if (reconnectTimeouts[foundRoom.roomId]) {
+          for (const pid in reconnectTimeouts[foundRoom.roomId]) {
+            clearTimeout(reconnectTimeouts[foundRoom.roomId][pid]);
+          }
+          delete reconnectTimeouts[foundRoom.roomId];
+        }
         delete gameRooms[foundRoom.roomId];
       }
 
+    } else if (foundRoom && foundRoom.status === 'LOBBY') {
+      delete foundRoom.players[foundPlayerId];
+      foundRoom.turnOrder = foundRoom.turnOrder.filter(id => id !== foundPlayerId);
+      console.log(`Removed player ${foundPlayerId} from Lobby ${foundRoom.roomId}`);
+      broadcastRoomState(foundRoom);
     }
   });
 });

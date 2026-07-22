@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Three Kingdoms Lobby</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 </head>
 <body>
   <div id="lobby-screen">
@@ -20,6 +21,9 @@
         </div>
         <div class="menu-actions">
           <button class="btn-menu btn-primary" id="btn-mode-online-menu" style="width: 100%; margin-top: 15px;">▶ เริ่มเกม (Start Game)</button>
+        </div>
+        <div id="panel-reconnect" class="menu-actions hidden" style="margin-top: 10px;">
+          <button class="btn-menu btn-accent" id="btn-reconnect-game" style="width: 100%; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; font-weight: bold;">🔄 กลับเข้าสู่เกมที่เล่นอยู่ (Reconnect)</button>
         </div>
       </div>
 

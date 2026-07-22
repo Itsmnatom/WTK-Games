@@ -9,6 +9,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const panelOnlineSetup = document.getElementById('panel-online-setup');
   const inputNickname = document.getElementById('input-nickname');
   const inputOnlineRoomId = document.getElementById('input-online-room-id');
+  const panelReconnect = document.getElementById('panel-reconnect');
+  const btnReconnectGame = document.getElementById('btn-reconnect-game');
+
+  // GSAP Entrance Animations
+  if (typeof gsap !== 'undefined') {
+    gsap.from('.lobby-container', { duration: 0.8, y: 40, opacity: 0, scale: 0.93, ease: 'back.out(1.7)' });
+    gsap.from('.lobby-icon', { duration: 1, scale: 0, rotation: -180, delay: 0.2, ease: 'elastic.out(1, 0.5)' });
+    gsap.from('.lobby-title', { duration: 0.7, opacity: 0, y: -20, delay: 0.35, ease: 'power2.out' });
+    gsap.from('.form-group', { duration: 0.6, opacity: 0, y: 15, stagger: 0.1, delay: 0.45, ease: 'power2.out' });
+    gsap.from('.btn-menu, .btn-join', { duration: 0.6, opacity: 0, y: 10, stagger: 0.1, delay: 0.55, ease: 'power2.out' });
+  }
+
+  // Check for active game to reconnect
+  const activeRoomId = localStorage.getItem('activeRoomId');
+  const activePlayerId = localStorage.getItem('activePlayerId');
+  if (activeRoomId && activePlayerId) {
+    panelReconnect.classList.remove('hidden');
+  }
+
+  btnReconnectGame.addEventListener('click', () => {
+    sessionStorage.setItem('roomAction', 'reconnect');
+    sessionStorage.setItem('reconnectRoomId', activeRoomId);
+    sessionStorage.setItem('reconnectPlayerId', activePlayerId);
+    window.location.href = `/app/${activeRoomId}`;
+  });
 
   // Load cached name if exists
   const cachedName = localStorage.getItem('savedPlayerName');
