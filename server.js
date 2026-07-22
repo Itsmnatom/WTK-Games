@@ -828,7 +828,7 @@ function startPlayerTurn(room) {
         isSuccess = (judgeCard.suit === 'CLUB');
       }
 
-      io.to(room.id).emit('judgement_result', {
+      io.to(room.roomId).emit('judgement_result', {
         title: titleName,
         card: judgeCard,
         isSuccess: isSuccess,
@@ -2850,7 +2850,7 @@ io.on('connection', (socket) => {
       room.discardPile.push(judgeCard);
       const isRed = judgeCard.suit === 'HEART' || judgeCard.suit === 'DIAMOND';
       
-      io.to(room.id).emit('judgement_result', {
+      io.to(room.roomId).emit('judgement_result', {
         title: 'เกราะประยุทธ์แปดทิศ',
         card: judgeCard,
         isSuccess: isRed,
