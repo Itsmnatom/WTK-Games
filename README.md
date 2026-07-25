@@ -165,6 +165,31 @@ WTK-Games/
 
 ---
 
+## 🗄️ 6.5 การตรวจสอบและดูข้อมูลในฐานข้อมูล (SQLite Database Inspection)
+
+ระบบเกมบันทึกข้อมูลลงใน SQLite Database ที่ไฟล์ `db/wtk_game.sqlite` โดยคุณสามารถเข้าดูข้อมูลได้ผ่าน **3 ช่องทางง่ายๆ**:
+
+### 1. ดูผ่าน CLI Script (แนะนำที่สุด - แสดงเป็นตารางสวยงาม)
+รันคำสั่งใน Terminal/PowerShell:
+```bash
+node db/view_db.js
+```
+ระบบจะแสดงข้อมูลสถิติผู้เล่น (Win rate / Kills / EXP), ประวัติการแข่งขัน (Match History) และจำนวนการ์ดในรูปแบบ `Console Table` สวยงามทันที
+
+### 2. ดูผ่าน REST API Endpoint
+เมื่อเปิดเซิร์ฟเวอร์ `node server.js` หรือ `node colyseus_server.js` สามารถเปิดเบราว์เซอร์ดูตารางผู้นำ (Leaderboard) ได้ที่:
+```http
+http://localhost:3001/api/leaderboard
+```
+
+### 3. ดูผ่านโปรแกรมจัดการ SQLite (GUI Tool)
+หากต้องการแก้ไขหรือดูตารางทั้งหมดแบบคอลัมน์ สามารถดาวน์โหลดโปรแกรมฟรี เช่น **[DB Browser for SQLite](https://sqlitebrowser.org/)** หรือส่วนขยาย **VS Code SQLite Viewer** แล้วเปิดไฟล์:
+```
+d:\test\db\wtk_game.sqlite
+```
+
+---
+
 ## 🚀 7. วิธีการติดตั้งและเริ่มต้นใช้งาน (Getting Started)
 
 ### ความต้องการของระบบ (Prerequisites)
