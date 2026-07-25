@@ -3,43 +3,463 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Three Kingdoms Lobby</title>
-  <link rel="stylesheet" href="style.css">
+  <title>สามก๊ก — War of Three Kingdoms</title>
+  <meta name="description" content="สามก๊ก การ์ดเกมสามก๊กออนไลน์แบบ Real-time Multiplayer">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    :root {
+      --gold: #c6a15b;
+      --gold-bright: #f0c040;
+      --gold-dim: rgba(198,161,91,0.15);
+      --crimson: #8c1c1c;
+      --crimson-bright: #c0392b;
+      --navy: #080a14;
+      --surface: rgba(12,16,32,0.88);
+      --glass: rgba(198,161,91,0.08);
+      --border: rgba(198,161,91,0.35);
+      --text: #f0e6cc;
+      --muted: #8a7a60;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      font-family: 'Outfit', sans-serif;
+      background: var(--navy);
+      color: var(--text);
+    }
+
+    /* Animated starfield */
+    .starfield {
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 120% 80% at 50% 10%, rgba(140, 28, 28, 0.22) 0%, transparent 65%),
+        radial-gradient(ellipse 80% 60% at 10% 90%, rgba(198, 161, 91, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 90% at 90% 90%, rgba(10, 20, 60, 0.95) 0%, transparent 75%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Dragon watermark */
+    .dragon-bg {
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cpath d='M100 10 C130 30 160 60 150 100 C140 140 110 160 100 190 C90 160 60 140 50 100 C40 60 70 30 100 10Z' fill='none' stroke='rgba(198,161,91,0.04)' stroke-width='1'/%3E%3C/svg%3E");
+      background-size: 400px 400px;
+      pointer-events: none; z-index: 0; opacity: 0.5;
+    }
+
+    .particles-canvas {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0; opacity: 0.6;
+    }
+
+    /* ─── Main Centered Layout ───────────────────────── */
+    #lobby-screen {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+      overflow-y: auto;
+    }
+
+    .lobby-wrapper {
+      width: 100%; max-width: 960px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 24px;
+    }
+
+    /* Top Floating Reconnect Banner */
+    .reconnect-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; width: 100%; max-width: 600px;
+      padding: 12px 20px;
+      background: rgba(14, 165, 233, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 14px;
+      backdrop-filter: blur(16px);
+      color: #7dd3fc; font-size: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+      50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.4); }
+    }
+
+    /* Header Zone */
+    .lobby-header {
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    .lobby-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(44px, 5vw, 68px);
+      font-weight: 900;
+      line-height: 1.05; letter-spacing: 0.06em;
+      background: linear-gradient(160deg, #fff9e6 0%, #f0c040 35%, #c6a15b 65%, #8b6914 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 35px rgba(198,161,91,0.45));
+    }
+
+    .lobby-subtitle {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(12px, 1.4vw, 16px);
+      letter-spacing: 0.3em;
+      color: var(--gold); opacity: 0.85;
+      text-transform: uppercase; margin-top: 6px;
+    }
+
+    /* Nickname Bar */
+    .player-profile-bar {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(12, 16, 32, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 6px 8px 6px 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      margin-top: 12px;
+    }
+    .player-profile-bar label {
+      font-size: 13px; font-weight: 700;
+      color: var(--gold); text-transform: uppercase;
+      letter-spacing: 0.08em; white-space: nowrap;
+    }
+    .player-profile-bar input {
+      background: transparent; border: none;
+      color: #fff; font-family: 'Outfit', sans-serif;
+      font-size: 16px; font-weight: 600; outline: none;
+      width: 180px; text-align: center;
+    }
+    .player-profile-bar input::placeholder { color: var(--muted); }
+
+    /* ─── 2 Hero Game Cards Grid ───────────────────────── */
+    .mode-cards-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 24px; width: 100%;
+    }
+
+    .mode-card {
+      background: rgba(12, 16, 32, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      display: flex; flex-direction: column;
+      align-items: center; text-align: center;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(28px);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+      position: relative; overflow: hidden;
+    }
+    .mode-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(198,161,91,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .mode-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--gold-bright);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(198,161,91,0.25);
+    }
+
+    .card-icon {
+      font-size: 48px; margin-bottom: 12px;
+      filter: drop-shadow(0 0 16px rgba(240,192,64,0.5));
+    }
+    .card-title {
+      font-family: 'Cinzel', serif;
+      font-size: 24px; font-weight: 700;
+      color: #fff; margin-bottom: 8px;
+    }
+    .card-desc {
+      font-size: 14px; color: var(--muted);
+      line-height: 1.5; margin-bottom: 24px;
+      min-height: 42px;
+    }
+
+    /* Controls inside cards */
+    .bot-stepper-wrap {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(198,161,91,0.08);
+      border: 1px solid rgba(198,161,91,0.25);
+      border-radius: 12px; padding: 6px 14px;
+      margin-bottom: 20px;
+    }
+    .bot-stepper-wrap label { font-size: 12px; font-weight: 700; color: var(--gold); }
+    .stepper-btn {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(198,161,91,0.15); border: 1px solid var(--border);
+      color: var(--gold-bright); font-size: 18px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .stepper-btn:hover { background: var(--gold); color: #000; }
+    .stepper-val { font-size: 16px; font-weight: 800; color: #fff; width: 28px; text-align: center; }
+
+    /* Buttons */
+    .btn-main-gold {
+      width: 100%; padding: 16px 24px;
+      font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800;
+      color: #0c1020;
+      background: linear-gradient(135deg, #f0c040 0%, #c6a15b 50%, #a07830 100%);
+      border: none; border-radius: 14px; cursor: pointer;
+      box-shadow: 0 8px 24px rgba(198,161,91,0.35);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: 0.05em;
+    }
+    .btn-main-gold:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(240,192,64,0.5);
+    }
+    .btn-main-gold:active { transform: translateY(0); }
+
+    .btn-main-outline {
+      width: 100%; padding: 14px 20px;
+      font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700;
+      color: var(--gold-bright);
+      background: rgba(198,161,91,0.08);
+      border: 1px solid var(--border);
+      border-radius: 12px; cursor: pointer;
+      transition: all 0.25s;
+    }
+    .btn-main-outline:hover {
+      background: rgba(198,161,91,0.2);
+      border-color: var(--gold-bright);
+      transform: translateY(-2px);
+    }
+
+    /* Online Setup Options Inside Online Card */
+    .online-options {
+      display: flex; flex-direction: column; gap: 12px; width: 100%;
+    }
+    .room-code-input {
+      width: 100%; padding: 12px 16px;
+      background: rgba(8, 10, 20, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 10px; color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; text-align: center; text-transform: uppercase;
+      outline: none; letter-spacing: 0.1em;
+      transition: border-color 0.2s;
+    }
+    .room-code-input:focus { border-color: var(--gold-bright); }
+
+    /* ─── Bottom Interactive Feature Badges ─────────────── */
+    .bottom-features-bar {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
+      width: 100%; margin-top: 8px;
+    }
+    .feature-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      background: rgba(12, 16, 32, 0.75);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      font-size: 13px; font-weight: 600; color: var(--text);
+      cursor: pointer; transition: all 0.25s;
+      backdrop-filter: blur(12px);
+    }
+    .feature-badge:hover {
+      background: rgba(198,161,91,0.2);
+      border-color: var(--gold-bright);
+      color: #fff; transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(198,161,91,0.25);
+    }
+
+    /* Modal Backdrop */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(4, 6, 14, 0.85);
+      backdrop-filter: blur(16px);
+      z-index: 100; display: flex; align-items: center; justify-content: center;
+      padding: 24px; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal-box {
+      background: rgba(12, 16, 32, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 20px; width: 100%; max-width: 640px;
+      max-height: 80vh; overflow-y: auto;
+      padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+      position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 20px; right: 20px;
+      background: none; border: none; color: var(--muted);
+      font-size: 24px; cursor: pointer; transition: color 0.2s;
+    }
+    .modal-close:hover { color: #fff; }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 768px) {
+      .mode-cards-grid { grid-template-columns: 1fr; }
+      .lobby-title { font-size: 38px; }
+      #lobby-screen { padding: 16px; }
+    }
+  </style>
 </head>
 <body>
+
+  <div class="starfield"></div>
+  <div class="dragon-bg"></div>
+  <canvas class="particles-canvas" id="particles-canvas"></canvas>
+
   <div id="lobby-screen">
-    <div class="lobby-container glass-panel">
-      <span class="lobby-icon">⚔️</span>
-      <h1 class="lobby-title">Three Kingdoms</h1>
-      <p class="lobby-subtitle">ศึกสามก๊ก - ล็อบบี้หลัก</p>
+    <div class="lobby-wrapper">
 
-      <div id="panel-menu" class="menu-panel">
-        <div class="form-group">
-          <label for="input-nickname">ชื่อผู้เล่น (NICKNAME)</label>
-          <input type="text" id="input-nickname" placeholder="ระบุชื่อผู้เล่น..." value="ผู้กล้าไร้นาม">
+      <!-- Reconnect banner -->
+      <div class="reconnect-banner hidden" id="panel-reconnect">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:20px;">⚡</span>
+          <div>
+            <div style="font-weight:700;">พบเกมที่กำลังรบอยู่!</div>
+            <div style="font-size:12px;opacity:0.85;">กดปุ่มเพื่อกลับเข้าสู่สนามรบเดิม</div>
+          </div>
         </div>
-        <div class="menu-actions">
-          <button class="btn-menu btn-primary" id="btn-mode-online-menu" style="width: 100%; margin-top: 15px;">▶ เริ่มเกม (Start Game)</button>
-        </div>
-        <div id="panel-reconnect" class="menu-actions hidden" style="margin-top: 10px;">
-          <button class="btn-menu btn-accent" id="btn-reconnect-game" style="width: 100%; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; font-weight: bold;">🔄 กลับเข้าสู่เกมที่เล่นอยู่ (Reconnect)</button>
+        <button id="btn-reconnect-game" class="btn-main-gold" style="width:auto;padding:8px 16px;font-size:13px;">กลับเข้าเกม</button>
+      </div>
+
+      <!-- Header Zone -->
+      <div class="lobby-header">
+        <div class="lobby-title">สามก๊ก</div>
+        <div class="lobby-subtitle">WAR OF THREE KINGDOMS</div>
+        
+        <!-- Player Nickname Bar -->
+        <div class="player-profile-bar">
+          <label for="input-nickname">👤 นักรบ:</label>
+          <input type="text" id="input-nickname" placeholder="ระบุชื่อผู้เล่น..." maxlength="20" autocomplete="off">
         </div>
       </div>
 
-      <div id="panel-online-setup" class="menu-panel hidden">
-        <div class="form-group">
-          <label for="input-online-room-id">รหัสห้อง (Room ID)</label>
-          <input type="text" id="input-online-room-id" placeholder="ระบุรหัสห้อง...">
+      <!-- 2 Main Game Mode Cards -->
+      <div class="mode-cards-grid">
+        
+        <!-- Singleplayer Bot Mode Card -->
+        <div class="mode-card">
+          <div class="card-icon">⚔️</div>
+          <div class="card-title">โหมดเล่นกับบอท</div>
+          <div class="card-desc">เข้าสู่สงครามทันที ต่อสู้กับบอท AI อัจฉริยะ 1-9 คน โดยไม่ต้องรอผู้เล่นอื่น</div>
+          
+          <div class="bot-stepper-wrap">
+            <label>จำนวนบอท:</label>
+            <button class="stepper-btn" id="bot-count-down">−</button>
+            <span class="stepper-val" id="bot-count-display">3</span>
+            <button class="stepper-btn" id="bot-count-up">+</button>
+            <input type="hidden" id="select-bot-count" value="3">
+          </div>
+
+          <button class="btn-main-gold" id="btn-start-bot">⚔️ เริ่มเกมทันที</button>
         </div>
-        <div class="menu-actions-grid">
-          <button class="btn-action btn-accent" id="btn-create-online">สร้างห้องใหม่</button>
-          <button class="btn-action btn-accent" id="btn-join-online">เข้าร่วมห้อง</button>
+
+        <!-- Multiplayer Online Card -->
+        <div class="mode-card">
+          <div class="card-icon">🌐</div>
+          <div class="card-title">โหมดผู้เล่นหลายคน</div>
+          <div class="card-desc">สร้างห้องเล่นกับเพื่อนในเครือข่าย หรือเข้าร่วมห้องเรียลไทม์ผ่านรหัสห้อง</div>
+          
+          <div class="online-options">
+            <input type="text" class="room-code-input" id="input-online-room-id" placeholder="ระบุรหัสห้อง (เช่น ROOM_1234)" autocomplete="off">
+            <div style="display:flex;gap:10px;">
+              <button class="btn-main-gold" id="btn-create-online" style="flex:1;">✦ สร้างห้องใหม่</button>
+              <button class="btn-main-outline" id="btn-join-online" style="flex:1;">⤵ เข้าร่วม</button>
+            </div>
+          </div>
         </div>
-        <button class="btn-back" id="btn-back-to-menu">⬅️ ย้อนกลับ</button>
+
       </div>
+
+      <!-- Bottom Interactive Feature Badges -->
+      <div class="bottom-features-bar">
+        <div class="feature-badge" onclick="openShowcase('heroes')">📜 12 ขุนพลสามก๊ก</div>
+        <div class="feature-badge" onclick="openShowcase('cards')">🎴 41 ประเภทการ์ด</div>
+        <div class="feature-badge" onclick="openShowcase('leaderboard')">🏆 ตารางอันดับ (Leaderboard)</div>
+        <div class="feature-badge" onclick="window.open('/colyseus', '_blank')">📊 Colyseus Monitor</div>
+      </div>
+
     </div>
   </div>
-  <script src="/lobby.js?v=4"></script>
+
+  <!-- Showcase Modal -->
+  <div class="modal-overlay" id="showcase-modal">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeShowcase()">&times;</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script src="/lobby.js"></script>
+  <script>
+    function openShowcase(type) {
+      const modal = document.getElementById('showcase-modal');
+      const content = document.getElementById('modal-content');
+      modal.classList.add('active');
+
+      if (type === 'heroes') {
+        content.innerHTML = `
+          <h2 style="color:var(--gold-bright);margin-bottom:12px;font-family:'Cinzel',serif;">📜 รายนาม 12 ขุนพลสามก๊ก</h2>
+          <p style="color:var(--muted);margin-bottom:16px;">ขุนพลพร้อมสกิลประจำตัวแบ่งตาม 4 ก๊ก (วุยก๊ก 魏, จ๊กก๊ก 蜀, ง่อก๊ก 吳, กลุ่มอิสระ 群)</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:left;">
+            <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;border:1px solid rgba(198,161,91,0.2);">
+              <strong style="color:#3b82f6;">魏 โจโฉ (Cao Cao)</strong><br/><span style="font-size:12px;color:#cbd5e1;">มหาอุปราช: เมื่อได้รับความเสียหาย หยิบการ์ดใบนั้นขึ้นมือได้</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;border:1px solid rgba(198,161,91,0.2);">
+              <strong style="color:#ef4444;">蜀 เล่าปี่ (Liu Bei)</strong><br/><span style="font-size:12px;color:#cbd5e1;">ปันสุข: มอบการ์ด 2 ใบให้เพื่อนเพื่อฟื้นฟู 1 HP</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;border:1px solid rgba(198,161,91,0.2);">
+              <strong style="color:#10b981;">吳 ซุนกวน (Sun Quan)</strong><br/><span style="font-size:12px;color:#cbd5e1;">ผลัดการ์ด: ทิ้งการ์ดกี่ใบก็ได้เพื่อจั่วใหม่เท่าเดิม</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;border:1px solid rgba(198,161,91,0.2);">
+              <strong style="color:#f59e0b;">群 เตียวเสี้ยน (Diao Chan)</strong><br/><span style="font-size:12px;color:#cbd5e1;">บ่วงเสน่หา: สั่งขุนพลชาย 2 คนดวลกันเอง</span>
+            </div>
+          </div>
+        `;
+      } else if (type === 'cards') {
+        content.innerHTML = `
+          <h2 style="color:var(--gold-bright);margin-bottom:12px;font-family:'Cinzel',serif;">🎴 คลังการ์ด 41 ประเภท</h2>
+          <p style="color:var(--muted);margin-bottom:16px;">ประกอบด้วย การ์ดพื้นฐาน (Basic), การ์ดกลยุทธ์ (Kit/Stratagem) และ อุปกรณ์สวมใส่ (Equipment)</p>
+          <div style="display:flex;flex-direction:column;gap:8px;text-align:left;">
+            <div style="padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:8px;">⚔️ <strong>โจมตี (SLASH)</strong>: ทำความเสียหาย 1 HP แก่เป้าหมายในระยะ</div>
+            <div style="padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:8px;">🛡️ <strong>หลบ (DODGE)</strong>: ป้องกันการโจมตีจาก SLASH</div>
+            <div style="padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:8px;">🍑 <strong>สวนท้อ (PEACH)</strong>: ฟื้นฟูพลังชีวิต 1 HP</div>
+            <div style="padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:8px;">⛔ <strong>ไร้ข้อกังขา (NEGATE)</strong>: ยกเลิกผลของการ์ดเวทมนตร์หรือดีเลย์</div>
+          </div>
+        `;
+      } else if (type === 'leaderboard') {
+        content.innerHTML = `
+          <h2 style="color:var(--gold-bright);margin-bottom:12px;font-family:'Cinzel',serif;">🏆 ตารางอันดับผู้รบ (Leaderboard)</h2>
+          <div id="leaderboard-list" style="text-align:center;padding:20px;color:var(--muted);">กำลังโหลดข้อมูล...</div>
+        `;
+        fetch('/api/leaderboard')
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.data) {
+              let html = `<table style="width:100%;border-collapse:collapse;margin-top:10px;text-align:left;">
+                <tr style="border-bottom:1px solid var(--border);color:var(--gold);">
+                  <th style="padding:8px;">อันดับ</th><th style="padding:8px;">ชื่อผู้เล่น</th><th style="padding:8px;">ชนะ</th><th style="padding:8px;">แพ้</th><th style="padding:8px;">EXP</th>
+                </tr>`;
+              data.data.forEach((p, index) => {
+                html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <td style="padding:8px;font-weight:bold;color:var(--gold-bright);">#${index+1}</td>
+                  <td style="padding:8px;">${p.name}</td>
+                  <td style="padding:8px;color:#10b981;">${p.wins}</td>
+                  <td style="padding:8px;color:#ef4444;">${p.losses}</td>
+                  <td style="padding:8px;color:#f59e0b;">${p.exp}</td>
+                </tr>`;
+              });
+              html += `</table>`;
+              document.getElementById('leaderboard-list').innerHTML = html;
+            }
+          });
+      }
+    }
+
+    function closeShowcase() {
+      document.getElementById('showcase-modal').classList.remove('active');
+    }
+  </script>
 </body>
 </html>

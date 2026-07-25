@@ -614,8 +614,8 @@
     btnLobbyWaitingText.classList.add('hidden');
     const ctrl = document.getElementById('host-bot-controls');
     if (ctrl) ctrl.classList.remove('hidden');
-    if (isTestSandboxMode) {
-      socket.emit('start_game', { roomId: myRoomId, botCount: 4 });
+    if (isTestSandboxMode || modeParam === 'BOT') {
+      socket.emit('start_game', { roomId: myRoomId, botCount: parseInt(botCountParam) || 3 });
     }
   });
 
@@ -862,6 +862,11 @@
       draftScreen.classList.add('hidden');
       gameScreen.classList.remove('hidden');
       gameOverOverlay.classList.add('hidden');
+
+      if (typeof window.initPhaserCardCanvas === 'function' && !window.phaserGameInitialized) {
+        window.initPhaserCardCanvas('phaser-game-container');
+        window.phaserGameInitialized = true;
+      }
 
       const topBar = document.querySelector('.top-bar');
       if (topBar) topBar.classList.remove('hidden');
@@ -1133,7 +1138,7 @@
         <div class="hp-bar-container">
           <div class="hp-label">
             <span>HP</span>
-            <span class="mono">${p.hp} / ${p.maxHp}</span>
+            <span class="mono">${p.hp <= 0 ? (p.isAlive ? `<span style="color: #ef4444; font-weight: bold;">🆘 ${p.hp} (ใกล้ตาย)</span>` : `0`) : p.hp} / ${p.maxHp}</span>
           </div>
           <div class="hp-bar-track">
             <div class="hp-bar-fill ${hpClass}" style="width: ${hpPercent}%"></div>
@@ -1290,6 +1295,9 @@
     handCards.innerHTML = '';
     const me = gameState.players[myPlayerId];
     if (!me || !me.hand) return;
+
+    // Dispatch hand cards to Phaser canvas renderer
+    window.dispatchEvent(new CustomEvent('updatePhaserHand', { detail: { cards: me.hand } }));
 
     handCount.textContent = `${me.hand.length} ใบ`;
 
@@ -1815,6 +1823,30 @@
     clearSelection();
   }
 
+  window.addEventListener('phaserCardSelected', (e) => {
+    if (!e.detail || !e.detail.cardId) return;
+    selectedCardId = e.detail.cardId;
+    btnPlayCard.disabled = false;
+  });
+
+  window.addEventListener('phaserCardPlayed', (e) => {
+    if (!e.detail || !e.detail.cardId || !isMyTurn()) return;
+    selectedCardId = e.detail.cardId;
+
+    const me = gameState ? gameState.players[myPlayerId] : null;
+    const card = me ? me.hand.find(c => c.id === selectedCardId) : null;
+    const aliveOpponents = gameState ? Object.values(gameState.players).filter(p => p.id !== myPlayerId && p.isAlive) : [];
+
+    if (card && (card.name === 'SLASH' || card.name === 'DUEL' || card.name === 'STEAL' || card.name === 'SABOTAGE' || card.name === 'FIRE_ATTACK' || card.name === 'THUNDER_ATTACK')) {
+      if (aliveOpponents.length === 1) {
+        executePlayCard(aliveOpponents[0].id);
+        return;
+      }
+    }
+
+    btnPlayCard.click();
+  });
+
   btnPlayCard.addEventListener('click', () => {
     const cardIdToPlay = selectedCardId || (selectedDiscardIds.length === 1 ? selectedDiscardIds[0] : null);
     if (!cardIdToPlay || !isMyTurn()) return;
@@ -1995,8 +2027,7 @@
       ((pending.type === 'WAITING_FOR_DODGE' || pending.type === 'DIAO_CHAN_SEDUCTION' || pending.type === 'ZHOU_YU_DISCORD') && pending.targetPlayerId === myPlayerId) ||
       (pending.type === 'WAITING_FOR_SLASH_DUEL' && pending.currentPlayerToSlash === myPlayerId) ||
       (pending.type === 'WAITING_FOR_AOE' && pending.targets && pending.targets[pending.currentTargetIndex] === myPlayerId) ||
-      (pending.type === 'WAITING_FOR_BORROW_SLASH' && pending.targetPlayerId === myPlayerId) ||
-      (pending.type === 'WAITING_FOR_NEGATE' && pending.sourcePlayerId !== myPlayerId && me && me.hand && me.hand.some(c => c.name === 'NEGATE')) // Only prompt to Negate others' plays if you actually have Negate!
+      (pending.type === 'WAITING_FOR_NEGATE' && me && me.hand && me.hand.some(c => c.name === 'NEGATE') && (pending.sourcePlayerId !== myPlayerId || (gameState.actionChain && gameState.actionChain.length > 1)))
     );
     
     if (isReactionPending) {
@@ -2026,9 +2057,9 @@
         if (pendingTitle) pendingTitle.textContent = aoeName;
         pendingAttackerName.textContent = `การโจมตีหมู่จาก ${attacker ? attacker.name : 'ศัตรู'}`;
         if (pending.aoeType === 'BARBARIAN_INVASION') {
-          btnDodge.textContent = 'ป้องกันด้วย SLASH 1 ใบ';
+          btnDodge.textContent = (me && me.hand && me.hand.some(c => c.name === 'NEGATE')) ? '⚔️ ป้องกันด้วย SLASH / ⛔ NEGATE' : 'ป้องกันด้วย SLASH 1 ใบ';
         } else {
-          btnDodge.textContent = 'หลบด้วย DODGE 1 ใบ';
+          btnDodge.textContent = (me && me.hand && me.hand.some(c => c.name === 'NEGATE')) ? '🛡️ หลบด้วย DODGE / ⛔ NEGATE' : 'หลบด้วย DODGE 1 ใบ';
         }
         btnTakeDamage.textContent = 'ยอมรับความเสียหาย (1 HP)';
       } else if (pending.type === 'WAITING_FOR_NEGATE') {
@@ -2558,6 +2589,29 @@
       return;
     }
 
+    if (pending.type === 'WAITING_FOR_SLASH_DUEL') {
+      let slashCard = me.hand.find(c => c.name === 'SLASH');
+      if (!slashCard && hasCharacter(me.character, 'GUAN_YU')) {
+        slashCard = me.hand.find(c => c.suit === 'HEART' || c.suit === 'DIAMOND');
+      } else if (!slashCard && hasCharacter(me.character, 'ZHAO_YUN')) {
+        slashCard = me.hand.find(c => c.name === 'DODGE');
+      }
+
+      if (!slashCard) {
+        showToast('คุณไม่มีการ์ด SLASH หรือการ์ดที่สามารถใช้แทน SLASH ได้เพื่อสู้กลับในการดวล!', 'error');
+        return;
+      }
+
+      socket.emit('resolve_pending', {
+        roomId: myRoomId,
+        action: 'DODGE',
+        cardId: slashCard.id,
+        playAs: hasCharacter(me.character, 'ZHAO_YUN') && slashCard.name === 'DODGE' ? 'SLASH' : null
+      });
+      pendingOverlay.classList.add('hidden');
+      return;
+    }
+
     if (pending.type === 'WAITING_FOR_NEGATE') {
       const negateCard = me.hand.find(c => c.name === 'NEGATE');
       if (!negateCard) {
@@ -2685,6 +2739,55 @@
     heroInfoModal.classList.add('hidden');
   });
 
+  function showFloatingText(playerId, text, color = '#ef4444') {
+    const avatarEl = playerId === myPlayerId ? document.getElementById('my-avatar-area') : document.getElementById(`opp-avatar-${playerId}`);
+    if (!avatarEl) return;
+    const rect = avatarEl.getBoundingClientRect();
+    const floatEl = document.createElement('div');
+    floatEl.style.position = 'fixed';
+    floatEl.style.left = `${rect.left + rect.width / 2}px`;
+    floatEl.style.top = `${rect.top + 10}px`;
+    floatEl.style.transform = 'translate(-50%, 0)';
+    floatEl.style.fontSize = '26px';
+    floatEl.style.fontWeight = '800';
+    floatEl.style.fontFamily = 'Outfit, sans-serif';
+    floatEl.style.color = color;
+    floatEl.style.textShadow = `0 0 12px ${color}, 0 2px 6px rgba(0,0,0,0.9)`;
+    floatEl.style.zIndex = '99999';
+    floatEl.style.pointerEvents = 'none';
+    floatEl.textContent = text;
+    document.body.appendChild(floatEl);
+
+    if (typeof gsap !== 'undefined') {
+      gsap.to(floatEl, {
+        y: -65,
+        scale: 1.35,
+        opacity: 0,
+        duration: 0.95,
+        ease: 'power2.out',
+        onComplete: () => floatEl.remove()
+      });
+    } else {
+      setTimeout(() => floatEl.remove(), 950);
+    }
+  }
+
+  function triggerScreenShake(playerId) {
+    const gameScreen = document.getElementById('game-screen');
+    if (gameScreen && typeof gsap !== 'undefined') {
+      gsap.to(gameScreen, {
+        x: 'random(-8, 8)',
+        y: 'random(-8, 8)',
+        duration: 0.05,
+        repeat: 5,
+        yoyo: true,
+        onComplete: () => {
+          gsap.set(gameScreen, { x: 0, y: 0 });
+        }
+      });
+    }
+  }
+
   // --- SYSTEM LOGS DETECTOR ---
   function detectEvents(prev, next) {
     if (!prev || !next) return;
@@ -2695,9 +2798,13 @@
 
       if (prevP && nextP) {
         if (nextP.hp < prevP.hp) {
-          // Handled by explicit damage_log event from server
+          const diff = prevP.hp - nextP.hp;
+          showFloatingText(pId, `-${diff} HP`, '#ef4444');
+          triggerScreenShake(pId);
         } else if (nextP.hp > prevP.hp) {
-          addLog(`💖 ${nextP.name} ฟื้นฟูพลังชีวิต 1 หน่วย (พลังชีวิต: ${nextP.hp}/${nextP.maxHp})`, 'heal');
+          const diff = nextP.hp - prevP.hp;
+          showFloatingText(pId, `+${diff} HP`, '#10b981');
+          addLog(`💖 ${nextP.name} ฟื้นฟูพลังชีวิต ${diff} หน่วย (พลังชีวิต: ${nextP.hp}/${nextP.maxHp})`, 'heal');
         }
 
         if (prevP.isAlive && !nextP.isAlive) {

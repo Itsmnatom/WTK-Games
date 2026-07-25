@@ -4168,10 +4168,11 @@ io.on('connection', (socket) => {
         }, 45000);
       }
 
-      // Check if ANY human players are left connected
+      // Check if ANY human players are left connected or have an active grace period
       const connectedHumans = Object.values(foundRoom.players).filter(p => !p.isBot && p.isAlive && !p.isDisconnected).length;
-      if (connectedHumans === 0) {
-        console.log(`All human players disconnected. Deleting room ${foundRoom.roomId}...`);
+      const hasPendingReconnects = reconnectTimeouts[foundRoom.roomId] && Object.keys(reconnectTimeouts[foundRoom.roomId]).length > 0;
+      if (connectedHumans === 0 && !hasPendingReconnects) {
+        console.log(`All human players disconnected and grace periods expired. Deleting room ${foundRoom.roomId}...`);
         if (reconnectTimeouts[foundRoom.roomId]) {
           for (const pid in reconnectTimeouts[foundRoom.roomId]) {
             clearTimeout(reconnectTimeouts[foundRoom.roomId][pid]);

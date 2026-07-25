@@ -1,71 +1,72 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 /* ==========================================
-   CSS VARIABLES & DESIGN TOKENS
+   CSS VARIABLES & DESIGN TOKENS (AAA IMPERIAL FANTASY)
    ========================================== */
 :root {
   /* Background & Surface */
-  --bg-primary: #1c1917; /* Dark wood/slate */
-  --bg-secondary: #292524;
-  --bg-surface: rgba(41, 37, 36, 0.85);
-  --bg-glass: rgba(28, 25, 23, 0.6);
-  --bg-glass-hover: rgba(68, 64, 60, 0.7);
-  --bg-glass-active: rgba(87, 83, 78, 0.8);
+  --bg-primary: #080a14;
+  --bg-secondary: #0f172a;
+  --bg-surface: rgba(15, 23, 42, 0.88);
+  --bg-glass: rgba(12, 16, 32, 0.75);
+  --bg-glass-hover: rgba(28, 35, 60, 0.85);
+  --bg-glass-active: rgba(40, 50, 80, 0.9);
 
   /* Borders */
-  --border-glass: rgba(198, 161, 91, 0.3); /* Gold border */
-  --border-glow: rgba(198, 161, 91, 0.5);
+  --border-glass: rgba(198, 161, 91, 0.35);
+  --border-glow: rgba(240, 192, 64, 0.6);
 
   /* Text */
-  --text-primary: #f5f5f4;
-  --text-secondary: #d6d3d1;
-  --text-muted: #a8a29e;
-  --text-accent: #c6a15b; /* WTK Gold */
+  --text-primary: #f0e6cc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #8a7a60;
+  --text-accent: #f0c040;
 
   /* Accents */
-  --accent-primary: #c6a15b; /* Gold */
-  --accent-secondary: #8c1c1c; /* Crimson Red */
-  --accent-cyan: #b69054; /* Light Gold */
+  --accent-primary: #c6a15b;
+  --accent-gold-bright: #f0c040;
+  --accent-secondary: #8c1c1c;
+  --accent-cyan: #38bdf8;
   --accent-gold: #c6a15b;
-  --accent-gold-dim: rgba(198, 161, 91, 0.15);
+  --accent-gold-dim: rgba(198, 161, 91, 0.18);
 
   /* Status Colors */
-  --hp-full: #16a34a; /* Green */
-  --hp-mid: #eab308; /* Yellow */
-  --hp-low: #dc2626; /* Red */
-  --hp-dead: #57534e; /* Grey */
+  --hp-full: #10b981;
+  --hp-mid: #f59e0b;
+  --hp-low: #ef4444;
+  --hp-dead: #475569;
 
-  /* Card Colors */
-  --card-slash: #7f1d1d; /* Deep Red */
-  --card-dodge: #1e3a8a; /* Deep Blue */
-  --card-peach: #be185d; /* Pink/Red */
-  --card-default: #44403c; /* Grey/Wood */
+  /* WTK Kingdom Factions (Standard Theme) */
+  --kingdom-wei: #2563eb;   /* 魏 Wei Imperial Blue */
+  --kingdom-shu: #dc2626;   /* 蜀 Shu Crimson Red */
+  --kingdom-wu: #16a34a;    /* 吳 Wu Emerald Green */
+  --kingdom-qun: #d97706;   /* 群 Qun Imperial Gold */
+
+  /* WTK Role Seals */
+  --role-lord: #f59e0b;     /* 👑 主公 Lord Gold */
+  --role-loyalist: #3b82f6; /* 🛡️ 忠臣 Loyalist Blue */
+  --role-rebel: #ef4444;    /* ⚔️ 反賊 Rebel Red */
+  --role-renegade: #a855f7; /* 🎭 內奸 Renegade Purple */
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.7);
-  --shadow-glow: 0 0 20px rgba(198, 161, 91, 0.2);
-  --shadow-card-hover: 0 8px 32px rgba(198, 161, 91, 0.4);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.85);
+  --shadow-glow: 0 0 24px rgba(198, 161, 91, 0.35);
 
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Spacing */
-  --radius-sm: 4px; /* More blocky/classic feel */
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
-
-  --surface-light: rgba(41, 37, 36, 0.6);
 }
 
-/* ==========================================
-   RESET & BASE
-   ========================================== */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -92,31 +93,31 @@ body {
   overflow: hidden !important;
 }
 
-/* Animated gradient background */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99, 102, 241, 0.08), transparent),
-    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(139, 92, 246, 0.06), transparent),
-    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(34, 211, 238, 0.03), transparent);
+    radial-gradient(ellipse 100% 80% at 10% 20%, rgba(140, 28, 28, 0.18), transparent 65%),
+    radial-gradient(ellipse 80% 60% at 90% 80%, rgba(198, 161, 91, 0.14), transparent 60%),
+    radial-gradient(ellipse 60% 70% at 50% 50%, rgba(10, 20, 60, 0.95), transparent 75%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* ==========================================
-   UTILITY CLASSES
-   ========================================== */
 .hidden { display: none !important; }
 
 .glass-panel {
-  background: rgba(28, 25, 23, 0.75);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(198, 161, 91, 0.35);
+  background: rgba(12, 16, 32, 0.85);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 0 1px rgba(198, 161, 91, 0.1),
+    0 16px 48px rgba(0, 0, 0, 0.75),
+    0 0 32px rgba(198, 161, 91, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .mono {
@@ -372,25 +373,25 @@ body::before {
   0% {
     box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7), 0 0 15px rgba(245, 158, 11, 0.4);
     border-color: #fbbf24;
-    transform: scale(1);
+    transform: translate(-50%, -50%);
   }
   50% {
     box-shadow: 0 0 0 12px rgba(245, 158, 11, 0), 0 0 25px rgba(245, 158, 11, 0.85);
     border-color: #f59e0b;
-    transform: scale(1.03);
+    transform: translate(-50%, -50%);
   }
   100% {
     box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 0 15px rgba(245, 158, 11, 0.4);
     border-color: #fbbf24;
-    transform: scale(1);
+    transform: translate(-50%, -50%);
   }
 }
 
 .opponent-card.is-target-candidate:not(.is-dead):hover {
-    transform: translate(-50%, -50%); /* Keep the center alignment, do not bounce */
-    border-color: var(--card-slash);
-    box-shadow: var(--shadow-card-hover), 0 0 20px rgba(239, 68, 68, 0.15);
-  }
+  transform: translate(-50%, -50%);
+  border-color: var(--card-slash);
+  box-shadow: var(--shadow-card-hover), 0 0 20px rgba(239, 68, 68, 0.25);
+}
 
 .opponent-header {
   display: flex;
@@ -1804,22 +1805,43 @@ body::before {
 
 .deck-zone {
   position: absolute;
-  top: 48%; /* Slightly above center since bottom has UI */
+  top: 48%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 90px;
   height: 130px;
-  background: url('https://scontent.fkdt1-1.fna.fbcdn.net/v/t39.30808-6/291995868_483849640250673_7936064924758433006_n.jpg?stp=dst-jpg_tt6&cstp=mx756x756&ctp=s756x756&_nc_cat=104&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeEV_JcKFc8PKLly6MC2CBjeRAu1cppRw0FEC7VymlHDQcU5eZAXxKVy1sKg8xuY8WUahVSZZWV158_Al11lD5ji&_nc_ohc=W8ZpMccIUJYQ7kNvwH3l27n&_nc_oc=Adp4rRA_k5sP2oxE3ISqBjO5jOcKaykzXkZWxJY7Uq4utsVJo01GF0Rx7g8UiKfqCj4&_nc_zt=23&_nc_ht=scontent.fkdt1-1.fna&_nc_gid=PR14Xv_y8LnXchRdYsa6fA&_nc_ss=7b2a8&oh=00_AQB-PdytaP_LhdYinY0QOR7BEvvs13IDZ6EFfmAlwP8fuA&oe=6A559DE7') center/cover no-repeat;
+  background: 
+    radial-gradient(ellipse at center, rgba(198,161,91,0.2) 0%, transparent 70%),
+    linear-gradient(135deg, #1c1917 0%, #0f172a 50%, #1e1b18 100%);
   border-radius: var(--radius-md);
   border: 2px solid var(--accent-gold);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.9), 0 0 15px rgba(251,191,36,0.3);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.9), 0 0 20px rgba(240,192,64,0.35);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  text-shadow: 1px 1px 3px #000, -1px -1px 3px #000;
+  gap: 4px;
+  color: var(--text-accent);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.9);
   font-weight: 800;
-  font-size: 16px;
+  font-size: 13px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.deck-zone::before {
+  content: '🐉';
+  font-size: 32px;
+  filter: drop-shadow(0 0 12px rgba(240,192,64,0.6));
+}
+
+.deck-zone::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px dashed rgba(198,161,91,0.5);
+  border-radius: calc(var(--radius-md) - 2px);
+  pointer-events: none;
 }
 
 /* Self Area */

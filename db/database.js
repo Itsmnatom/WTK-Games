@@ -70,6 +70,20 @@ function initDatabase() {
 }
 
 function recordPlayerStats(name, isWin, kills = 0, damage = 0) {
+  let pName, pWin, pKills, pDamage;
+
+  if (typeof name === 'object' && name !== null) {
+    pName = name.name;
+    pWin = name.won !== undefined ? name.won : !!name.isWin;
+    pKills = name.kills || 0;
+    pDamage = name.damage || 0;
+  } else {
+    pName = name;
+    pWin = !!isWin;
+    pKills = kills || 0;
+    pDamage = damage || 0;
+  }
+
   return new Promise((resolve, reject) => {
     db.run(`
       INSERT INTO players (name, matches_played, wins, losses, kills, damage_dealt, exp)
@@ -81,7 +95,7 @@ function recordPlayerStats(name, isWin, kills = 0, damage = 0) {
         kills = kills + excluded.kills,
         damage_dealt = damage_dealt + excluded.damage_dealt,
         exp = exp + (excluded.wins * 100) + (excluded.kills * 30)
-    `, [name, isWin ? 1 : 0, isWin ? 0 : 1, kills, damage, isWin ? 100 : 20], function(err) {
+    `, [pName, pWin ? 1 : 0, pWin ? 0 : 1, pKills, pDamage, pWin ? 100 : 20], function(err) {
       if (err) return reject(err);
       resolve({ id: this.lastID, changes: this.changes });
     });
@@ -89,11 +103,25 @@ function recordPlayerStats(name, isWin, kills = 0, damage = 0) {
 }
 
 function saveMatchHistory(roomId, winnerRole, playerCount = 4, durationSeconds = 0) {
+  let rId, wRole, pCount, dSec;
+
+  if (typeof roomId === 'object' && roomId !== null) {
+    rId = roomId.roomId;
+    wRole = roomId.winnerRole || 'UNKNOWN';
+    pCount = roomId.playerCount || 4;
+    dSec = roomId.durationSeconds || roomId.duration || 0;
+  } else {
+    rId = roomId;
+    wRole = winnerRole || 'UNKNOWN';
+    pCount = playerCount || 4;
+    dSec = durationSeconds || 0;
+  }
+
   return new Promise((resolve, reject) => {
     db.run(`
       INSERT INTO match_history (room_id, winner_role, player_count, duration_seconds)
       VALUES (?, ?, ?, ?)
-    `, [roomId, winnerRole, playerCount, durationSeconds], function(err) {
+    `, [rId, wRole, pCount, dSec], function(err) {
       if (err) return reject(err);
       resolve({ id: this.lastID });
     });

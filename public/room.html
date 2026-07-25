@@ -21,6 +21,7 @@
   <title>Three Kingdoms Room</title>
   <link rel="stylesheet" href="/style.css?v=5">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 </head>
 <body>
 
@@ -77,6 +78,8 @@
        GAME BOARD SCREEN
        ========================================== -->
   <div id="game-screen" class="hidden">
+    <!-- Phaser 3 Hybrid Canvas Container -->
+    <div id="phaser-game-container" style="position: fixed; inset: 0; pointer-events: none; z-index: 10;"></div>
 
     <!-- Top Bar -->
     <div class="top-bar glass-panel">
@@ -500,9 +503,11 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Socket.io -->
+  <!-- Colyseus Client SDK -->
   <link rel="stylesheet" href="/style.css?v=18">
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/colyseus.js@0.15.23/dist/colyseus.js"></script>
+  <script src="/colyseus_client.js?v=1"></script>
+  <script src="/phaser_card_scene.js?v=1"></script>
   <script src="/room_app.js?v=18"></script>
 </body>
 </html>
