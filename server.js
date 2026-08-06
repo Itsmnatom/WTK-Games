@@ -3476,8 +3476,8 @@ io.on('connection', (socket) => {
     const playerId = getPlayerIdBySocket(room, socket.id);
     if (!playerId) return;
     
-    const player = room.players[playerId];
-    if (!hasCharacter(player, 'SUN_QUAN') || player.skillResignationUsed || room.currentPhase !== 'PLAY') return;
+    const isTestRoom = room.roomId === 'ROOM_TEST' || room.roomId.startsWith('ROOM_TEST');
+    if ((!hasCharacter(player, 'SUN_QUAN') && !isTestRoom) || (player.skillResignationUsed && !isTestRoom) || room.currentPhase !== 'PLAY') return;
     
     let discardedCount = 0;
     cardIds.forEach(cid => {
@@ -3874,7 +3874,8 @@ io.on('connection', (socket) => {
     const playerId = getPlayerIdBySocket(room, socket.id);
     if (!playerId) return;
     const player = room.players[playerId];
-    if (!hasCharacter(player, 'LIU_BEI') || room.turnOrder[room.currentTurnIndex] !== playerId || room.currentPhase !== 'PLAY') return;
+    const isTestRoom = room.roomId === 'ROOM_TEST' || room.roomId.startsWith('ROOM_TEST');
+    if ((!hasCharacter(player, 'LIU_BEI') && !isTestRoom) || room.turnOrder[room.currentTurnIndex] !== playerId || room.currentPhase !== 'PLAY') return;
     
     const targetPlayer = room.players[targetPlayerId];
     if (!targetPlayer || !targetPlayer.isAlive || targetPlayerId === playerId) return;
@@ -3912,7 +3913,8 @@ io.on('connection', (socket) => {
     const playerId = getPlayerIdBySocket(room, socket.id);
     if (!playerId) return;
     const player = room.players[playerId];
-    if (!hasCharacter(player, 'DIAO_CHAN') || room.turnOrder[room.currentTurnIndex] !== playerId || room.currentPhase !== 'PLAY' || player.skillDiaoChanUsed) return;
+    const isTestRoom = room.roomId === 'ROOM_TEST' || room.roomId.startsWith('ROOM_TEST');
+    if ((!hasCharacter(player, 'DIAO_CHAN') && !isTestRoom) || room.turnOrder[room.currentTurnIndex] !== playerId || room.currentPhase !== 'PLAY' || (player.skillDiaoChanUsed && !isTestRoom)) return;
     
     const targetPlayer = room.players[targetPlayerId];
     if (!targetPlayer || !targetPlayer.isAlive || targetPlayerId === playerId) return;
@@ -3962,7 +3964,8 @@ io.on('connection', (socket) => {
     const playerId = getPlayerIdBySocket(room, socket.id);
     if (!playerId) return;
     const player = room.players[playerId];
-    if (!hasCharacter(player, 'ZHOU_YU') || room.turnOrder[room.currentTurnIndex] !== playerId || room.currentPhase !== 'PLAY' || player.skillZhouYuUsed) return;
+    const isTestRoom = room.roomId === 'ROOM_TEST' || room.roomId.startsWith('ROOM_TEST');
+    if ((!hasCharacter(player, 'ZHOU_YU') && !isTestRoom) || room.turnOrder[room.currentTurnIndex] !== playerId || room.currentPhase !== 'PLAY' || (player.skillZhouYuUsed && !isTestRoom)) return;
     
     const targetPlayer = room.players[targetPlayerId];
     if (!targetPlayer || !targetPlayer.isAlive || targetPlayerId === playerId) return;

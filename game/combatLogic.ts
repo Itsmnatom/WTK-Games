@@ -1,25 +1,25 @@
 'use strict';
 /**
- * game/combatLogic.js
+ * game/combatLogic.ts
  * dealDamage, checkGameOver, dying phase, helper functions
- * Extracted from server.js section 5
  */
 
-const { hasCharacter, drawCards, endPlayerTurn, checkDiscardRequirement } = require('./phaseLogic');
+import { hasCharacter, drawCards, endPlayerTurn, checkDiscardRequirement } from './phaseLogic';
+import type { GameRoom, Player, Card, DamageType } from './types';
 
 // ─── Game Over Check ──────────────────────────────────────────────────────────
-function checkGameOver(room) {
-  const lord = Object.values(room.players).find(p => p.role === 'LORD');
+function checkGameOver(room: GameRoom): boolean {
+  const lord = Object.values(room.players).find((p: Player) => p.role === 'LORD');
   if (!lord) return false;
 
-  const rebels    = Object.values(room.players).filter(p => p.role === 'REBEL');
-  const renegades = Object.values(room.players).filter(p => p.role === 'RENEGADE');
-  const aliveRebels    = rebels.filter(p => p.isAlive).length;
-  const aliveRenegades = renegades.filter(p => p.isAlive).length;
+  const rebels    = Object.values(room.players).filter((p: Player) => p.role === 'REBEL');
+  const renegades = Object.values(room.players).filter((p: Player) => p.role === 'RENEGADE');
+  const aliveRebels    = rebels.filter((p: Player) => p.isAlive).length;
+  const aliveRenegades = renegades.filter((p: Player) => p.isAlive).length;
 
   if (!lord.isAlive) {
-    room.status = 'ENDED';
-    const totalAlive = Object.values(room.players).filter(p => p.isAlive).length;
+    room.status = 'ENDED' as any;
+    const totalAlive = Object.values(room.players).filter((p: Player) => p.isAlive).length;
     if (totalAlive === 1 && aliveRenegades === 1) {
       room.winnerRole = 'RENEGADE';
       room.winnerText = 'คนทรยศ (Renegade) เป็นผู้เหลือรอดคนสุดท้ายและเอาชนะการศึก!';
@@ -31,7 +31,7 @@ function checkGameOver(room) {
   }
 
   if (aliveRebels === 0 && aliveRenegades === 0) {
-    room.status = 'ENDED';
+    room.status = 'ENDED' as any;
     room.winnerRole = 'LORD';
     room.winnerText = 'ฝ่ายเจ้าเมืองและผู้ภักดี (Lord & Loyalists) ปราบปรามกบฏสำเร็จและชนะการศึก!';
     return true;
@@ -40,7 +40,7 @@ function checkGameOver(room) {
 }
 
 // ─── Damage Log ───────────────────────────────────────────────────────────────
-function logDamage(targetName, damage, hp, maxHp, attackerName, cardName) {
+function logDamage(targetName: string, damage: number, hp: number, maxHp: number, attackerName?: string, cardName?: string): void {
   let msg = `💥 ${targetName} เสียพลังชีวิต ${damage} หน่วย`;
   if (attackerName) msg += ` จาก ${attackerName}`;
   if (cardName) msg += ` (${cardName})`;
@@ -49,7 +49,7 @@ function logDamage(targetName, damage, hp, maxHp, attackerName, cardName) {
 }
 
 // ─── Deal Damage ──────────────────────────────────────────────────────────────
-function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageType = 'NORMAL') {
+function dealDamage(room: GameRoom, targetPlayerId: string, damage: number, cardUsed: Card | null, attackerId: string | null, damageType: DamageType = 'NORMAL'): void {
   const targetPlayer = room.players[targetPlayerId];
   if (!targetPlayer || !targetPlayer.isAlive) return;
 
@@ -59,7 +59,7 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
 
   // Armor processing
   if (!attackerHasBlueSteel && targetPlayer.equipment?.armor) {
-    const armorName = targetPlayer.equipment.armor.name;
+    const armorName = (targetPlayer.equipment.armor as Card).name;
     if (armorName === 'SILVER_LION_HELMET' && finalDamage > 1) {
       finalDamage = 1;
     }
@@ -93,7 +93,7 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
   // Chain reaction for elemental
   if (targetPlayer.isChained && (damageType === 'FIRE' || damageType === 'THUNDER')) {
     targetPlayer.isChained = false;
-    room.turnOrder.forEach(pid => {
+    room.turnOrder.forEach((pid: string) => {
       if (pid !== targetPlayerId && room.players[pid]?.isAlive && room.players[pid].isChained) {
         room.players[pid].isChained = false;
         dealDamage(room, pid, finalDamage, cardUsed, attackerId, damageType);
@@ -104,22 +104,22 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
   // Cao Cao: Emperor's Domain
   if (hasCharacter(targetPlayer, 'CAO_CAO') && cardUsed && !['PEACH', 'WINE'].includes(cardUsed.name)) {
     targetPlayer.hand.push(cardUsed);
-    const discardIdx = room.discardPile.findIndex(c => c.id === cardUsed.id);
+    const discardIdx = room.discardPile.findIndex((c: Card) => c.id === cardUsed.id);
     if (discardIdx !== -1) room.discardPile.splice(discardIdx, 1);
     room._emitAll && room._emitAll('card_played', { playerId: targetPlayerId, cardName: "สกิล Emperor's Domain", targetId: attackerId });
   }
 
   // Sima Yi: Feedback
-  if (hasCharacter(targetPlayer, 'SIMA_YI') && attackerId && attacker?.hand?.length > 0) {
-    const randIdx = Math.floor(Math.random() * attacker.hand.length);
-    const stolen = attacker.hand.splice(randIdx, 1)[0];
+  if (hasCharacter(targetPlayer, 'SIMA_YI') && attackerId && attacker?.hand?.length! > 0) {
+    const randIdx = Math.floor(Math.random() * attacker!.hand.length);
+    const stolen = attacker!.hand.splice(randIdx, 1)[0];
     targetPlayer.hand.push(stolen);
     room._emitAll && room._emitAll('card_played', { playerId: targetPlayerId, cardName: 'สกิล Feedback', targetId: attackerId });
   }
 
   // KIRIN_BOW: destroy target's horse on hit
   if (attacker?.equipment?.weapon?.name === 'KIRIN_BOW') {
-    let destroyedHorse = null;
+    let destroyedHorse: Card | string | null = null;
     if (targetPlayer.equipment?.offensiveHorse) {
       destroyedHorse = targetPlayer.equipment.offensiveHorse;
       targetPlayer.equipment.offensiveHorse = null;
@@ -127,7 +127,7 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
       destroyedHorse = targetPlayer.equipment.defensiveHorse;
       targetPlayer.equipment.defensiveHorse = null;
     }
-    if (destroyedHorse) room.discardPile.push(destroyedHorse);
+    if (destroyedHorse) room.discardPile.push(destroyedHorse as Card);
   }
 
   if (targetPlayer.hp <= 0) {
@@ -138,7 +138,7 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
 }
 
 // ─── Dying Phase ──────────────────────────────────────────────────────────────
-function startDyingPhase(room, dyingPlayerId, attackerId = null) {
+function startDyingPhase(room: GameRoom, dyingPlayerId: string, attackerId: string | null = null): void {
   const dyingPlayer = room.players[dyingPlayerId];
   const needed = 1 - dyingPlayer.hp;
   room.pendingAction = {
@@ -154,7 +154,7 @@ function startDyingPhase(room, dyingPlayerId, attackerId = null) {
   checkDyingAskerBot(room);
 }
 
-function checkDyingAskerBot(room) {
+function checkDyingAskerBot(room: GameRoom): void {
   if (!room.pendingAction || room.pendingAction.type !== 'DYING') return;
   const pending = room.pendingAction;
   const askerId = room.turnOrder[pending.currentAskerIdx];
@@ -163,15 +163,15 @@ function checkDyingAskerBot(room) {
   if (asker?.isAlive && asker.isBot) {
     setTimeout(() => {
       if (!room.pendingAction || room.pendingAction.type !== 'DYING') return;
-      const dyingPlayer = room.players[pending.targetPlayerId];
+      const dyingPlayer = room.players[pending.targetPlayerId!];
       let shouldSave = (askerId === pending.targetPlayerId);
       if (!shouldSave && (asker.role === 'LORD' || asker.role === 'LOYALIST') && dyingPlayer?.role === 'LORD') {
         shouldSave = true;
       }
 
-      let peachIdx = asker.hand.findIndex(c => c.name === 'PEACH');
+      let peachIdx = asker.hand.findIndex((c: Card) => c.name === 'PEACH');
       if (askerId === pending.targetPlayerId && peachIdx === -1) {
-        peachIdx = asker.hand.findIndex(c => c.name === 'WINE');
+        peachIdx = asker.hand.findIndex((c: Card) => c.name === 'WINE');
       }
 
       if (shouldSave && peachIdx !== -1) {
@@ -201,10 +201,10 @@ function checkDyingAskerBot(room) {
   }
 }
 
-function advanceDyingAsker(room) {
+function advanceDyingAsker(room: GameRoom): void {
   if (!room.pendingAction || room.pendingAction.type !== 'DYING') return;
   const pending = room.pendingAction;
-  const startingIdx = room.turnOrder.indexOf(pending.targetPlayerId);
+  const startingIdx = room.turnOrder.indexOf(pending.targetPlayerId!);
 
   do {
     pending.currentAskerIdx = (pending.currentAskerIdx + 1) % room.turnOrder.length;
@@ -216,7 +216,7 @@ function advanceDyingAsker(room) {
 
   if (pending.currentAskerIdx === startingIdx) {
     // No one saved them — player dies
-    const dyingPlayer = room.players[pending.targetPlayerId];
+    const dyingPlayer = room.players[pending.targetPlayerId!];
     dyingPlayer.isAlive = false;
     dyingPlayer.hp = 0;
 
@@ -224,8 +224,8 @@ function advanceDyingAsker(room) {
     if (dyingPlayer.hand) { room.discardPile.push(...dyingPlayer.hand); dyingPlayer.hand = []; }
     if (dyingPlayer.delayedKitZone) { room.discardPile.push(...dyingPlayer.delayedKitZone); dyingPlayer.delayedKitZone = []; }
     if (dyingPlayer.equipment) {
-      ['weapon', 'armor', 'defensiveHorse', 'offensiveHorse', 'treasure'].forEach(slot => {
-        if (dyingPlayer.equipment[slot]) { room.discardPile.push(dyingPlayer.equipment[slot]); dyingPlayer.equipment[slot] = null; }
+      (['weapon', 'armor', 'defensiveHorse', 'offensiveHorse', 'treasure'] as const).forEach(slot => {
+        if (dyingPlayer.equipment[slot]) { room.discardPile.push(dyingPlayer.equipment[slot] as Card); dyingPlayer.equipment[slot] = null; }
       });
     }
 
@@ -233,13 +233,13 @@ function advanceDyingAsker(room) {
     if (pending.attackerId && room.players[pending.attackerId]) {
       const killer = room.players[pending.attackerId];
       if (dyingPlayer.role === 'REBEL') {
-        drawCards(room, 3).forEach(c => killer.hand.push(c));
+        drawCards(room, 3).forEach((c: Card) => killer.hand.push(c));
         console.log(`${killer.name} drew 3 cards for killing a REBEL.`);
       } else if (killer.role === 'LORD' && dyingPlayer.role === 'LOYALIST') {
         room.discardPile.push(...killer.hand);
         killer.hand = [];
-        ['weapon', 'armor', 'defensiveHorse', 'offensiveHorse', 'treasure'].forEach(slot => {
-          if (killer.equipment[slot]) { room.discardPile.push(killer.equipment[slot]); killer.equipment[slot] = null; }
+        (['weapon', 'armor', 'defensiveHorse', 'offensiveHorse', 'treasure'] as const).forEach(slot => {
+          if (killer.equipment[slot]) { room.discardPile.push(killer.equipment[slot] as Card); killer.equipment[slot] = null; }
         });
         console.log(`Lord ${killer.name} killed a LOYALIST and lost all cards.`);
       }
@@ -269,7 +269,7 @@ function advanceDyingAsker(room) {
   }
 }
 
-function resumeAfterAttack(room) {
+function resumeAfterAttack(room: GameRoom): void {
   if (room.status !== 'PLAYING') return;
   const attackerId = room.turnOrder[room.currentTurnIndex];
   const attacker = room.players[attackerId];
@@ -281,16 +281,16 @@ function resumeAfterAttack(room) {
   }
 }
 
-function getCardById(room, cardId) {
+function getCardById(room: GameRoom, cardId: string | null | undefined): Card | null {
   if (!cardId) return null;
   for (const p of Object.values(room.players)) {
-    const c = p.hand?.find(x => x.id === cardId);
+    const c = p.hand?.find((x: Card) => x.id === cardId);
     if (c) return c;
   }
-  return room.discardPile.find(x => x.id === cardId) || null;
+  return room.discardPile.find((x: Card) => x.id === cardId) || null;
 }
 
-module.exports = {
+export {
   checkGameOver, dealDamage, startDyingPhase,
   checkDyingAskerBot, advanceDyingAsker, resumeAfterAttack, getCardById,
 };

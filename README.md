@@ -1,13 +1,13 @@
 # ⚔️ WTK-Games (สามก๊ก การ์ดเกมเรียลไทม์)
 
 > **สื่อการเรียนการสอนและคู่มือสถาปัตยกรรมระบบการพัฒนาระบบเกมมัลติเพลเยอร์เรียลไทม์ (Real-Time Multiplayer Card Game Framework)**  
-> พัฒนาด้วยเทคโนโลยี **Node.js, Express, Socket.IO, Vanilla JavaScript (ES6+), HTML5/CSS3 Dark Glassmorphism 2.0, และ GSAP 3 Motion Engine**
+> พัฒนาด้วยเทคโนโลยี **Node.js, Express, Colyseus 0.15 (Authoritative Multiplayer Framework), Phaser 3 Canvas Engine, Vanilla JavaScript (ES6+), HTML5/CSS3 Dark Glassmorphism 2.0, SQLite3 Database, และ GSAP 3 Motion Engine**
 
 ---
 
 ## 📌 1. วัตถุประสงค์และภาพรวมโครงการ (Project Overview)
 
-โครงการ **WTK-Games** คือเว็บแอปพลิเคชันเกมการ์ดสามก๊กเรียลไทม์มัลติเพลเยอร์ (War of the Three Kingdoms) ที่ถูกออกแบบมาเพื่อเป็น **สื่อการเรียนการสอน (Educational Resource)** ด้านการพัฒนาเว็บแอปพลิเคชันเชิงซ้อน, การจัดการ State Machine ของเกม, ระบบการสื่อสารแบบสองทางผ่าน WebSocket (Socket.IO), การออกแบบ UI/UX ตามมาตรฐาน Glassmorphism, และการสร้างภาพเคลื่อนไหวระดับ 60 FPS ด้วย GSAP
+โครงการ **WTK-Games** คือเว็บแอปพลิเคชันเกมการ์ดสามก๊กเรียลไทม์มัลติเพลเยอร์ (War of the Three Kingdoms) ที่ถูกออกแบบมาเพื่อเป็น **สื่อการเรียนการสอน (Educational Resource)** ด้านการพัฒนาเว็บแอปพลิเคชันเชิงซ้อน, การจัดการ State Machine ของเกม, ระบบการสื่อสารแบบสองทางผ่าน WebSocket (Colyseus 0.15 Authoritative Framework), การออกแบบ UI/UX ตามมาตรฐาน Glassmorphism, และการสร้างภาพเคลื่อนไหวระดับ 60 FPS ด้วย GSAP
 
 ---
 
@@ -116,37 +116,79 @@ graph TD
 
 ## 💻 5. อธิบายสถาปัตยกรรมและฟังก์ชันในซอร์สโค้ด (Codebase Architecture for Teaching)
 
-โครงสร้างซอร์สโค้ดถูกแบ่งออกเป็น **Server-Side Architecture** และ **Client-Side Architecture** อย่างชัดเจน เพื่อให้ง่ายต่อการนำไปใช้เป็นสื่อการเรียนการสอน:
+โครงสร้างซอร์สโค้ดถูกแบ่งเป็น **Colyseus Server Stack** และ **Client-Side Architecture** อย่างชัดเจน โดยมีการแยก Game Logic ออกเป็นโมดูลย่อยเพื่อง่ายต่อการบำรุงรักษาและการเรียนการสอน:
 
 ```
 WTK-Games/
-├── server.js               # Node.js + Socket.IO Server (State Machine & Logic)
+├── colyseus_server.js      # Entry Point — Colyseus 0.15 + Express (PORT 3001)
+├── server.js               # Legacy Socket.IO (ไม่ active — npm run start:legacy)
 ├── rules.json              # ข้อกำหนดและกฎกติกาเกมฉบับมาตรฐาน
 ├── AGENTS.md               # ข้อกำหนดสถาปัตยกรรมและ Skill Registry
 ├── README.md               # คู่มือการเล่นและสื่อการเรียนการสอน
+├── game/
+│   ├── phaseLogic.js       # Deck, Turn Phases, Role Assignment, HP Setup
+│   ├── cardLogic.js        # Card Use Handlers, Negate Window, Action Chain
+│   ├── combatLogic.js      # dealDamage, checkGameOver, Dying Phase
+│   └── botAI.js            # Bot AI Brain — runBotTurn + Response Handlers
+├── rooms/
+│   ├── WTKRoom.js          # Colyseus Room Class — onMessage Handlers ทั้งหมด
+│   └── schema/WTKSchema.js # Colyseus Schema — Delta Encoding State
+├── db/
+│   ├── database.js         # SQLite Helpers (initDatabase, recordPlayerStats, getLeaderboard)
+│   └── view_db.js          # Quick DB Inspection: node db/view_db.js
+├── plugins/
+│   └── plugin_manager.js   # Plugin System + SoundEffectsPlugin v1.2.0
 ├── public/
+│   ├── colyseus_client.js  # Socket.IO Compat Layer สำหรับ Colyseus.Client
 │   ├── room.html           # หน้าจอเกมหลัก (Glassmorphism 2.0 UI)
 │   ├── lobby.html          # หน้าห้องพักรอเล่นเกม
 │   ├── room_app.js         # Client-side Game Controller & Canvas/GSAP Handlers
 │   ├── lobby.js            # Client-side Lobby Controller
-│   ├── style.css           # Design System & Responsive Layout (100vh)
+│   ├── phaser_card_scene.js# Phaser 3 Canvas Card Scene
+│   ├── style.css           # Design System & Responsive Layout (54KB Glassmorphism)
 │   ├── cards_db.json       # พจนานุกรมการ์ด 41 ชนิด และ pic_url
 │   └── heroes.json         # ฐานข้อมูลขุนพล 12 ตัว และคำแปลสกิลภาษาไทย
-└── skills/                 # Open Design Skills Registry
+└── skills/                 # Open Design Skills Registry (9 skills)
 ```
 
-### 5.1 ฟังก์ชันสำคัญฝั่ง Server (`server.js`)
-1. **`initDeck()`:** สร้างและสับกองการ์ด 41 ชนิด พร้อมการ์ดสเปกตรัมหลากสีและแต้ม
-2. **`startNextTurn(room)`:** ระบบ State Machine จัดการเปลี่ยนเทิร์น ตรวจสอบสถานะการรอดชีวิต และประมวลผล 6 Phase
-3. **`dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageType)`:** ฟังก์ชันคำนวณความเสียหาย ตรวจสอบผลพาสซีฟของชุดเกราะ (`NIO_SHIELD`, `SILVER_LION_HELMET`, `RATTAN_ARMOR`, `BLUE_STEEL_SWORD`) และจัดการสถานะใกล้ตาย (`DYING`)
-4. **`startNegateWindow(room, pendingAction)`:** เปิดหน้าต่างให้ผู้เล่นทุกคนร่ายการ์ดไร้ข้อกังขา (`NEGATE`) ขัดขวางผลของการ์ดกลยุทธ์
-5. **`endPlayerTurn(room)`:** ปิดเทิร์น ตรวจสอบเงื่อนไขการชนะของทุกบทบาท และย้ายเทิร์นอย่างปลอดภัย
+### 5.1 ฟังก์ชันสำคัญฝั่ง Server
+
+#### `game/phaseLogic.js` — Phase & Deck Management
+1. **`initDeck()`:** สร้างและสับกองการ์ด 41 ชนิด รวมกว่า 240+ ใบ (Basic, Kit, Delayed, Equipment)
+2. **`assignRoles(room)`:** สุ่มแจกบทบาท (LORD, LOYALIST, REBEL, RENEGADE) ตามจำนวนผู้เล่น 2–10 คน
+3. **`endPlayerTurn(room)`:** ปิดเทิร์นอย่างปลอดภัย ตรวจสอบเงื่อนไขชนะทุกบทบาท และส่งต่อเทิร์น
+4. **`setupCharacterHp(player, playerCount)`:** ตั้งค่า HP ตามตัวละคร (3 HP สำหรับตัวละคร INT-type, +1 LORD bonus เมื่อผู้เล่น ≥ 6)
+
+#### `game/cardLogic.js` — Card Use & Action Chain
+5. **`handleUseCard(room, socket, data)`:** Handler หลักสำหรับ `use_card` event — จัดการการร่ายการ์ดทุกชนิด
+6. **`startNegateWindow(room, actionData)`:** เปิดหน้าต่าง 5 วินาทีให้ผู้เล่นทุกคนร่าย NEGATE ขัดขวาง
+7. **`resolveActionChain(room)`:** ตัดสินผลของ Action Chain (จำนวนคู่คือถูกยกเลิก, จำนวนคี่คือสำเร็จ)
+
+#### `game/combatLogic.js` — Damage & Game Over
+8. **`dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageType)`:** คำนวณความเสียหายรวม Armor passive, Iron Chain, Dying Phase
+9. **`checkGameOver(room)`:** ตรวจสอบเงื่อนไขจบเกม — LORD ตาย = Rebel/Renegade ชนะ, ปราบทุกศัตรู = Lord ชนะ
+
+#### `game/botAI.js` — Bot Intelligence
+10. **`runBotTurn(room, botId)`:** AI Loop 8 ขั้นตอน — Heal → EX_NIHILO → Equip → AOE → Delayed → KIT → Wine → SLASH
+11. **`handleBotDodge/DuelSlash/AOE/Seduction/ZhouYu/BumperPick/BorrowSlash`:** Bot Response Handlers สำหรับแต่ละสถานการณ์
+
+#### `rooms/WTKRoom.js` — Colyseus Room
+12. **`onCreate/onJoin/onLeave/onDispose`:** Lifecycle hooks จัดการ Reconnect grace period 45 วินาที และบันทึก DB เมื่อจบเกม
+13. **`_registerHandlers()`:** ลงทะเบียน onMessage handlers ทั้งหมด รวม Character Skills, Admin Tools
+14. **`_broadcastAll()`:** ส่ง Sanitized State ส่วนตัวให้แต่ละ Client (ซ่อนไพ่ของคนอื่น)
 
 ### 5.2 ฟังก์ชันสำคัญฝั่ง Client (`public/room_app.js`)
 1. **`renderHand()`:** วาดการ์ดบนมือแบบคลี่พัด (Card Fan) คำนวณมุมและระยะห่าง `translate(x, y) rotate(deg)` พร้อมแสดงป้ายระยะโจมตีสีทอง `(ระยะ: N)` บนการ์ดอาวุธ
 2. **`renderOpponents()`:** วาดการ์ดคู่ต่อสู้รอบโต๊ะตามมุมองศารูปครึ่งวงกลม ($10^\circ \rightarrow 170^\circ$) คำนวณระยะห่างระหว่างผู้เล่น ให้ออร่าสีทองนำสายตาเป้าหมาย
 3. **`onSelectTarget(targetPlayerId)`:** ระบบจัดการเลือกเป้าหมายแบบ 2-Step Workflow สำหรับการ์ดหลายเป้าหมาย (`BORROWED_SWORD`, `IRON_CHAIN`)
 4. **`showJudgementCardFlipAnimation(title, card, isSuccess, playerName)`:** ฟังก์ชันแสดงผลหน้าต่างเปิดไพ่พิจารณาชะตา 3D ด้วย GSAP Engine
+
+### 5.3 Client ↔ Server Communication (`public/colyseus_client.js`)
+ไฟล์นี้ทำหน้าที่เป็น **Socket.IO Compatibility Layer** ห่อหุ้ม `Colyseus.Client` ให้มี API เหมือน Socket.IO เดิม:
+- `socket.emit(event, data)` → `room.send(event, data)`
+- `socket.on(event, cb)` → `room.onMessage(event, cb)`
+- Auto-reconnect เมื่อ disconnect โดยไม่ตั้งใจ (retry 3 วินาที)
+- บันทึก Colyseus Reconnection Token ลง `localStorage` สำหรับการต่อกลับเข้าห้อง
 
 ---
 
@@ -206,14 +248,20 @@ d:\test\db\wtk_game.sqlite
    ```bash
    npm install
    ```
-3. **เริ่มต้นเซิร์ฟเวอร์:**
+3. **คอมไพล์ TypeScript & เริ่มต้นเซิร์ฟเวอร์ (Colyseus Stack — แนะนำ):**
    ```bash
-   node server.js
+   npm run build     # คอมไพล์ TypeScript โค้ดฝั่ง Server ลง dist/
+   npm start         # รัน node dist/colyseus_server.js
+   # หรือรันคำสั่งทดสอบพร้อมคอมไพล์ในคำสั่งเดียว
+   npm test          # คอมไพล์และรัน Unit Test ทั้ง 19 ข้อ
    ```
+   > ⚠️ **Legacy Server** (Socket.IO เก่า — ไม่แนะนำ): `npm run start:legacy`
 4. **เข้าใช้งานผ่านเบราว์เซอร์:**
    - หน้าล็อบบี้หลัก: `http://localhost:3001/lobby`
    - โหมดทดสอบแอดมิน: `http://localhost:3001/test`
-   - ดูข้อมูลสถิติผู้เล่นผ่าน SQL API: `http://localhost:3001/api/leaderboard`
+   - Colyseus Monitor Dashboard: `http://localhost:3001/colyseus`
+   - ดูข้อมูลสถิติผู้เล่นผ่าน API: `http://localhost:3001/api/leaderboard`
+   - ดูห้องที่เปิดอยู่: `http://localhost:3001/api/rooms`
 5. **วิธีเข้าดูข้อมูลใน SQL Database (`db/wtk_game.sqlite`):**
    - **ผ่าน Terminal Command:** รันคำสั่ง `node db/view_db.js` เพื่อแสดงตารางสถิติผู้เล่นและประวัติการแข่งในคอนโซล
    - **ผ่าน GUI Program:** ใช้โปรแกรม [DB Browser for SQLite](https://sqlitebrowser.org/) หรือ VS Code Extension `SQLite Viewer` เปิดไฟล์ `db/wtk_game.sqlite`
@@ -228,8 +276,17 @@ d:\test\db\wtk_game.sqlite
 
 ## 📝 9. บันทึกประวัติการปรับปรุงระบบและฟีเจอร์ใหม่ (Changelog & Updates)
 
-| เวอร์ชัน (Version) | รายละเอียดการปรับปรุง (System Updates & Features) |
-| :---: | :--- |
+| เวอร์ชั่น | รายละเอียดการปรับปรุง (Key Changes & Feature Additions) |
+| :--- | :--- |
+| **v2.1.0** | 📘 **TypeScript Server Migration**: ย้ายโค้ดฝั่ง Server ทั้งหมดจาก JavaScript ไปสู่ TypeScript (`colyseus_server.ts`, `game/types.ts`, `game/phaseLogic.ts`, `game/combatLogic.ts`, `game/cardLogic.ts`, `game/botAI.ts`, `rooms/WTKRoom.ts`, `rooms/schema/WTKSchema.ts`, `db/database.ts`, `plugins/plugin_manager.ts`), เพิ่ม `tsconfig.json`, คอมไพล์ลงโฟลเดอร์ `dist/`, ปรับปรุง `package.json` (`npm run build`, `npm start` -> `node dist/colyseus_server.js`, `npm test` -> `tsc && jest`), ลบไฟล์ `.js` เก่าฝั่ง Server และอัปเดต Unit Tests ทั้ง 19 ข้อให้ผ่าน 100% |
+| **v2.0.0** | 🧪 **Jest Unit Test Suite**: เพิ่มชุดทดสอบอัตโนมัติด้วย Jest ครอบคลุม 4 โซนหลัก (`tests/phaseLogic.test.js`, `tests/combatLogic.test.js`, `tests/cardLogic.test.js`, `tests/database.test.js`) จำนวน 19 test cases ให้ผ่าน 100% พร้อมอัปเดตคำสั่ง `npm test` ใน `package.json` (`jest --verbose --forceExit`) |
+| **v1.9.1** | 🎨 **Animation & Motion Polish**: ปรับปรุง physics-like animations ใน `public/style.css` (cubic-bezier cubic transitions, targetPulse, dramatic shake, winnerGlow, card hover/select elevation) |
+| **v1.9.0** | 🖥️ **UX/UI Overhaul**: ปรับปรุง UI หน้า Room (Lobby + Draft + Game Board) เพิ่ม imperial header, player list v2, top bar button system, action bar two-row layout, skill button pills, game over premium overlay |
+| **v1.8.1** | 🔓 ผู้เล่นที่ใช้ชื่อ `Admin` (ไม่แบ่งตัวพิมพ์ใหญ่/เล็ก) จะได้รับสิทธิ์ Admin โดยอัตโนมัติ **ทุกห้อง** โดยไม่ต้องใช้ Secret Key + ยกเลิกสิทธิ์ Admin อัตโนมัติของ Host (Host ได้แค่ปุ่ม Start Game) — ปรับใน `onJoin` และ `admin_authenticate` ของ `WTKRoom.js` |
+| **v1.8.0** | 📋 อัปเดตเอกสาร `AGENTS.md` และ `README.md` ให้สะท้อนสถาปัตยกรรม Colyseus 0.15 ปัจจุบันอย่างครบถ้วน: แผนผังไฟล์ทั้งหมด, ตาราง Deck Composition, ตาราง Character Skills, ลำดับ Bot AI Priority, ตาราง Plugin Hooks, และรายการ Admin Tools ครบทุกตัว |
+| **v1.7.5** | 🎨 ปรับปรุงความสว่างและการแสดงผลไพ่บนมือ: ลบผลกระทบของ GSAP Animation Opacity และกำหนดค่าความโปร่งแสงให้เป็นการ์ดทึบแสง (Opacity 100%) สว่างชัดเจนทุกใบอย่างสมบูรณ์แบบ |
+| **v1.7.4** | 🎨 ปรับการแสดงผลการ์ดบนมือให้สว่างคมชัดและสวยงามเสมอกันทุกใบตามดีไซน์ต้นแบบ (Uniform Brightness Style) |
+| **v1.7.3** | 🎨 ปรับปรุงการแสดงผลพลังชีวิต (HP) ให้สอดคล้องกันทั่วทั้งกระดาน: เปลี่ยนหลอด HP ของผู้เล่นคนอื่นให้ใช้จุดพลังชีวิตสีเขียว (`.hp-point`) เหมือนกับเพลทผู้เล่นหลัก |
 | **v1.7.1** | 🐞 แก้ไขบั๊ก Grace Period Reconnect: ป้องกันห้องเกมถูกลบโดยไม่จำเป็นกรณีผู้เล่นคนสุดท้ายหลุดการเชื่อมต่อแต่ยังอยู่ระหว่างนับเวลาถอยหลัง Reconnect (45 วินาที) |
 | **v1.7.0** | 🤖 เพิ่มระบบ **Bot Controller & Passive Mode ในโหมด `/test`**: กำหนดให้บอทอยู่เฉยๆ ไม่เล่นอัตโนมัติ (Passive), เพิ่มปุ่ม **➕ เพิ่มบอท**, **➖ ลบบอทออก**, **⏩ สั่งบอทผ่านเทิร์น**, และ **⚔️ สั่งบอทฟันใส่เรา** |
 | **v1.6.2** | ⚡ ปรับสลับลำดับความสำคัญให้ URL Query Parameters (`params.get(...)`) มีลำดับความสำคัญสูงกว่า `sessionStorage` เพื่อให้ Intent จาก URL ในโหมดทดสอบ `/test` (`action=create`, `mode=BOT`) ทำงานได้อย่างถูกต้องเสมอมิโดนค่าเก่าทับ |
@@ -242,4 +299,3 @@ d:\test\db\wtk_game.sqlite
 | **v1.3.0** | 📖 จัดทำคู่มือสื่อการเรียนการสอนและสถาปัตยกรรมระบบใน `README.md` ภาษาไทยฉบับสมบูรณ์ |
 | **v1.2.0** | 🎯 เพิ่มระบบเลือก 2 เป้าหมายสำหรับโซ่เหล็ก (`IRON_CHAIN`) และยืมดาบฆ่าคน (`BORROWED_SWORD`) พร้อมออร่าสีทองนำสายตา |
 | **v1.1.0** | 🎨 เพิ่มการแสดงผลระยะโจมตีอาวุธ `(ระยะ: N)` บนมือ, แอนิเมชันเปิดไพ่พิจารณา 3D, และอัปเกรด Glassmorphism UI 2.0 |
-

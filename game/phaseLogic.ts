@@ -1,35 +1,48 @@
 'use strict';
 /**
- * game/phaseLogic.js
+ * game/phaseLogic.ts
  * Deck management, turn phases, draw/play/discard phase controllers
- * Extracted from server.js sections 3 & 4
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import type { Card, Suit, CardType, GameRoom, Player, HeroChoice } from './types';
 
-let allHeroes = [];
+let allHeroes: any[] = [];
 try {
-  const data = fs.readFileSync(path.join(__dirname, '..', 'public', 'heroes.json'), 'utf8');
+  let heroesPath = path.join(process.cwd(), 'public', 'heroes.json');
+  if (!fs.existsSync(heroesPath)) {
+    heroesPath = path.join(__dirname, '..', 'public', 'heroes.json');
+  }
+  const data = fs.readFileSync(heroesPath, 'utf8');
   allHeroes = JSON.parse(data);
-} catch (e) {
+} catch (e: any) {
   console.log('[phaseLogic] Could not load heroes.json:', e.message);
   allHeroes = [];
 }
 
 // ─── Utility helpers ──────────────────────────────────────────────────────────
-function hasCharacter(player, charName) {
+function hasCharacter(player: Player | null | undefined, charName: string): boolean {
   if (!player || !player.character) return false;
-  return player.character.toUpperCase().includes(charName.toUpperCase());
+  let charStr = '';
+  if (typeof player.character === 'string') {
+    charStr = player.character;
+  } else if (typeof player.character === 'object') {
+    charStr = (player.character as any).id || (player.character as any).name || (player.character as any).title || '';
+  } else {
+    charStr = String(player.character);
+  }
+  if (!charStr) return false;
+  return charStr.toUpperCase().includes(charName.toUpperCase());
 }
 
 // ─── Deck Logic ───────────────────────────────────────────────────────────────
-function initDeck() {
-  const suits = ['SPADE', 'HEART', 'DIAMOND', 'CLUB'];
-  const deck = [];
+function initDeck(): Card[] {
+  const suits: Suit[] = ['SPADE', 'HEART', 'DIAMOND', 'CLUB'];
+  const deck: Card[] = [];
   let idCounter = 1;
 
-  const push = (name, suit, rank, type, count = 1, extra = {}) => {
+  const push = (name: string, suit: Suit, rank: number, type: CardType, count: number = 1, extra: Record<string, any> = {}): void => {
     for (let i = 0; i < count; i++) {
       deck.push({ id: `c_${idCounter++}`, name, suit, rank: rank || Math.floor(Math.random() * 13) + 1, type, ...extra });
     }
@@ -37,7 +50,7 @@ function initDeck() {
 
   // BASIC cards
   for (let i = 0; i < 20; i++) {
-    const suit = i < 5 ? 'SPADE' : i < 10 ? 'CLUB' : i < 15 ? 'HEART' : 'DIAMOND';
+    const suit: Suit = i < 5 ? 'SPADE' : i < 10 ? 'CLUB' : i < 15 ? 'HEART' : 'DIAMOND';
     push('SLASH', suit, 0, 'BASIC');
   }
   push('SLASH', 'SPADE', 0, 'BASIC');  // extra
@@ -100,23 +113,23 @@ function initDeck() {
   return deck.sort(() => 0.5 - Math.random());
 }
 
-function drawCards(room, count) {
-  const cards = [];
+function drawCards(room: GameRoom, count: number): Card[] {
+  const cards: Card[] = [];
   for (let i = 0; i < count; i++) {
     if (room.deck.length === 0) {
       if (room.discardPile.length === 0) break;
       room.deck = [...room.discardPile].sort(() => 0.5 - Math.random());
       room.discardPile = [];
     }
-    cards.push(room.deck.pop());
+    cards.push(room.deck.pop()!);
   }
   return cards;
 }
 
 // ─── Role Assignment ──────────────────────────────────────────────────────────
-function assignRoles(room) {
+function assignRoles(room: GameRoom): void {
   const count = room.turnOrder.length;
-  const roleSets = {
+  const roleSets: Record<number, string[]> = {
     2:  ['LORD', 'REBEL'],
     3:  ['LORD', 'REBEL', 'RENEGADE'],
     4:  ['LORD', 'LOYALIST', 'REBEL', 'RENEGADE'],
@@ -136,7 +149,7 @@ function assignRoles(room) {
   }
 
   const lordIndex = roles.indexOf('LORD');
-  room.turnOrder.forEach((pid, idx) => { room.players[pid].role = roles[idx]; });
+  room.turnOrder.forEach((pid: string, idx: number) => { (room.players[pid] as any).role = roles[idx]; });
 
   // LORD goes first
   if (lordIndex > 0) {
@@ -145,8 +158,8 @@ function assignRoles(room) {
 }
 
 // ─── Character HP Setup ───────────────────────────────────────────────────────
-function setupCharacterHp(player, playerCount = 4) {
-  const charId = typeof player.character === 'string' ? player.character : (player.character?.id || player.character?.name || '');
+function setupCharacterHp(player: Player, playerCount: number = 4): void {
+  const charId = typeof player.character === 'string' ? player.character : ((player.character as any)?.id || (player.character as any)?.name || '');
   const n = (charId || '').toUpperCase();
   const isLow = n.includes('ZHEN_JI') || n.includes('LADY_ZHEN') || n.includes('DIAO_CHAN') ||
                 n.includes('ZHUGE_LIANG') || n.includes('XIAO_QIAO') || n.includes('DA_QIAO') ||
@@ -162,18 +175,18 @@ function setupCharacterHp(player, playerCount = 4) {
 }
 
 // ─── Draft Phase ──────────────────────────────────────────────────────────────
-function startDraftPhase(room) {
-  room.status = 'DRAFTING';
-  Object.values(room.players).forEach(player => {
-    let choices = [];
+function startDraftPhase(room: GameRoom): void {
+  room.status = 'DRAFTING' as any;
+  Object.values(room.players).forEach((player: Player) => {
+    let choices: any[] = [];
     if (player.role === 'LORD') {
-      const lords = allHeroes.filter(h => ['Cao Cao', 'Liu Bei', 'Sun Quan'].includes(h.title || h.name));
-      const rest = allHeroes.filter(h => !['Cao Cao', 'Liu Bei', 'Sun Quan'].includes(h.title || h.name)).sort(() => 0.5 - Math.random());
+      const lords = allHeroes.filter((h: any) => ['Cao Cao', 'Liu Bei', 'Sun Quan'].includes(h.title || h.name));
+      const rest = allHeroes.filter((h: any) => !['Cao Cao', 'Liu Bei', 'Sun Quan'].includes(h.title || h.name)).sort(() => 0.5 - Math.random());
       choices = [...lords, ...rest.slice(0, 2)];
     } else {
       choices = [...allHeroes].sort(() => 0.5 - Math.random()).slice(0, 3);
     }
-    player.characterChoices = choices.map(h => ({
+    player.characterChoices = choices.map((h: any) => ({
       id: (h.title || h.name).toUpperCase().replace(/[^A-Z0-9]/g, '_'),
       name: h.title || h.name,
       sub: h.sub || '',
@@ -181,18 +194,18 @@ function startDraftPhase(room) {
       kingdom: h.kingdom
     }));
     if (player.isBot) {
-      player.character = player.characterChoices[0].id;
+      player.character = player.characterChoices![0].id;
       setupCharacterHp(player, room.turnOrder.length);
     }
   });
 }
 
 // ─── Play Phase Start ─────────────────────────────────────────────────────────
-function startPlayPhase(room) {
-  room.status = 'PLAYING';
+function startPlayPhase(room: GameRoom): void {
+  room.status = 'PLAYING' as any;
   room.deck = initDeck();
   room.discardPile = [];
-  Object.values(room.players).forEach(player => {
+  Object.values(room.players).forEach((player: Player) => {
     player.hand = drawCards(room, 4);
   });
   room.currentTurnIndex = 0;
@@ -200,8 +213,8 @@ function startPlayPhase(room) {
 }
 
 // ─── Distance Calculation ─────────────────────────────────────────────────────
-function calculateDistance(room, fromId, toId) {
-  const order = room.turnOrder.filter(pid => room.players[pid] && room.players[pid].isAlive);
+function calculateDistance(room: GameRoom, fromId: string, toId: string): number {
+  const order = room.turnOrder.filter((pid: string) => room.players[pid] && room.players[pid].isAlive);
   const idxFrom = order.indexOf(fromId);
   const idxTo = order.indexOf(toId);
   if (idxFrom === -1 || idxTo === -1) return 999;
@@ -216,10 +229,10 @@ function calculateDistance(room, fromId, toId) {
 }
 
 // ─── Turn Flow ────────────────────────────────────────────────────────────────
-function startPlayerTurn(room) {
+function startPlayerTurn(room: GameRoom): void {
   if (room.status === 'ENDED') return;
-  const aliveCount = Object.values(room.players).filter(p => p.isAlive).length;
-  if (aliveCount === 0) { room.status = 'ENDED'; return; }
+  const aliveCount = Object.values(room.players).filter((p: Player) => p.isAlive).length;
+  if (aliveCount === 0) { room.status = 'ENDED' as any; return; }
 
   const playerId = room.turnOrder[room.currentTurnIndex];
   const player = room.players[playerId];
@@ -244,11 +257,11 @@ function startPlayerTurn(room) {
 
   // ── JUDGEMENT PHASE ──
   if (player.delayedKitZone && player.delayedKitZone.length > 0) {
-    room.currentPhase = 'JUDGEMENT';
+    room.currentPhase = 'JUDGEMENT' as any;
     room._broadcastFn && room._broadcastFn();
 
     while (player.delayedKitZone.length > 0) {
-      const card = player.delayedKitZone.pop();
+      const card = player.delayedKitZone.pop()!;
       const judgeCard = drawCards(room, 1)[0];
       if (!judgeCard) break;
       room.discardPile.push(judgeCard);
@@ -314,7 +327,7 @@ function startPlayerTurn(room) {
       }
       executeDrawPhase(room, player, skipDrawPhase, skipPlayPhase);
     } else {
-      room.currentPhase = 'PREPARATION';
+      room.currentPhase = 'PREPARATION' as any;
       room.pendingAction = { type: 'LUO_RIVER', targetPlayerId: playerId, skipDrawPhase, skipPlayPhase };
       room._broadcastFn && room._broadcastFn();
     }
@@ -323,15 +336,15 @@ function startPlayerTurn(room) {
   }
 }
 
-function executeDrawPhase(room, player, skipDrawPhase = false, skipPlayPhase = false) {
+function executeDrawPhase(room: GameRoom, player: Player, skipDrawPhase: boolean = false, skipPlayPhase: boolean = false): void {
   if (!skipDrawPhase) {
-    room.currentPhase = 'DRAW';
+    room.currentPhase = 'DRAW' as any;
     const drawCount = hasCharacter(player, 'ZHOU_YU') ? 3 : 2;
     player.hand.push(...drawCards(room, drawCount));
   }
 
   if (!skipPlayPhase) {
-    room.currentPhase = 'PLAY';
+    room.currentPhase = 'PLAY' as any;
     room.attacksPlayedInTurn = 0;
     player.wineActive = false;
     room._broadcastFn && room._broadcastFn();
@@ -347,7 +360,7 @@ function executeDrawPhase(room, player, skipDrawPhase = false, skipPlayPhase = f
   }
 }
 
-function checkDiscardRequirement(room) {
+function checkDiscardRequirement(room: GameRoom): void {
   const playerId = room.turnOrder[room.currentTurnIndex];
   const player = room.players[playerId];
   if (!player) { endPlayerTurn(room); return; }
@@ -370,7 +383,7 @@ function checkDiscardRequirement(room) {
   }
 }
 
-function endPlayerTurn(room) {
+function endPlayerTurn(room: GameRoom): void {
   const playerId = room.turnOrder[room.currentTurnIndex];
   const player = room.players[playerId];
   if (player) player.wineActive = false;
@@ -379,9 +392,9 @@ function endPlayerTurn(room) {
 }
 
 // ─── Sanitized State for client ───────────────────────────────────────────────
-function getSanitizedRoomState(room, targetPlayerId) {
-  const maskedPlayers = {};
-  Object.keys(room.players).forEach(pId => {
+function getSanitizedRoomState(room: GameRoom, targetPlayerId: string): any {
+  const maskedPlayers: Record<string, any> = {};
+  Object.keys(room.players).forEach((pId: string) => {
     const p = room.players[pId];
     maskedPlayers[pId] = {
       id: p.id,
@@ -424,10 +437,10 @@ function getSanitizedRoomState(room, targetPlayerId) {
   };
 }
 
-module.exports = {
+export {
   initDeck, drawCards, assignRoles, setupCharacterHp,
   startDraftPhase, startPlayPhase, startPlayerTurn,
   executeDrawPhase, checkDiscardRequirement, endPlayerTurn,
   calculateDistance, hasCharacter, getSanitizedRoomState,
-  getAllHeroes: () => allHeroes,
 };
+export const getAllHeroes = (): any[] => allHeroes;

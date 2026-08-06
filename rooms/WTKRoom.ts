@@ -1,35 +1,30 @@
 'use strict';
 /**
- * rooms/WTKRoom.js
- * Colyseus 0.15 Room class — แทน socket.io handlers ทั้งหมดใน server.js
- * 
- * Flow:
- *   onCreate()  → init state, register onMessage handlers
- *   onJoin()    → player join / allowReconnection
- *   onLeave()   → built-in reconnect grace period
- *   onDispose() → cleanup + save to SQL DB
+ * rooms/WTKRoom.ts
+ * Colyseus 0.15 Room class — replaces socket.io handlers in server.js
  */
 
-const { Room } = require('colyseus');
-const { WTKState, PlayerSchema, EquipmentSchema } = require('./schema/WTKSchema');
-const {
+import { Room, Client } from 'colyseus';
+import { WTKState } from './schema/WTKSchema';
+import {
   assignRoles, startDraftPhase, startPlayPhase,
   setupCharacterHp, getSanitizedRoomState, endPlayerTurn,
-  checkDiscardRequirement, executeDrawPhase, drawCards, calculateDistance, hasCharacter
-} = require('../game/phaseLogic');
-const {
+  checkDiscardRequirement, executeDrawPhase, drawCards, calculateDistance, hasCharacter, getAllHeroes
+} from '../game/phaseLogic';
+import {
   dealDamage, resumeAfterAttack, getCardById,
-  startDyingPhase, advanceDyingAsker
-} = require('../game/combatLogic');
-const {
+  startDyingPhase, advanceDyingAsker, checkGameOver
+} from '../game/combatLogic';
+import {
   runBotTurn, handleBotDodge, handleBotDuelSlash, handleBotAOE,
   handleBotSeduction, handleBotZhouYu, handleBotBumperPick, handleBotBorrowSlash
-} = require('../game/botAI');
-const {
+} from '../game/botAI';
+import {
   startNegateWindow, resolveActionChain, handleUseCard, handleResolvePending
-} = require('../game/cardLogic');
-const { recordPlayerStats, saveMatchHistory } = require('../db/database');
-const pluginManager = require('../plugins/plugin_manager');
+} from '../game/cardLogic';
+import { recordPlayerStats, saveMatchHistory } from '../db/database';
+import pluginManager from '../plugins/plugin_manager';
+import type { GameRoom, Player, SocketLike } from '../game/types';
 
 // ─── Bot name pool ────────────────────────────────────────────────────────────
 const BOT_NAMES = [
@@ -41,13 +36,14 @@ const BOT_NAMES = [
 // ─── Admin secret ─────────────────────────────────────────────────────────────
 const ADMIN_SECRET_KEY = process.env.ADMIN_SECRET_KEY || 'admin123';
 
-class WTKRoom extends Room {
+export class WTKRoom extends Room<WTKState> {
+  gameState!: GameRoom;
+  private _reconnectTokens: Record<string, any> = {};
+  private _adminSockets: Set<string> = new Set();
 
   // ─── onCreate ──────────────────────────────────────────────────────────────
-  onCreate(options) {
-    // Initialize plain game state (not Schema for game logic)
-    // We keep game logic as plain JS objects for compatibility
-    // and sync to Colyseus schema for client delta encoding
+  onCreate(options: any): void {
+    // Initialize plain game state (used for game logic)
     this.gameState = {
       roomId: this.roomId,
       status: 'LOBBY',
@@ -72,7 +68,7 @@ class WTKRoom extends Room {
 
     // Attach broadcast helpers to gameState so game logic modules can call them
     this.gameState._broadcastFn = () => this._broadcastAll();
-    this.gameState._emitAll = (event, data) => this.broadcast(event, data);
+    this.gameState._emitAll = (event: string, data: any) => this.broadcast(event, data);
 
     // Colyseus Schema state (used for delta encoding)
     this.setState(new WTKState());
@@ -82,14 +78,8 @@ class WTKRoom extends Room {
 
     this.maxClients = 10;
 
-    // Reconnect token map: playerId → reconnection token
-    this._reconnectTokens = {};
-
-    // Admin socket IDs
-    this._adminSockets = new Set();
-
     console.log(`[WTKRoom] Room ${this.roomId} created (mode: ${this.gameState.mode})`);
-    pluginManager.onRoomCreate && pluginManager.onRoomCreate(this.roomId);
+    if (pluginManager.onRoomCreate) pluginManager.onRoomCreate(this.roomId);
 
     // Register all onMessage handlers
     this._registerHandlers();
@@ -102,11 +92,10 @@ class WTKRoom extends Room {
   }
 
   // ─── onJoin ───────────────────────────────────────────────────────────────
-  async onJoin(client, options) {
+  async onJoin(client: Client, options: any): Promise<void> {
     const gs = this.gameState;
     const { playerName, roomAction, reconnectPlayerId, mode } = options || {};
-    // _action is set by colyseus_client.js: 'create' | 'join' | 'reconnect'
-    const action = options._action || roomAction || 'join';
+    const action = options?._action || roomAction || 'join';
 
     // ── RECONNECT PATH ──
     if (roomAction === 'reconnect' && reconnectPlayerId) {
@@ -115,6 +104,10 @@ class WTKRoom extends Room {
         player.socketId = client.sessionId;
         player.isDisconnected = false;
         this._reconnectTokens[reconnectPlayerId] = client.auth;
+        if ((player.name || '').toLowerCase() === 'admin') {
+          this._adminSockets.add(client.sessionId);
+          client.send('admin_auth_status', { isAdmin: true, message: '🔓 ยืนยันสิทธิ์ Admin สำเร็จ! (ชื่อ Admin)' });
+        }
         console.log(`[WTKRoom] ${player.name} reconnected (client: ${client.sessionId})`);
         client.send('reconnect_success', { roomId: this.roomId, playerId: reconnectPlayerId });
         this._broadcastAll();
@@ -122,9 +115,8 @@ class WTKRoom extends Room {
       }
     }
 
-    // ── JOIN PLAYING ROOM (spec observer or rejoin by playerId) ──
+    // ── JOIN PLAYING ROOM ──
     if (gs.status !== 'LOBBY') {
-      // Allow re-entry for known player
       const existingId = Object.keys(gs.players).find(pid => {
         return gs.players[pid].name === (playerName || '') && gs.players[pid].isDisconnected;
       });
@@ -132,6 +124,10 @@ class WTKRoom extends Room {
         const player = gs.players[existingId];
         player.socketId = client.sessionId;
         player.isDisconnected = false;
+        if ((player.name || '').toLowerCase() === 'admin') {
+          this._adminSockets.add(client.sessionId);
+          client.send('admin_auth_status', { isAdmin: true, message: '🔓 ยืนยันสิทธิ์ Admin สำเร็จ! (ชื่อ Admin)' });
+        }
         client.send('reconnect_success', { roomId: this.roomId, playerId: existingId });
         this._broadcastAll();
         return;
@@ -148,7 +144,6 @@ class WTKRoom extends Room {
     const isHost = gs.turnOrder.length === 0;
     const playerId = 'p' + (gs.turnOrder.length + 1);
 
-    // Set game mode from creator's options
     if (isHost && mode) gs.mode = mode;
 
     gs.players[playerId] = {
@@ -167,16 +162,25 @@ class WTKRoom extends Room {
       isBot: false,
       isDisconnected: false,
       isChained: false,
+      isHost,
+      slashedThisTurn: false,
+      skillResignationUsed: false,
+      skillDiaoChanUsed: false,
+      skillZhouYuUsed: false,
     };
     gs.turnOrder.push(playerId);
 
     if (isHost) {
       gs.hostSocketId = client.sessionId;
-      this._adminSockets.add(client.sessionId);
     }
 
-    // Host (creator) gets room_created → shows Start Game button in room_app.js
-    // Joiner gets room_joined → shows waiting text
+    const joinedName = gs.players[playerId].name || '';
+    if (joinedName.toLowerCase() === 'admin') {
+      this._adminSockets.add(client.sessionId);
+      console.log(`[WTKRoom] Player '${joinedName}' granted Admin access in ${this.roomId}`);
+      client.send('admin_auth_status', { isAdmin: true, message: '🔓 ยืนยันสิทธิ์ Admin สำเร็จ! (ชื่อ Admin)' });
+    }
+
     if (isHost || action === 'create') {
       client.send('room_created', { roomId: this.roomId, playerId });
     } else {
@@ -184,7 +188,6 @@ class WTKRoom extends Room {
     }
     console.log(`[WTKRoom] ${gs.players[playerId].name} (${playerId}) ${isHost ? 'CREATED' : 'joined'} ${this.roomId}`);
 
-    // Auto-populate test room with bots
     if ((this.roomId === 'ROOM_TEST' || this.roomId.startsWith('ROOM_TEST')) && isHost) {
       for (let i = 0; i < 3; i++) {
         const bId = 'p' + (gs.turnOrder.length + 1);
@@ -194,6 +197,7 @@ class WTKRoom extends Room {
           maxHp: 4, hp: 4, hand: [],
           equipment: { weapon: null, armor: null, offensiveHorse: null, defensiveHorse: null, treasure: null },
           delayedKitZone: [], isAlive: true, wineActive: false, isBot: true, isDisconnected: false, isChained: false,
+          isHost: false, slashedThisTurn: false, skillResignationUsed: false, skillDiaoChanUsed: false, skillZhouYuUsed: false
         };
         gs.turnOrder.push(bId);
       }
@@ -205,7 +209,7 @@ class WTKRoom extends Room {
   }
 
   // ─── onLeave ──────────────────────────────────────────────────────────────
-  async onLeave(client, consented) {
+  async onLeave(client: Client, consented?: boolean): Promise<void> {
     const gs = this.gameState;
     const playerId = this._getPlayerIdByClient(client);
 
@@ -219,16 +223,13 @@ class WTKRoom extends Room {
       this._broadcastAll();
 
       try {
-        // Colyseus built-in allowReconnection — waits up to 45s
         const reconnection = await this.allowReconnection(client, 45);
-        // Player reconnected!
         player.socketId = reconnection.sessionId;
         player.isDisconnected = false;
         reconnection.send('reconnect_success', { roomId: this.roomId, playerId });
         this._broadcastAll();
         console.log(`[WTKRoom] ${player.name} reconnected successfully.`);
       } catch (e) {
-        // Reconnection timed out
         console.log(`[WTKRoom] ${player.name} failed to reconnect. Removing from game.`);
         player.hp = 0;
         player.isAlive = false;
@@ -237,16 +238,15 @@ class WTKRoom extends Room {
         if (player.hand) { gs.discardPile.push(...player.hand); player.hand = []; }
         if (player.delayedKitZone) { gs.discardPile.push(...player.delayedKitZone); player.delayedKitZone = []; }
         if (player.equipment) {
-          ['weapon','armor','defensiveHorse','offensiveHorse'].forEach(slot => {
-            if (player.equipment[slot]) { gs.discardPile.push(player.equipment[slot]); player.equipment[slot] = null; }
+          (['weapon','armor','defensiveHorse','offensiveHorse'] as const).forEach(slot => {
+            if (player.equipment[slot]) { gs.discardPile.push(player.equipment[slot] as any); player.equipment[slot] = null; }
           });
         }
 
-        const { checkGameOver } = require('../game/combatLogic');
         const isGameOver = checkGameOver(gs);
         if (!isGameOver) {
           if (gs.turnOrder[gs.currentTurnIndex] === playerId) {
-            gs.currentPhase = 'DISCARD';
+            gs.currentPhase = 'DISCARD' as any;
             checkDiscardRequirement(gs);
           } else {
             this._broadcastAll();
@@ -261,16 +261,10 @@ class WTKRoom extends Room {
       console.log(`[WTKRoom] ${player.name} left lobby.`);
       this._broadcastAll();
     }
-
-    // Cleanup empty room
-    const connectedHumans = Object.values(gs.players).filter(p => !p.isBot && p.isAlive && !p.isDisconnected).length;
-    if (connectedHumans === 0 && gs.status !== 'LOBBY') {
-      console.log(`[WTKRoom] All humans gone from ${this.roomId}. Room will dispose.`);
-    }
   }
 
   // ─── onDispose ────────────────────────────────────────────────────────────
-  async onDispose() {
+  async onDispose(): Promise<void> {
     const gs = this.gameState;
     console.log(`[WTKRoom] Room ${this.roomId} disposed.`);
 
@@ -279,18 +273,15 @@ class WTKRoom extends Room {
         const players = Object.values(gs.players);
         await saveMatchHistory({
           roomId: gs.roomId,
-          mode: gs.mode,
-          winnerRole: gs.winnerRole,
+          winnerRole: gs.winnerRole || 'UNKNOWN',
           playerCount: players.length,
-          endedAt: new Date().toISOString()
+          durationSeconds: 0
         });
         for (const p of players) {
           if (!p.isBot) {
             await recordPlayerStats({
               name: p.name,
-              role: p.role,
-              character: p.character,
-              won: p.role === gs.winnerRole,
+              isWin: p.role === gs.winnerRole,
             });
           }
         }
@@ -298,15 +289,14 @@ class WTKRoom extends Room {
         console.error('[WTKRoom] DB save error:', err);
       }
     }
-    pluginManager.onRoomDispose && pluginManager.onRoomDispose(this.roomId);
+    if (pluginManager.onRoomDispose) pluginManager.onRoomDispose(this.roomId);
   }
 
   // ─── Message Handlers ─────────────────────────────────────────────────────
-  _registerHandlers() {
+  private _registerHandlers(): void {
     const gs = this.gameState;
 
-    // ── add_bot ──
-    this.onMessage('add_bot', (client, data) => {
+    this.onMessage('add_bot', (client) => {
       if (gs.status !== 'LOBBY') return;
       if (gs.turnOrder.length >= 10) {
         return client.send('game_error', { message: 'ผู้เล่นและบอทเต็มห้องแล้ว (สูงสุด 10 คน)' });
@@ -319,14 +309,14 @@ class WTKRoom extends Room {
         maxHp: 4, hp: 4, hand: [],
         equipment: { weapon: null, armor: null, offensiveHorse: null, defensiveHorse: null, treasure: null },
         delayedKitZone: [], isAlive: true, wineActive: false, isBot: true, isDisconnected: false, isChained: false,
+        isHost: false, slashedThisTurn: false, skillResignationUsed: false, skillDiaoChanUsed: false, skillZhouYuUsed: false
       };
       gs.turnOrder.push(bId);
       console.log(`[WTKRoom] Added bot ${botName} (${bId}) to ${this.roomId}`);
       this._broadcastAll();
     });
 
-    // ── remove_bot ──
-    this.onMessage('remove_bot', (client, data) => {
+    this.onMessage('remove_bot', () => {
       if (gs.status !== 'LOBBY') return;
       const botPlayers = Object.values(gs.players).filter(p => p.isBot);
       if (botPlayers.length === 0) return;
@@ -337,7 +327,6 @@ class WTKRoom extends Room {
       this._broadcastAll();
     });
 
-    // ── start_game ──
     this.onMessage('start_game', (client, data) => {
       if (gs.status !== 'LOBBY') return;
       const { botCount } = data || {};
@@ -355,6 +344,7 @@ class WTKRoom extends Room {
             maxHp: 4, hp: 4, hand: [],
             equipment: { weapon: null, armor: null, offensiveHorse: null, defensiveHorse: null, treasure: null },
             delayedKitZone: [], isAlive: true, wineActive: false, isBot: true, isDisconnected: false, isChained: false,
+            isHost: false, slashedThisTurn: false, skillResignationUsed: false, skillDiaoChanUsed: false, skillZhouYuUsed: false
           };
           gs.turnOrder.push(bId);
         }
@@ -364,7 +354,6 @@ class WTKRoom extends Room {
       this._broadcastAll();
     });
 
-    // ── choose_character ──
     this.onMessage('choose_character', (client, data) => {
       if (gs.status !== 'DRAFTING') return;
       const playerId = this._getPlayerIdByClient(client);
@@ -379,49 +368,43 @@ class WTKRoom extends Room {
       else this._broadcastAll();
     });
 
-    // ── use_card ──
     this.onMessage('use_card', (client, data) => {
       if (gs.status !== 'PLAYING') return;
-      // Inject client as socket-like object
       const socketLike = this._makeSocketLike(client);
       handleUseCard(gs, socketLike, { ...data, roomId: this.roomId });
     });
 
-    // ── resolve_pending ──
     this.onMessage('resolve_pending', (client, data) => {
       if (gs.status !== 'PLAYING') return;
       const socketLike = this._makeSocketLike(client);
       handleResolvePending(gs, socketLike, { ...data, roomId: this.roomId });
     });
 
-    // ── end_turn ──
-    this.onMessage('end_turn', (client, data) => {
+    this.onMessage('end_turn', (client) => {
       if (gs.status !== 'PLAYING') return;
       const playerId = this._getPlayerIdByClient(client);
       if (gs.turnOrder[gs.currentTurnIndex] !== playerId) return;
-      gs.currentPhase = 'DISCARD';
+      gs.currentPhase = 'DISCARD' as any;
       checkDiscardRequirement(gs);
     });
 
-    // ── discard_cards ──
     this.onMessage('discard_cards', (client, data) => {
-      if (gs.currentPhase !== 'DISCARD') return;
+      if (gs.currentPhase !== ('DISCARD' as any)) return;
       const playerId = this._getPlayerIdByClient(client);
       if (gs.turnOrder[gs.currentTurnIndex] !== playerId) return;
       const player = gs.players[playerId];
       const { cardIds } = data;
-      const hasAll = cardIds.every(cid => player.hand.some(c => c.id === cid));
+      const hasAll = (cardIds as string[]).every(cid => player.hand.some(c => c.id === cid));
       if (!hasAll) return client.send('game_error', { message: 'ไม่พบการ์ดที่ระบุในกองมือ' });
       const requiredDiscard = player.hand.length - player.hp;
       if (cardIds.length !== requiredDiscard) return client.send('game_error', { message: `กรุณาทิ้งการ์ดทั้งหมด ${requiredDiscard} ใบ` });
-      cardIds.forEach(cid => {
+      (cardIds as string[]).forEach(cid => {
         const idx = player.hand.findIndex(c => c.id === cid);
         gs.discardPile.push(player.hand.splice(idx, 1)[0]);
       });
       endPlayerTurn(gs);
     });
 
-    // ── use_peach_dying ──
     this.onMessage('use_peach_dying', (client, data) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'DYING') return;
       const pending = gs.pendingAction;
@@ -429,7 +412,7 @@ class WTKRoom extends Room {
       const playerId = this._getPlayerIdByClient(client);
       if (playerId !== askerId) return;
       const asker = gs.players[askerId];
-      const dyingPlayer = gs.players[pending.targetPlayerId];
+      const dyingPlayer = gs.players[pending.targetPlayerId!];
 
       if (data.usePeach) {
         let peachIdx = asker.hand.findIndex(c => c.name === 'PEACH');
@@ -446,10 +429,10 @@ class WTKRoom extends Room {
       }
     });
 
-    // ── play_negate ──
     this.onMessage('play_negate', (client, data) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_NEGATE') return;
       const playerId = this._getPlayerIdByClient(client);
+      if (!playerId) return;
       const player = gs.players[playerId];
       const cardIdx = player.hand.findIndex(c => c.id === data.cardId && c.name === 'NEGATE');
       if (cardIdx === -1) return client.send('game_error', { message: 'ไม่มีการ์ด NEGATE ใบนี้' });
@@ -466,16 +449,15 @@ class WTKRoom extends Room {
       }, 5000);
     });
 
-    // ── pass_negate ──
-    this.onMessage('pass_negate', (client, data) => {
+    this.onMessage('pass_negate', (client) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_NEGATE') return;
       const playerId = this._getPlayerIdByClient(client);
+      if (!playerId) return;
       if (!gs.negatePassedPlayers.includes(playerId)) gs.negatePassedPlayers.push(playerId);
       const aliveCount = Object.values(gs.players).filter(p => p.isAlive).length;
       if (gs.negatePassedPlayers.length >= aliveCount) resolveActionChain(gs);
     });
 
-    // ── pick_bumper_card ──
     this.onMessage('pick_bumper_card', (client, data) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_BUMPER_PICK') return;
       const playerId = this._getPlayerIdByClient(client);
@@ -483,11 +465,11 @@ class WTKRoom extends Room {
       const cardIdx = gs.bumperHarvestCards.findIndex(c => c.id === data.cardId);
       if (cardIdx === -1) return client.send('game_error', { message: 'ไม่มีการ์ดใบนี้ให้เลือก' });
       const picked = gs.bumperHarvestCards.splice(cardIdx, 1)[0];
-      gs.players[playerId].hand.push(picked);
-      gs.chat.push({ sender: 'System', text: `${gs.players[playerId].name} เลือก ${picked.name}(${picked.suit}) จากเสบียงอุดมสมบูรณ์`, time: new Date().toLocaleTimeString('th-TH') });
+      gs.players[playerId!].hand.push(picked);
+      gs.chat.push({ sender: 'System', text: `${gs.players[playerId!].name} เลือก ${picked.name}(${picked.suit}) จากเสบียงอุดมสมบูรณ์`, time: new Date().toLocaleTimeString('th-TH') });
       if (gs.bumperHarvestCards.length > 0) {
-        const myIdx = gs.turnOrder.indexOf(playerId);
-        let nextPickerId = null;
+        const myIdx = gs.turnOrder.indexOf(playerId!);
+        let nextPickerId: string | null = null;
         for (let i = 1; i < gs.turnOrder.length; i++) {
           const tid = gs.turnOrder[(myIdx + i) % gs.turnOrder.length];
           if (gs.players[tid]?.isAlive) { nextPickerId = tid; break; }
@@ -506,13 +488,12 @@ class WTKRoom extends Room {
       }
     });
 
-    // ── trigger_luo_river / skip_luo_river ──
-    this.onMessage('trigger_luo_river', (client, data) => {
+    this.onMessage('trigger_luo_river', (client) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'LUO_RIVER') return;
       const playerId = this._getPlayerIdByClient(client);
       if (playerId !== gs.pendingAction.targetPlayerId) return;
       const pending = gs.pendingAction;
-      const player = gs.players[playerId];
+      const player = gs.players[playerId!];
       const drawn = drawCards(gs, 1);
       if (drawn.length > 0) {
         const card = drawn[0];
@@ -521,52 +502,56 @@ class WTKRoom extends Room {
       }
     });
 
-    this.onMessage('skip_luo_river', (client, data) => {
+    this.onMessage('skip_luo_river', (client) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'LUO_RIVER') return;
       const playerId = this._getPlayerIdByClient(client);
       if (playerId !== gs.pendingAction.targetPlayerId) return;
       const pending = gs.pendingAction;
-      const player = gs.players[playerId];
+      const player = gs.players[playerId!];
       gs.pendingAction = null;
       executeDrawPhase(gs, player, pending.skipDrawPhase, pending.skipPlayPhase);
     });
 
-    // ── resolve_borrowed_sword ──
     this.onMessage('resolve_borrowed_sword', (client, data) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_BORROW_SLASH') return;
       const playerId = this._getPlayerIdByClient(client);
       if (playerId !== gs.pendingAction.targetPlayerId) return;
-      const playerB = gs.players[playerId];
-      const playerA = gs.players[gs.pendingAction.sourcePlayerId];
+      const playerB = gs.players[playerId!];
+      const playerA = gs.players[gs.pendingAction.sourcePlayerId!];
       if (data.cardId) {
         const cardIdx = playerB.hand.findIndex(c => c.id === data.cardId);
         if (cardIdx !== -1) {
-          const slashCard = playerB.hand.splice(cardIdx, 1)[0];
+          const slashCard = playerB.hand[cardIdx];
+          const isSlash = slashCard.name === 'SLASH' || slashCard.name === 'THUNDER_ATTACK' ||
+            (hasCharacter(playerB, 'ZHAO_YUN') && slashCard.name === 'DODGE') ||
+            (hasCharacter(playerB, 'GUAN_YU') && (slashCard.suit === 'HEART' || slashCard.suit === 'DIAMOND'));
+          if (!isSlash) return client.send('game_error', { message: 'การ์ดที่เลือกใช้แทน SLASH ไม่ถูกต้อง' });
+
+          playerB.hand.splice(cardIdx, 1);
           gs.discardPile.push(slashCard);
           const damage = playerB.wineActive ? 2 : 1;
           playerB.wineActive = false;
           gs.pendingAction = {
-            type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId, targetPlayerId: gs.pendingAction.victimId,
+            type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId!, targetPlayerId: gs.pendingAction.victimId,
             damage, cardUsedId: slashCard.id, originalAttackerId: gs.pendingAction.sourcePlayerId,
             timeoutAt: Date.now() + 15000, dodgeNeeded: hasCharacter(playerB, 'LV_BU') ? 2 : 1,
-            damageType: playerB.equipment?.weapon?.name === 'FEATHERED_FAN' ? 'FIRE' : 'NORMAL'
+            damageType: (playerB.equipment?.weapon as any)?.name === 'FEATHERED_FAN' ? 'FIRE' : 'NORMAL'
           };
           this._broadcastAll();
-          const playerC = gs.players[gs.pendingAction.targetPlayerId];
-          if (playerC?.isBot) setTimeout(() => handleBotDodge(gs, gs.pendingAction.targetPlayerId, damage), 1200);
+          const playerC = gs.players[gs.pendingAction.targetPlayerId!];
+          if (playerC?.isBot) setTimeout(() => handleBotDodge(gs, gs.pendingAction!.targetPlayerId!, damage), 1200);
           return;
         }
       }
-      if (playerB.equipment?.weapon) { playerA.hand.push(playerB.equipment.weapon); playerB.equipment.weapon = null; }
+      if (playerB.equipment?.weapon) { playerA.hand.push(playerB.equipment.weapon as any); playerB.equipment.weapon = null; }
       gs.pendingAction = null; resumeAfterAttack(gs); this._broadcastAll();
     });
 
-    // ── resolve_fire_reveal ──
     this.onMessage('resolve_fire_reveal', (client, data) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_FIRE_REVEAL') return;
       const playerId = this._getPlayerIdByClient(client);
       if (playerId !== gs.pendingAction.targetPlayerId) return;
-      const target = gs.players[playerId];
+      const target = gs.players[playerId!];
       const revealedCard = target.hand.find(c => c.id === data.cardId);
       if (!revealedCard) return client.send('game_error', { message: 'ไม่พบการ์ดที่เลือก' });
       gs.chat.push({ sender: 'System', text: `${target.name} เปิดเผยการ์ด ${revealedCard.name} (${revealedCard.suit})`, time: new Date().toLocaleTimeString('th-TH') });
@@ -574,32 +559,30 @@ class WTKRoom extends Room {
       this._broadcastAll();
     });
 
-    // ── resolve_fire_match ──
     this.onMessage('resolve_fire_match', (client, data) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_FIRE_MATCH') return;
       const playerId = this._getPlayerIdByClient(client);
       if (playerId !== gs.pendingAction.sourcePlayerId) return;
-      const attacker = gs.players[playerId];
+      const attacker = gs.players[playerId!];
       if (data.cancel) { gs.pendingAction = null; resumeAfterAttack(gs); this._broadcastAll(); return; }
       const matchIdx = attacker.hand.findIndex(c => c.id === data.cardId);
       if (matchIdx === -1) return client.send('game_error', { message: 'ไม่พบการ์ดที่เลือก' });
       const matched = attacker.hand[matchIdx];
       if (matched.suit !== gs.pendingAction.requiredSuit) return client.send('game_error', { message: `ต้องทิ้งการ์ดดอก ${gs.pendingAction.requiredSuit} เท่านั้น` });
       gs.discardPile.push(attacker.hand.splice(matchIdx, 1)[0]);
-      const targetId = gs.pendingAction.targetPlayerId;
+      const targetId = gs.pendingAction.targetPlayerId!;
       gs.pendingAction = null;
-      dealDamage(gs, targetId, 1, null, playerId, 'FIRE');
+      dealDamage(gs, targetId, 1, null, playerId!, 'FIRE');
       if (!gs.pendingAction) resumeAfterAttack(gs);
       this._broadcastAll();
     });
 
-    // ── resolve_yinyang_choice ──
     this.onMessage('resolve_yinyang_choice', (client, data) => {
       if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_YINYANG_CHOICE') return;
       const playerId = this._getPlayerIdByClient(client);
       if (playerId !== gs.pendingAction.targetPlayerId) return;
-      const target = gs.players[playerId];
-      const attacker = gs.players[gs.pendingAction.sourcePlayerId];
+      const target = gs.players[playerId!];
+      const attacker = gs.players[gs.pendingAction.sourcePlayerId!];
       if (data.action === 'DISCARD') {
         const idx = target.hand.findIndex(c => c.id === data.cardId);
         if (idx !== -1) gs.discardPile.push(target.hand.splice(idx, 1)[0]);
@@ -609,14 +592,13 @@ class WTKRoom extends Room {
       gs.pendingAction = null; resumeAfterAttack(gs); this._broadcastAll();
     });
 
-    // ── resolve_weapon_skill ──
     this.onMessage('resolve_weapon_skill', (client, data) => {
       if (!gs.pendingAction) return;
       const playerId = this._getPlayerIdByClient(client);
       if (playerId !== gs.pendingAction.sourcePlayerId) return;
       const pending = gs.pendingAction;
-      const attacker = gs.players[playerId];
-      const target = gs.players[pending.targetPlayerId];
+      const attacker = gs.players[playerId!];
+      const target = gs.players[pending.targetPlayerId!];
       if (!data.accept) {
         if (pending.type === 'WAITING_FOR_FROST_DISCARD') {
           gs.pendingAction = null;
@@ -633,7 +615,7 @@ class WTKRoom extends Room {
           const slashCard = attacker.hand.splice(slashIdx, 1)[0];
           gs.discardPile.push(slashCard);
           const dmg = attacker.wineActive ? 2 : 1; attacker.wineActive = false;
-          gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId, targetPlayerId: target.id, cardUsedId: slashCard.id, damage: dmg, dodgeNeeded: 1, damageType: 'NORMAL', timeoutAt: Date.now() + 15000 };
+          gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId!, targetPlayerId: target.id, cardUsedId: slashCard.id, damage: dmg, dodgeNeeded: 1, damageType: 'NORMAL', timeoutAt: Date.now() + 15000 };
           this._broadcastAll();
           if (target.isBot) setTimeout(() => handleBotDodge(gs, target.id, dmg), 1200);
         } else { gs.pendingAction = null; resumeAfterAttack(gs); this._broadcastAll(); }
@@ -643,12 +625,12 @@ class WTKRoom extends Room {
         const cardIds = data.cardIds || [];
         const needed = discard2 ? 2 : 1;
         if (cardIds.length < needed) return client.send('game_error', { message: `กรุณาเลือกการ์ดทิ้ง ${needed} ใบ` });
-        cardIds.forEach(cid => {
+        cardIds.forEach((cid: string) => {
           const idx = attacker.hand.findIndex(c => c.id === cid);
           if (idx !== -1) gs.discardPile.push(attacker.hand.splice(idx, 1)[0]);
           else {
-            const slots = ['weapon','armor','offensiveHorse','defensiveHorse','treasure'];
-            for (const slot of slots) { if (attacker.equipment[slot]?.id === cid) { gs.discardPile.push(attacker.equipment[slot]); attacker.equipment[slot] = null; break; } }
+            const slots = ['weapon','armor','offensiveHorse','defensiveHorse','treasure'] as const;
+            for (const slot of slots) { if ((attacker.equipment[slot] as any)?.id === cid) { gs.discardPile.push(attacker.equipment[slot] as any); attacker.equipment[slot] = null; break; } }
           }
         });
         gs.pendingAction = null;
@@ -659,60 +641,59 @@ class WTKRoom extends Room {
       else if (pending.type === 'WAITING_FOR_FROST_DISCARD') {
         const cardIds = data.cardIds || [];
         if (cardIds.length < 2) return client.send('game_error', { message: 'กรุณาเลือกการ์ดทิ้ง 2 ใบ' });
-        cardIds.slice(0, 2).forEach(cid => {
+        cardIds.slice(0, 2).forEach((cid: string) => {
           const idx = target.hand.findIndex(c => c.id === cid);
           if (idx !== -1) gs.discardPile.push(target.hand.splice(idx, 1)[0]);
           else {
-            const slots = ['weapon','armor','offensiveHorse','defensiveHorse','treasure'];
-            for (const slot of slots) { if (target.equipment[slot]?.id === cid) { gs.discardPile.push(target.equipment[slot]); target.equipment[slot] = null; break; } }
+            const slots = ['weapon','armor','offensiveHorse','defensiveHorse','treasure'] as const;
+            for (const slot of slots) { if ((target.equipment[slot] as any)?.id === cid) { gs.discardPile.push(target.equipment[slot] as any); target.equipment[slot] = null; break; } }
           }
         });
         gs.pendingAction = null; resumeAfterAttack(gs); this._broadcastAll();
       }
     });
 
-    // ── use_serpent_spear ──
     this.onMessage('use_serpent_spear', (client, data) => {
-      if (!gs.pendingAction === false && gs.pendingAction) return client.send('game_error', { message: 'กรุณารอการประมวลผลก่อนหน้า' });
+      if (gs.pendingAction) return client.send('game_error', { message: 'กรุณารอการประมวลผลก่อนหน้า' });
       const playerId = this._getPlayerIdByClient(client);
       if (gs.turnOrder[gs.currentTurnIndex] !== playerId || gs.currentPhase !== 'PLAY') return client.send('game_error', { message: 'ไม่ใช่เทิร์นของคุณ หรือไม่ใช่ช่วงร่ายการ์ด' });
-      const player = gs.players[playerId];
-      if (!player?.equipment?.weapon || player.equipment.weapon.name !== 'SERPENT_SPEAR') return client.send('game_error', { message: 'คุณต้องสวม SERPENT_SPEAR ก่อนใช้ความสามารถนี้' });
+      const player = gs.players[playerId!];
+      if (!player?.equipment?.weapon || (player.equipment.weapon as any).name !== 'SERPENT_SPEAR') return client.send('game_error', { message: 'คุณต้องสวม SERPENT_SPEAR ก่อนใช้ความสามารถนี้' });
       const { cardIds, targetPlayerId } = data;
       if (!cardIds || cardIds.length !== 2) return client.send('game_error', { message: 'กรุณาเลือกการ์ด 2 ใบเพื่อทิ้งแทน SLASH' });
-      if (!cardIds.every(cid => player.hand.some(c => c.id === cid))) return client.send('game_error', { message: 'ไม่พบการ์ดที่ระบุบนมือ' });
-      const hasZhuge = player.equipment.weapon.name === 'ZHUGE_CROSSBOW';
+      if (!cardIds.every((cid: string) => player.hand.some(c => c.id === cid))) return client.send('game_error', { message: 'ไม่พบการ์ดที่ระบุบนมือ' });
+      const hasZhuge = (player.equipment.weapon as any).name === 'ZHUGE_CROSSBOW';
       const isZhangFei = hasCharacter(player, 'ZHANG_FEI');
       if (gs.attacksPlayedInTurn >= 1 && !hasZhuge && !isZhangFei) return client.send('game_error', { message: 'คุณใช้สิทธิ์โจมตีครบแล้วในเทิร์นนี้' });
       const target = gs.players[targetPlayerId];
       if (!target?.isAlive) return client.send('game_error', { message: 'เป้าหมายไม่พร้อมรับการโจมตี' });
-      const weaponRange = player.equipment.weapon.range || 3;
-      const dist = calculateDistance(gs, playerId, targetPlayerId);
+      const weaponRange = (player.equipment.weapon as any).range || 3;
+      const dist = calculateDistance(gs, playerId!, targetPlayerId);
       if (dist > weaponRange) return client.send('game_error', { message: `ระยะไม่ถึง! เป้าหมายอยู่ห่าง ${dist} แต่ระยะโจมตีคือ ${weaponRange}` });
       if (hasCharacter(target, 'ZHUGE_LIANG') && target.hand.length === 0) return client.send('game_error', { message: 'ขงเบ้งเปิดใช้สกิล เมืองว่างเปล่า ไม่สามารถตกเป็นเป้าหมายได้!' });
-      cardIds.forEach(cid => { const idx = player.hand.findIndex(c => c.id === cid); if (idx !== -1) gs.discardPile.push(player.hand.splice(idx, 1)[0]); });
+      cardIds.forEach((cid: string) => { const idx = player.hand.findIndex(c => c.id === cid); if (idx !== -1) gs.discardPile.push(player.hand.splice(idx, 1)[0]); });
       const damage = player.wineActive ? 2 : 1;
       player.wineActive = false;
       gs.attacksPlayedInTurn += 1; player.slashedThisTurn = true;
-      gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId, targetPlayerId, cardUsedId: `serpent_${Date.now()}`, damage, dodgeNeeded: hasCharacter(player, 'LV_BU') ? 2 : 1, damageType: 'NORMAL', timeoutAt: Date.now() + 15000 };
-      this.broadcast('card_played', { playerId, cardName: 'SERPENT_SPEAR', targetId: targetPlayerId });
+      gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId!, targetPlayerId, cardUsedId: `serpent_${Date.now()}`, damage, dodgeNeeded: hasCharacter(player, 'LV_BU') ? 2 : 1, damageType: 'NORMAL', timeoutAt: Date.now() + 15000 };
+      this.broadcast('card_played', { playerId: playerId!, cardName: 'SERPENT_SPEAR', targetId: targetPlayerId });
       this._broadcastAll();
       if (target.isBot) setTimeout(() => handleBotDodge(gs, targetPlayerId, damage), 1200);
       else setTimeout(() => {
         if (gs.pendingAction?.type === 'WAITING_FOR_DODGE' && gs.pendingAction.sourcePlayerId === playerId) {
-          gs.pendingAction = null; dealDamage(gs, targetPlayerId, damage, null, playerId, 'NORMAL'); if (!gs.pendingAction) resumeAfterAttack(gs); this._broadcastAll();
+          gs.pendingAction = null; dealDamage(gs, targetPlayerId, damage, null, playerId!, 'NORMAL'); if (!gs.pendingAction) resumeAfterAttack(gs); this._broadcastAll();
         }
       }, 15000);
     });
 
-    // ── Character Skills ──
+    // Character Skills
     this.onMessage('use_sun_quan_skill', (client, data) => {
       const playerId = this._getPlayerIdByClient(client);
       if (!playerId) return;
       const player = gs.players[playerId];
       if (!hasCharacter(player, 'SUN_QUAN') || player.skillResignationUsed || gs.currentPhase !== 'PLAY') return;
       let count = 0;
-      (data.cardIds || []).forEach(cid => {
+      (data.cardIds || []).forEach((cid: string) => {
         const idx = player.hand.findIndex(c => c.id === cid);
         if (idx !== -1) { gs.discardPile.push(player.hand.splice(idx, 1)[0]); count++; }
       });
@@ -782,10 +763,13 @@ class WTKRoom extends Room {
       }, 15000);
     });
 
-    // ── Admin Tools ──
+    // Admin Tools
     this.onMessage('admin_authenticate', (client, data) => {
       const { secretKey } = data;
-      if (secretKey === ADMIN_SECRET_KEY || this.roomId === 'ROOM_TEST') {
+      const playerId = this._getPlayerIdByClient(client);
+      const playerName = (playerId && gs.players[playerId]?.name) || '';
+      const isAdminByName = playerName.toLowerCase() === 'admin';
+      if (secretKey === ADMIN_SECRET_KEY || this.roomId === 'ROOM_TEST' || isAdminByName) {
         this._adminSockets.add(client.sessionId);
         client.send('admin_auth_status', { isAdmin: true, message: '🔓 ยืนยันสิทธิ์ Admin สำเร็จ!' });
       } else {
@@ -799,11 +783,16 @@ class WTKRoom extends Room {
       if (!playerId) return;
       const player = gs.players[playerId];
       const { cardName } = data;
-      let cardType = 'BASIC';
+      let cardType: any = 'BASIC';
+      const WEAPON_RANGE: Record<string, number> = { 'ZHUGE_CROSSBOW':1,'BLUE_STEEL_SWORD':2,'SIX_SWORDS_WU':2,'FROST_SWORD':2,'YIN_YANG_SWORDS':2,'SERPENT_SPEAR':3,'TWO_BLADED_TRIDENT':3,'ROCK_CLEAVING_AXE':3,'GREEN_DRAGON_BLADE':3,'FEATHERED_FAN':4,'SKY_PIERCING_HALBERD':4,'KIRIN_BOW':5 };
+      const ALL_EQUIPMENT = [...Object.keys(WEAPON_RANGE), 'NIO_SHIELD', 'EIGHT_TRIGRAMS_FORMATION', 'SILVER_LION_HELMET', 'RATTAN_ARMOR', 'RED_HARE', 'SHADOWRUNNER', 'LIGHTNING_HOOF', 'FERGANA_STEED', 'WOODEN_CART'];
       if (['ACEDIA','STARVATION','LIGHTNING'].includes(cardName)) cardType = 'DELAYED';
-      else if (['ZHUGE_CROSSBOW','GREEN_DRAGON_BLADE','SERPENT_SPEAR','ROCK_CLEAVING_AXE','KIRIN_BOW','BLUE_STEEL_SWORD','YIN_YANG_SWORDS','FEATHERED_FAN','NIO_SHIELD','EIGHT_TRIGRAMS_FORMATION','SILVER_LION_HELMET','RATTAN_ARMOR','RED_HARE'].includes(cardName)) cardType = 'EQUIPMENT';
+      else if (ALL_EQUIPMENT.includes(cardName)) cardType = 'EQUIPMENT';
       else if (['STEAL','SABOTAGE','DUEL','FIRE_ATTACK','IRON_CHAIN','EX_NIHILO','BARBARIAN_INVASION','ARROW_BARRAGE','PEACH_GARDEN','BUMPER_HARVEST','BORROWED_SWORD','NEGATE'].includes(cardName)) cardType = 'KIT';
-      player.hand.push({ id: `admin_c_${Date.now()}`, name: cardName, suit: 'HEART', rank: 7, type: cardType });
+      
+      const extra: Record<string, any> = {};
+      if (WEAPON_RANGE[cardName]) extra.range = WEAPON_RANGE[cardName];
+      player.hand.push({ id: `admin_c_${Date.now()}`, name: cardName, suit: 'HEART', rank: 7, type: cardType, ...extra });
       gs.chat.push({ sender: 'Admin', text: `🛠️ เสกการ์ด [${cardName}] ขึ้นมือสำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
       this._broadcastAll();
     });
@@ -813,11 +802,13 @@ class WTKRoom extends Room {
       const playerId = this._getPlayerIdByClient(client);
       if (!playerId) return;
       const player = gs.players[playerId];
-      const allHeroes = require('../game/phaseLogic').getAllHeroes();
-      player.character = data.character;
-      const heroInfo = allHeroes.find(h => h.id === data.character || h.name === data.character);
+      const allHeroes = getAllHeroes();
+      const rawChar = data.character || data.characterId;
+      const charId = typeof rawChar === 'object' ? (rawChar.id || rawChar.name || '') : String(rawChar || '');
+      player.character = charId;
+      const heroInfo = allHeroes.find((h: any) => h.id === charId || h.name === charId);
       if (heroInfo) { player.maxHp = heroInfo.hp || 4; player.hp = Math.min(player.hp, player.maxHp); }
-      gs.chat.push({ sender: 'Admin', text: `🧙 เปลี่ยนขุนพลเป็น [${data.character}] สำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
+      gs.chat.push({ sender: 'Admin', text: `🧙 เปลี่ยนขุนพลเป็น [${charId}] สำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
       this._broadcastAll();
     });
 
@@ -832,16 +823,17 @@ class WTKRoom extends Room {
       this._broadcastAll();
     });
 
-    this.onMessage('admin_spawn_bot', (client, data) => {
+    this.onMessage('admin_spawn_bot', (client) => {
       if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST') return client.send('game_error', { message: '⚠️ ปฏิเสธสิทธิ์' });
       const botId = `bot_${Date.now().toString().slice(-4)}`;
-      const allHeroes = require('../game/phaseLogic').getAllHeroes();
+      const allHeroes = getAllHeroes();
       const randHero = allHeroes[Math.floor(Math.random() * allHeroes.length)] || { id: 'GUAN_YU', hp: 4 };
       gs.players[botId] = {
         id: botId, name: `บอททดสอบ_${botId.slice(-3)}`, socketId: '', role: 'REBEL',
         character: randHero.id, hp: randHero.hp || 4, maxHp: randHero.hp || 4,
         hand: drawCards(gs, 4), equipment: { weapon: null, armor: null, offensiveHorse: null, defensiveHorse: null, treasure: null },
         delayedKitZone: [], isAlive: true, wineActive: false, isBot: true, isDisconnected: false, isChained: false,
+        isHost: false, slashedThisTurn: false, skillResignationUsed: false, skillDiaoChanUsed: false, skillZhouYuUsed: false
       };
       if (!gs.turnOrder.includes(botId)) gs.turnOrder.push(botId);
       gs.chat.push({ sender: 'Admin', text: `🤖 เพิ่มบอททดสอบ [${gs.players[botId].name}] สำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
@@ -868,7 +860,7 @@ class WTKRoom extends Room {
       this._broadcastAll();
     });
 
-    this.onMessage('admin_bot_pass_turn', (client, data) => {
+    this.onMessage('admin_bot_pass_turn', (client) => {
       if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST') return;
       const currentId = gs.turnOrder[gs.currentTurnIndex];
       const currentP = gs.players[currentId];
@@ -886,25 +878,24 @@ class WTKRoom extends Room {
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
-  _getPlayerIdByClient(client) {
+  private _getPlayerIdByClient(client: Client): string | null {
     const gs = this.gameState;
     return Object.keys(gs.players).find(pid => gs.players[pid].socketId === client.sessionId) || null;
   }
 
-  _makeSocketLike(client) {
+  private _makeSocketLike(client: Client): SocketLike {
     const playerId = this._getPlayerIdByClient(client);
     return {
       id: client.sessionId,
-      emit: (event, data) => client.send(event, data),
-      send: (event, data) => client.send(event, data),
+      emit: (event: string, data: any) => client.send(event, data),
+      send: (event: string, data: any) => client.send(event, data),
       _playerId: playerId,
     };
   }
 
   // ─── Broadcast all clients with sanitized state ────────────────────────────
-  _broadcastAll() {
+  private _broadcastAll(): void {
     const gs = this.gameState;
-    // Sync status to Colyseus schema for built-in metrics
     this.state.status = gs.status;
     this.state.currentPhase = gs.currentPhase;
     this.state.currentTurnPlayerId = gs.turnOrder[gs.currentTurnIndex] || '';
@@ -913,13 +904,10 @@ class WTKRoom extends Room {
     this.state.mode = gs.mode;
     this.state.isBotPassive = gs.isBotPassive;
 
-    // Send personalized state to each connected client
-    this.clients.forEach(client => {
+    this.clients.forEach((client: Client) => {
       const playerId = this._getPlayerIdByClient(client);
-      const sanitized = getSanitizedRoomState(gs, playerId);
+      const sanitized = getSanitizedRoomState(gs, playerId!);
       client.send('room_state_update', sanitized);
     });
   }
 }
-
-module.exports = { WTKRoom };

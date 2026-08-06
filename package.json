@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node colyseus_server.js",
+    "build": "tsc",
+    "start": "node dist/colyseus_server.js",
     "start:legacy": "node server.js",
-    "dev": "node colyseus_server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsc && node dist/colyseus_server.js",
+    "test": "tsc && jest --verbose --forceExit"
   },
   "keywords": [],
   "author": "",
@@ -17,11 +18,21 @@
     "@colyseus/monitor": "^0.15.8",
     "@colyseus/ws-transport": "^0.15.3",
     "colyseus": "^0.15.57",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^4.0.379",
+    "pptxgenjs": "^4.0.1",
+    "puppeteer": "^25.4.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.2",
+    "jest": "^30.4.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2"
   }
 }

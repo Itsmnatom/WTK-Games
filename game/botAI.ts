@@ -1,22 +1,22 @@
 'use strict';
 /**
- * game/botAI.js
+ * game/botAI.ts
  * Bot AI brain — runBotTurn + all bot response handlers
- * Extracted from server.js section 5 (Bot AI Brain)
  */
 
-const { hasCharacter, calculateDistance, drawCards, checkDiscardRequirement, endPlayerTurn } = require('./phaseLogic');
-const { dealDamage, resumeAfterAttack, getCardById, startDyingPhase } = require('./combatLogic');
+import { hasCharacter, calculateDistance, drawCards, checkDiscardRequirement, endPlayerTurn } from './phaseLogic';
+import { dealDamage, resumeAfterAttack, getCardById, startDyingPhase } from './combatLogic';
+import type { GameRoom, Player, Card } from './types';
 
 // ─── Bot wants to attack helper ───────────────────────────────────────────────
-function botWantsToAttack(bot, target, room) {
+function botWantsToAttack(bot: Player, target: Player, room: GameRoom): boolean {
   if (bot.id === target.id || !target.isAlive) return false;
   if (bot.role === 'LORD' || bot.role === 'LOYALIST') return target.role === 'REBEL' || target.role === 'RENEGADE';
   if (bot.role === 'REBEL') return target.role === 'LORD' || target.role === 'LOYALIST';
   if (bot.role === 'RENEGADE') {
-    const rebelsAlive = Object.values(room.players).some(p => p.isAlive && p.role === 'REBEL');
+    const rebelsAlive = Object.values(room.players).some((p: Player) => p.isAlive && p.role === 'REBEL');
     if (rebelsAlive) return target.role === 'REBEL';
-    const loyalistsAlive = Object.values(room.players).some(p => p.isAlive && p.role === 'LOYALIST');
+    const loyalistsAlive = Object.values(room.players).some((p: Player) => p.isAlive && p.role === 'LOYALIST');
     if (loyalistsAlive) return target.role === 'LOYALIST';
     return target.role === 'LORD';
   }
@@ -24,7 +24,7 @@ function botWantsToAttack(bot, target, room) {
 }
 
 // ─── Main Bot Turn ────────────────────────────────────────────────────────────
-function runBotTurn(room, botId) {
+function runBotTurn(room: GameRoom, botId: string): void {
   const bot = room.players[botId];
   if (!bot || !bot.isAlive || room.status !== 'PLAYING') return;
 
@@ -38,7 +38,7 @@ function runBotTurn(room, botId) {
 
   // 1. Heal with PEACH if damaged
   if (!actionTaken && bot.hp < bot.maxHp) {
-    const peachIdx = bot.hand.findIndex(c => c.name === 'PEACH');
+    const peachIdx = bot.hand.findIndex((c: Card) => c.name === 'PEACH');
     if (peachIdx !== -1) {
       const card = bot.hand.splice(peachIdx, 1)[0];
       room.discardPile.push(card);
@@ -50,12 +50,12 @@ function runBotTurn(room, botId) {
 
   // 2. EX_NIHILO draw 2
   if (!actionTaken) {
-    const idx = bot.hand.findIndex(c => c.name === 'EX_NIHILO');
+    const idx = bot.hand.findIndex((c: Card) => c.name === 'EX_NIHILO');
     if (idx !== -1) {
       const card = bot.hand.splice(idx, 1)[0];
       room.discardPile.push(card);
       room._emitAll && room._emitAll('card_played', { playerId: botId, cardName: 'EX_NIHILO' });
-      drawCards(room, 2).forEach(c => bot.hand.push(c));
+      drawCards(room, 2).forEach((c: Card) => bot.hand.push(c));
       room._broadcastFn && room._broadcastFn();
       actionTaken = true;
     }
@@ -64,13 +64,13 @@ function runBotTurn(room, botId) {
   // 3. Equip Weapon
   if (!actionTaken) {
     const WEAPONS = ['ZHUGE_CROSSBOW','BLUE_STEEL_SWORD','SIX_SWORDS_WU','KIRIN_BOW','FEATHERED_FAN','SERPENT_SPEAR','FROST_SWORD','TWO_BLADED_TRIDENT','ROCK_CLEAVING_AXE','GREEN_DRAGON_BLADE','SKY_PIERCING_HALBERD','YIN_YANG_SWORDS'];
-    const WEAPON_RANGE = { 'ZHUGE_CROSSBOW':1,'BLUE_STEEL_SWORD':2,'SIX_SWORDS_WU':2,'KIRIN_BOW':5,'FEATHERED_FAN':4,'SERPENT_SPEAR':3,'FROST_SWORD':2,'TWO_BLADED_TRIDENT':3,'ROCK_CLEAVING_AXE':3,'GREEN_DRAGON_BLADE':3,'SKY_PIERCING_HALBERD':4,'YIN_YANG_SWORDS':2 };
-    const wIdx = bot.hand.findIndex(c => WEAPONS.includes(c.name));
+    const WEAPON_RANGE: Record<string, number> = { 'ZHUGE_CROSSBOW':1,'BLUE_STEEL_SWORD':2,'SIX_SWORDS_WU':2,'KIRIN_BOW':5,'FEATHERED_FAN':4,'SERPENT_SPEAR':3,'FROST_SWORD':2,'TWO_BLADED_TRIDENT':3,'ROCK_CLEAVING_AXE':3,'GREEN_DRAGON_BLADE':3,'SKY_PIERCING_HALBERD':4,'YIN_YANG_SWORDS':2 };
+    const wIdx = bot.hand.findIndex((c: Card) => WEAPONS.includes(c.name));
     if (wIdx !== -1) {
       const w = bot.hand[wIdx];
-      if (!bot.equipment.weapon || bot.equipment.weapon.name !== w.name) {
+      if (!bot.equipment.weapon || (bot.equipment.weapon as Card).name !== w.name) {
         bot.hand.splice(wIdx, 1);
-        if (bot.equipment.weapon) room.discardPile.push(bot.equipment.weapon);
+        if (bot.equipment.weapon) room.discardPile.push(bot.equipment.weapon as Card);
         w.range = WEAPON_RANGE[w.name] || 1;
         bot.equipment.weapon = w;
         room._emitAll && room._emitAll('card_played', { playerId: botId, cardName: w.name });
@@ -81,7 +81,7 @@ function runBotTurn(room, botId) {
 
   // 3b. Equip Horse
   if (!actionTaken) {
-    const hIdx = bot.hand.findIndex(c => ['RED_HARE','LIGHTNING_HOOF','FERGANA_STEED','SHADOWRUNNER'].includes(c.name));
+    const hIdx = bot.hand.findIndex((c: Card) => ['RED_HARE','LIGHTNING_HOOF','FERGANA_STEED','SHADOWRUNNER'].includes(c.name));
     if (hIdx !== -1) {
       const h = bot.hand[hIdx];
       const isOff = h.name === 'RED_HARE' || h.name === 'FERGANA_STEED';
@@ -95,14 +95,14 @@ function runBotTurn(room, botId) {
 
   // 3c. Equip Armor
   if (!actionTaken) {
-    const aIdx = bot.hand.findIndex(c => ['NIO_SHIELD','EIGHT_TRIGRAMS_FORMATION','SILVER_LION_HELMET','RATTAN_ARMOR'].includes(c.name));
+    const aIdx = bot.hand.findIndex((c: Card) => ['NIO_SHIELD','EIGHT_TRIGRAMS_FORMATION','SILVER_LION_HELMET','RATTAN_ARMOR'].includes(c.name));
     if (aIdx !== -1) {
       const arm = bot.hand[aIdx];
-      if (!bot.equipment.armor || bot.equipment.armor.name !== arm.name) {
+      if (!bot.equipment.armor || (bot.equipment.armor as Card).name !== arm.name) {
         bot.hand.splice(aIdx, 1);
         if (bot.equipment.armor) {
-          room.discardPile.push(bot.equipment.armor);
-          if (bot.equipment.armor.name === 'SILVER_LION_HELMET') bot.hp = Math.min(bot.maxHp, bot.hp + 1);
+          room.discardPile.push(bot.equipment.armor as Card);
+          if ((bot.equipment.armor as Card).name === 'SILVER_LION_HELMET') bot.hp = Math.min(bot.maxHp, bot.hp + 1);
         }
         bot.equipment.armor = arm;
         actionTaken = true;
@@ -112,12 +112,12 @@ function runBotTurn(room, botId) {
 
   // 3d. AOE (BARBARIAN_INVASION / ARROW_BARRAGE)
   if (!actionTaken) {
-    const aoeIdx = bot.hand.findIndex(c => ['BARBARIAN_INVASION','ARROW_BARRAGE'].includes(c.name));
+    const aoeIdx = bot.hand.findIndex((c: Card) => ['BARBARIAN_INVASION','ARROW_BARRAGE'].includes(c.name));
     if (aoeIdx !== -1) {
       const aoeCard = bot.hand.splice(aoeIdx, 1)[0];
       room.discardPile.push(aoeCard);
       const myIdx = room.turnOrder.indexOf(botId);
-      const targets = [];
+      const targets: string[] = [];
       for (let i = 1; i < room.turnOrder.length; i++) {
         const pid = room.turnOrder[(myIdx + i) % room.turnOrder.length];
         if (room.players[pid]?.isAlive) targets.push(pid);
@@ -144,14 +144,14 @@ function runBotTurn(room, botId) {
 
   // 3e. Delayed (ACEDIA / STARVATION)
   if (!actionTaken) {
-    const dIdx = bot.hand.findIndex(c => ['ACEDIA','STARVATION'].includes(c.name));
+    const dIdx = bot.hand.findIndex((c: Card) => ['ACEDIA','STARVATION'].includes(c.name));
     if (dIdx !== -1) {
       const cardName = bot.hand[dIdx].name;
       for (const pid of room.turnOrder) {
         if (pid === botId) continue;
         const target = room.players[pid];
         if (botWantsToAttack(bot, target, room)) {
-          const alreadyHas = target.delayedKitZone?.some(c => c.name === cardName);
+          const alreadyHas = target.delayedKitZone?.some((c: Card) => c.name === cardName);
           if (!alreadyHas) {
             const card = bot.hand.splice(dIdx, 1)[0];
             target.delayedKitZone = target.delayedKitZone || [];
@@ -168,18 +168,18 @@ function runBotTurn(room, botId) {
 
   // 4. SABOTAGE
   if (!actionTaken) {
-    const sIdx = bot.hand.findIndex(c => c.name === 'SABOTAGE');
+    const sIdx = bot.hand.findIndex((c: Card) => c.name === 'SABOTAGE');
     if (sIdx !== -1) {
       for (const pid of room.turnOrder) {
         const target = room.players[pid];
         if (botWantsToAttack(bot, target, room) && (target.hand.length > 0 || target.equipment?.weapon || target.equipment?.defensiveHorse || target.equipment?.offensiveHorse)) {
           const card = bot.hand.splice(sIdx, 1)[0];
           room.discardPile.push(card);
-          let discardedCard = null;
+          let discardedCard: Card | null = null;
           if (target.hand.length > 0) discardedCard = target.hand.splice(Math.floor(Math.random() * target.hand.length), 1)[0];
-          else if (target.equipment?.defensiveHorse) { discardedCard = target.equipment.defensiveHorse; target.equipment.defensiveHorse = null; }
-          else if (target.equipment?.weapon) { discardedCard = target.equipment.weapon; target.equipment.weapon = null; }
-          else if (target.equipment?.offensiveHorse) { discardedCard = target.equipment.offensiveHorse; target.equipment.offensiveHorse = null; }
+          else if (target.equipment?.defensiveHorse) { discardedCard = target.equipment.defensiveHorse as Card; target.equipment.defensiveHorse = null; }
+          else if (target.equipment?.weapon) { discardedCard = target.equipment.weapon as Card; target.equipment.weapon = null; }
+          else if (target.equipment?.offensiveHorse) { discardedCard = target.equipment.offensiveHorse as Card; target.equipment.offensiveHorse = null; }
           if (discardedCard) room.discardPile.push(discardedCard);
           room._emitAll && room._emitAll('card_played', { playerId: botId, cardName: 'SABOTAGE', targetId: pid });
           room._broadcastFn && room._broadcastFn();
@@ -192,7 +192,7 @@ function runBotTurn(room, botId) {
 
   // 4b. STEAL
   if (!actionTaken) {
-    const sIdx = bot.hand.findIndex(c => c.name === 'STEAL');
+    const sIdx = bot.hand.findIndex((c: Card) => c.name === 'STEAL');
     if (sIdx !== -1) {
       for (const pid of room.turnOrder) {
         const target = room.players[pid];
@@ -200,10 +200,10 @@ function runBotTurn(room, botId) {
         if (dist <= 1 && botWantsToAttack(bot, target, room) && (target.hand.length > 0 || target.equipment?.weapon || target.equipment?.defensiveHorse)) {
           const card = bot.hand.splice(sIdx, 1)[0];
           room.discardPile.push(card);
-          let stolenCard = null;
+          let stolenCard: Card | null = null;
           if (target.hand.length > 0) stolenCard = target.hand.splice(Math.floor(Math.random() * target.hand.length), 1)[0];
-          else if (target.equipment?.defensiveHorse) { stolenCard = target.equipment.defensiveHorse; target.equipment.defensiveHorse = null; }
-          else if (target.equipment?.weapon) { stolenCard = target.equipment.weapon; target.equipment.weapon = null; }
+          else if (target.equipment?.defensiveHorse) { stolenCard = target.equipment.defensiveHorse as Card; target.equipment.defensiveHorse = null; }
+          else if (target.equipment?.weapon) { stolenCard = target.equipment.weapon as Card; target.equipment.weapon = null; }
           if (stolenCard) {
             bot.hand.push(stolenCard);
             if (stolenCard.name === 'SILVER_LION_HELMET') target.hp = Math.min(target.maxHp, target.hp + 1);
@@ -219,7 +219,7 @@ function runBotTurn(room, botId) {
 
   // 4c. DUEL
   if (!actionTaken) {
-    const dIdx = bot.hand.findIndex(c => c.name === 'DUEL');
+    const dIdx = bot.hand.findIndex((c: Card) => c.name === 'DUEL');
     if (dIdx !== -1) {
       for (const pid of room.turnOrder) {
         const target = room.players[pid];
@@ -241,16 +241,16 @@ function runBotTurn(room, botId) {
 
   // 5. Wine buff before SLASH
   if (!actionTaken) {
-    const hasWine = bot.hand.some(c => c.name === 'WINE');
-    const hasSlash = bot.hand.some(c => c.name === 'SLASH' || c.name === 'THUNDER_ATTACK');
+    const hasWine = bot.hand.some((c: Card) => c.name === 'WINE');
+    const hasSlash = bot.hand.some((c: Card) => c.name === 'SLASH' || c.name === 'THUNDER_ATTACK');
     if (hasWine && hasSlash && !bot.wineActive) {
-      const weaponRange = bot.equipment?.weapon?.range || 1;
-      const enemyInRange = room.turnOrder.some(pid => {
+      const weaponRange = (bot.equipment?.weapon as Card)?.range || 1;
+      const enemyInRange = room.turnOrder.some((pid: string) => {
         const t = room.players[pid];
         return botWantsToAttack(bot, t, room) && calculateDistance(room, botId, pid) <= weaponRange;
       });
       if (enemyInRange) {
-        const wIdx = bot.hand.findIndex(c => c.name === 'WINE');
+        const wIdx = bot.hand.findIndex((c: Card) => c.name === 'WINE');
         const wCard = bot.hand.splice(wIdx, 1)[0];
         room.discardPile.push(wCard);
         bot.wineActive = true;
@@ -261,10 +261,10 @@ function runBotTurn(room, botId) {
 
   // 6. SLASH / THUNDER_ATTACK
   if (!actionTaken) {
-    const slashIdx = bot.hand.findIndex(c => c.name === 'SLASH' || c.name === 'THUNDER_ATTACK');
+    const slashIdx = bot.hand.findIndex((c: Card) => c.name === 'SLASH' || c.name === 'THUNDER_ATTACK');
     if (slashIdx !== -1) {
-      const weaponRange = bot.equipment?.weapon?.range || 1;
-      const hasZhuge = bot.equipment?.weapon?.name === 'ZHUGE_CROSSBOW';
+      const weaponRange = (bot.equipment?.weapon as Card)?.range || 1;
+      const hasZhuge = (bot.equipment?.weapon as Card)?.name === 'ZHUGE_CROSSBOW';
       const isZhangFei = hasCharacter(bot, 'ZHANG_FEI');
 
       for (const pid of room.turnOrder) {
@@ -301,19 +301,19 @@ function runBotTurn(room, botId) {
   if (actionTaken) {
     setTimeout(() => runBotTurn(room, botId), 1200);
   } else {
-    room.currentPhase = 'DISCARD';
+    room.currentPhase = 'DISCARD' as any;
     checkDiscardRequirement(room);
   }
 }
 
 // ─── Bot Response Handlers ────────────────────────────────────────────────────
-function handleBotDodge(room, botId, damage) {
+function handleBotDodge(room: GameRoom, botId: string, damage: number): void {
   const bot = room.players[botId];
   if (!bot || !bot.isAlive || !room.pendingAction) return;
   const pending = room.pendingAction;
 
   // Eight Trigrams
-  if (bot.equipment?.armor?.name === 'EIGHT_TRIGRAMS_FORMATION' && !pending.eightTrigramsUsed) {
+  if ((bot.equipment?.armor as Card)?.name === 'EIGHT_TRIGRAMS_FORMATION' && !pending.eightTrigramsUsed) {
     const judgeCard = drawCards(room, 1)[0];
     if (judgeCard) {
       room.discardPile.push(judgeCard);
@@ -333,9 +333,9 @@ function handleBotDodge(room, botId, damage) {
     }
   }
 
-  let dodgeIdx = bot.hand.findIndex(c => c.name === 'DODGE');
+  let dodgeIdx = bot.hand.findIndex((c: Card) => c.name === 'DODGE');
   if (dodgeIdx === -1 && (hasCharacter(bot, 'ZHEN_JI') || hasCharacter(bot, 'LADY_ZHEN'))) {
-    dodgeIdx = bot.hand.findIndex(c => c.suit === 'SPADE' || c.suit === 'CLUB');
+    dodgeIdx = bot.hand.findIndex((c: Card) => c.suit === 'SPADE' || c.suit === 'CLUB');
   }
 
   if (dodgeIdx !== -1) {
@@ -354,19 +354,19 @@ function handleBotDodge(room, botId, damage) {
     const attackerId = pending?.sourcePlayerId || null;
     const cardUsed = pending ? getCardById(room, pending.cardUsedId) : null;
     room.pendingAction = null;
-    dealDamage(room, botId, damage, cardUsed, attackerId);
+    dealDamage(room, botId, damage, cardUsed, attackerId!);
     if (!room.pendingAction) resumeAfterAttack(room);
   }
 }
 
-function handleBotDuelSlash(room) {
+function handleBotDuelSlash(room: GameRoom): void {
   const pending = room.pendingAction;
   if (!pending || pending.type !== 'WAITING_FOR_SLASH_DUEL') return;
   const botId = pending.currentPlayerToSlash;
   const bot = room.players[botId];
   if (!bot || !bot.isAlive) return;
 
-  const slashIdx = bot.hand.findIndex(c => c.name === 'SLASH');
+  const slashIdx = bot.hand.findIndex((c: Card) => c.name === 'SLASH');
   if (slashIdx !== -1) {
     const card = bot.hand.splice(slashIdx, 1)[0];
     room.discardPile.push(card);
@@ -381,7 +381,7 @@ function handleBotDuelSlash(room) {
           const atkId = pending.currentPlayerToSlash === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
           const cu = getCardById(room, pending.cardUsedId);
           room.pendingAction = null;
-          dealDamage(room, pending.currentPlayerToSlash, 1, cu, atkId);
+          dealDamage(room, pending.currentPlayerToSlash, 1, cu, atkId!);
           if (!room.pendingAction) resumeAfterAttack(room);
           room._broadcastFn && room._broadcastFn();
         }
@@ -392,12 +392,12 @@ function handleBotDuelSlash(room) {
     const atkId = damagedId === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
     const cu = getCardById(room, pending.cardUsedId);
     room.pendingAction = null;
-    dealDamage(room, damagedId, 1, cu, atkId);
+    dealDamage(room, damagedId, 1, cu, atkId!);
     if (!room.pendingAction) resumeAfterAttack(room);
   }
 }
 
-function handleBotAOE(room) {
+function handleBotAOE(room: GameRoom): void {
   const pending = room.pendingAction;
   if (!pending || pending.type !== 'WAITING_FOR_AOE') return;
   const botId = pending.targets[pending.currentTargetIndex];
@@ -420,12 +420,12 @@ function handleBotAOE(room) {
 
   let playedIdx = -1;
   if (pending.aoeType === 'BARBARIAN_INVASION') {
-    playedIdx = bot.hand.findIndex(c => c.name === 'SLASH');
-    if (playedIdx === -1 && hasCharacter(bot, 'GUAN_YU')) playedIdx = bot.hand.findIndex(c => c.suit === 'HEART' || c.suit === 'DIAMOND');
+    playedIdx = bot.hand.findIndex((c: Card) => c.name === 'SLASH');
+    if (playedIdx === -1 && hasCharacter(bot, 'GUAN_YU')) playedIdx = bot.hand.findIndex((c: Card) => c.suit === 'HEART' || c.suit === 'DIAMOND');
   } else if (pending.aoeType === 'ARROW_BARRAGE') {
-    playedIdx = bot.hand.findIndex(c => c.name === 'DODGE');
+    playedIdx = bot.hand.findIndex((c: Card) => c.name === 'DODGE');
     if (playedIdx === -1 && (hasCharacter(bot, 'ZHEN_JI') || hasCharacter(bot, 'LADY_ZHEN'))) {
-      playedIdx = bot.hand.findIndex(c => c.suit === 'SPADE' || c.suit === 'CLUB');
+      playedIdx = bot.hand.findIndex((c: Card) => c.suit === 'SPADE' || c.suit === 'CLUB');
     }
   }
 
@@ -444,7 +444,7 @@ function handleBotAOE(room) {
     }
   } else {
     const cardUsed = getCardById(room, pending.cardUsedId);
-    dealDamage(room, botId, 1, cardUsed, pending.sourcePlayerId);
+    dealDamage(room, botId, 1, cardUsed, pending.sourcePlayerId!);
     if (room.pendingAction?.type === 'WAITING_FOR_AOE') {
       pending.currentTargetIndex++;
       if (pending.currentTargetIndex >= pending.targets.length) {
@@ -460,10 +460,10 @@ function handleBotAOE(room) {
   }
 }
 
-function handleBotSeduction(room, botId) {
+function handleBotSeduction(room: GameRoom, botId: string): void {
   const bot = room.players[botId];
   if (!bot || !bot.isAlive || !room.pendingAction) return;
-  const slashIdx = bot.hand.findIndex(c => c.name === 'SLASH');
+  const slashIdx = bot.hand.findIndex((c: Card) => c.name === 'SLASH');
   if (slashIdx !== -1) {
     const card = bot.hand.splice(slashIdx, 1)[0];
     room.discardPile.push(card);
@@ -473,15 +473,15 @@ function handleBotSeduction(room, botId) {
   } else {
     const atkId = room.pendingAction?.sourcePlayerId || null;
     room.pendingAction = null;
-    dealDamage(room, botId, 1, null, atkId);
+    dealDamage(room, botId, 1, null, atkId!);
     if (!room.pendingAction) resumeAfterAttack(room);
   }
 }
 
-function handleBotZhouYu(room, botId, requiredColor) {
+function handleBotZhouYu(room: GameRoom, botId: string, requiredColor: string): void {
   const bot = room.players[botId];
   if (!bot || !bot.isAlive || !room.pendingAction) return;
-  const matchingIdx = bot.hand.findIndex(c => {
+  const matchingIdx = bot.hand.findIndex((c: Card) => {
     const color = (c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'RED' : 'BLACK';
     return color === requiredColor;
   });
@@ -494,12 +494,12 @@ function handleBotZhouYu(room, botId, requiredColor) {
   } else {
     const atkId = room.pendingAction?.sourcePlayerId || null;
     room.pendingAction = null;
-    dealDamage(room, botId, 1, null, atkId);
+    dealDamage(room, botId, 1, null, atkId!);
     if (!room.pendingAction) resumeAfterAttack(room);
   }
 }
 
-function handleBotBumperPick(room) {
+function handleBotBumperPick(room: GameRoom): void {
   if (!room.pendingAction || room.pendingAction.type !== 'WAITING_FOR_BUMPER_PICK') return;
   const pickerId = room.pendingAction.currentPickerId;
   const picker = room.players[pickerId];
@@ -514,7 +514,7 @@ function handleBotBumperPick(room) {
 
   if (room.bumperHarvestCards.length > 0) {
     const myIdx = room.turnOrder.indexOf(pickerId);
-    let nextPickerId = null;
+    let nextPickerId: string | null = null;
     for (let i = 1; i < room.turnOrder.length; i++) {
       const tid = room.turnOrder[(myIdx + i) % room.turnOrder.length];
       if (room.players[tid]?.isAlive) { nextPickerId = tid; break; }
@@ -539,14 +539,14 @@ function handleBotBumperPick(room) {
   }
 }
 
-function handleBotBorrowSlash(room) {
+function handleBotBorrowSlash(room: GameRoom): void {
   const pending = room.pendingAction;
   if (!pending || pending.type !== 'WAITING_FOR_BORROW_SLASH') return;
-  const botId = pending.targetPlayerId;
+  const botId = pending.targetPlayerId!;
   const bot = room.players[botId];
   if (!bot?.isAlive) return;
 
-  const slashIdx = bot.hand.findIndex(c => c.name === 'SLASH');
+  const slashIdx = bot.hand.findIndex((c: Card) => c.name === 'SLASH');
   if (slashIdx !== -1) {
     const slashCard = bot.hand.splice(slashIdx, 1)[0];
     room.discardPile.push(slashCard);
@@ -556,15 +556,15 @@ function handleBotBorrowSlash(room) {
       type: 'WAITING_FOR_DODGE', sourcePlayerId: botId, targetPlayerId: pending.victimId,
       damage, cardUsedId: slashCard.id, originalAttackerId: pending.sourcePlayerId,
       timeoutAt: Date.now() + 15000, dodgeNeeded: hasCharacter(bot, 'LV_BU') ? 2 : 1,
-      damageType: bot.equipment?.weapon?.name === 'FEATHERED_FAN' ? 'FIRE' : 'NORMAL'
+      damageType: (bot.equipment?.weapon as Card)?.name === 'FEATHERED_FAN' ? 'FIRE' : 'NORMAL'
     };
     room._broadcastFn && room._broadcastFn();
-    if (room.players[pending.victimId]?.isBot) setTimeout(() => handleBotDodge(room, pending.victimId, damage), 1200);
+    if (room.players[pending.victimId!]?.isBot) setTimeout(() => handleBotDodge(room, pending.victimId!, damage), 1200);
   } else {
     if (bot.equipment?.weapon) {
-      const weapon = bot.equipment.weapon;
+      const weapon = bot.equipment.weapon as Card;
       bot.equipment.weapon = null;
-      const playerA = room.players[pending.sourcePlayerId];
+      const playerA = room.players[pending.sourcePlayerId!];
       if (playerA) playerA.hand.push(weapon);
     }
     room.pendingAction = null;
@@ -573,7 +573,7 @@ function handleBotBorrowSlash(room) {
   }
 }
 
-module.exports = {
+export {
   runBotTurn, botWantsToAttack,
   handleBotDodge, handleBotDuelSlash, handleBotAOE,
   handleBotSeduction, handleBotZhouYu,

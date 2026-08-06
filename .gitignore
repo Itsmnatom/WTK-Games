@@ -20,11 +20,24 @@ Thumbs.db
 *.swp
 *.sublime-project
 
-# Environment variables & Logs
+# Environment variables (ห้าม commit — เก็บ secret keys)
 .env
 .env.local
+.env.*.local
+# .env.example → commit ได้ (ไม่มี secret จริง)
 logs/
 *.log
 
+# Temp generated PDF/HTML/PPTX reports
+weekly_report.*
+generate_pdf.js
+generate_slides.js
+generate_readme_slides.js
+*.pdf
+*.pptx
+*_print.html
+*_slides.md
+
 skill*
 AGENTS*
+
