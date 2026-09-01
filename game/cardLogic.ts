@@ -105,9 +105,11 @@ function executeOriginalAction(room: GameRoom, action: ActionData): void {
     if (!targetPlayer?.isAlive || (hasCharacter(targetPlayer, 'ZHUGE_LIANG') && targetPlayer.hand.length === 0)) {
       resumeAfterAttack(room); room._broadcastFn && room._broadcastFn(); return;
     }
+    const isSourceLuBu = hasCharacter(player, 'LV_BU') || hasCharacter(player, 'LU_BU');
+    const slashNeeded = isSourceLuBu ? 2 : 1;
     room.pendingAction = {
       type: 'WAITING_FOR_SLASH_DUEL', sourcePlayerId: sourceId, targetPlayerId: targetId,
-      currentPlayerToSlash: targetId, cardUsedId: cardUsed?.id, damage: 1, timeoutAt: Date.now() + 15000
+      currentPlayerToSlash: targetId, cardUsedId: cardUsed?.id, damage: 1, slashNeeded, timeoutAt: Date.now() + 15000
     };
     room._broadcastFn && room._broadcastFn();
     if (targetPlayer.isBot) setTimeout(() => { if (room.pendingAction) handleBotDuelSlash(room); }, 1200);
@@ -217,17 +219,33 @@ function handleUseCard(room: GameRoom, socket: SocketLike | null, data: any): vo
   if (playerId !== currentTurnPlayerId || room.currentPhase !== 'PLAY') return _err(socket, 'ไม่ใช่เทิร์นของคุณ หรือไม่ใช่ช่วงร่ายการ์ด');
   if (room.pendingAction) return _err(socket, 'กรุณารอการประมวลผลก่อนหน้า');
 
-  const cardIndex = player.hand.findIndex((c: Card) => c.id === cardId);
-  if (cardIndex === -1) return _err(socket, 'ไม่พบการ์ดใบนี้อยู่บนมือของคุณ');
-  const cardUsed = player.hand[cardIndex];
+  let cardIndex = player.hand.findIndex((c: Card) => c.id === cardId);
+  let cardUsed: Card | null = cardIndex !== -1 ? player.hand[cardIndex] : null;
+  let isEquipUsed = false;
+  let equipSlotUsed: string | null = null;
 
-  if (player.slashedThisTurn && cardUsed.type === 'EQUIPMENT') return _err(socket, 'คุณใช้ SLASH ไปแล้วในเทิร์นนี้ ไม่สามารถใช้การ์ดอุปกรณ์เพิ่มได้');
+  if (!cardUsed && player.equipment) {
+    const slots = ['weapon', 'armor', 'offensiveHorse', 'defensiveHorse', 'treasure'] as const;
+    for (const slot of slots) {
+      if ((player.equipment[slot] as Card)?.id === cardId) {
+        cardUsed = player.equipment[slot] as Card;
+        isEquipUsed = true;
+        equipSlotUsed = slot;
+        break;
+      }
+    }
+  }
+
+  if (!cardUsed) return _err(socket, 'ไม่พบการ์ดใบนี้อยู่บนมือหรืออุปกรณ์ของคุณ');
+
+  if (player.slashedThisTurn && cardUsed.type === 'EQUIPMENT' && !isEquipUsed) return _err(socket, 'คุณใช้ SLASH ไปแล้วในเทิร์นนี้ ไม่สามารถใช้การ์ดอุปกรณ์เพิ่มได้');
 
   let effectiveCardName = cardUsed.name;
-  if (playAs === 'SLASH') {
+  if (playAs === 'SLASH' || isEquipUsed) {
     const isGuanYuSlash = hasCharacter(player, 'GUAN_YU') && (cardUsed.suit === 'HEART' || cardUsed.suit === 'DIAMOND');
-    const isZhaoYunSlash = hasCharacter(player, 'ZHAO_YUN') && cardUsed.name === 'DODGE';
+    const isZhaoYunSlash = hasCharacter(player, 'ZHAO_YUN') && cardUsed.name === 'DODGE' && !isEquipUsed;
     if (isGuanYuSlash || isZhaoYunSlash) effectiveCardName = 'SLASH';
+    else if (isEquipUsed) return _err(socket, 'การ์ดอุปกรณ์ไม่สามารถแปลงเป็น SLASH ได้ (ต้องเป็นการ์ดสีแดงของกวนอู)');
     else return _err(socket, 'การ์ดไม่สามารถแปลงเป็น SLASH ได้');
   }
 
@@ -246,7 +264,15 @@ function handleUseCard(room: GameRoom, socket: SocketLike | null, data: any): vo
 
     const damage = player.wineActive ? 2 : 1;
     player.wineActive = false;
-    player.hand.splice(cardIndex, 1);
+
+    if (isEquipUsed && equipSlotUsed) {
+      player.equipment[equipSlotUsed as keyof typeof player.equipment] = null;
+      room.discardPile.push(cardUsed);
+      if (cardUsed.name === 'SILVER_LION_HELMET') player.hp = Math.min(player.maxHp, player.hp + 1);
+    } else {
+      player.hand.splice(cardIndex, 1);
+    }
+
     room.attacksPlayedInTurn += 1;
     player.slashedThisTurn = true;
 
@@ -570,10 +596,21 @@ function handleResolvePending(room: GameRoom, socket: SocketLike | null, data: a
 
     if (pending.type === 'WAITING_FOR_SLASH_DUEL') {
       pending.eightTrigramsUsed = false;
-      pending.currentPlayerToSlash = pending.currentPlayerToSlash === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
-      pending.timeoutAt = Date.now() + 15000;
-      room._broadcastFn && room._broadcastFn();
-      if (room.players[pending.currentPlayerToSlash]?.isBot) setTimeout(() => handleBotDuelSlash(room), 1200);
+      pending.slashNeeded = (pending.slashNeeded || 1) - 1;
+      if (pending.slashNeeded <= 0) {
+        const nextSlashPlayerId = pending.currentPlayerToSlash === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
+        const nextOpponent = room.players[pending.currentPlayerToSlash];
+        const isNextOpponentLuBu = hasCharacter(nextOpponent, 'LV_BU') || hasCharacter(nextOpponent, 'LU_BU');
+        pending.currentPlayerToSlash = nextSlashPlayerId;
+        pending.slashNeeded = isNextOpponentLuBu ? 2 : 1;
+        pending.timeoutAt = Date.now() + 15000;
+        room._broadcastFn && room._broadcastFn();
+        if (room.players[pending.currentPlayerToSlash]?.isBot) setTimeout(() => handleBotDuelSlash(room), 1200);
+      } else {
+        pending.timeoutAt = Date.now() + 15000;
+        room._broadcastFn && room._broadcastFn();
+        if (room.players[pending.currentPlayerToSlash]?.isBot) setTimeout(() => handleBotDuelSlash(room), 600);
+      }
       return;
     }
     if (pending.type === 'WAITING_FOR_AOE') {

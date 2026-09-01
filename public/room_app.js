@@ -2089,7 +2089,8 @@
         const opponentId = myPlayerId === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
         const opponent = gameState.players[opponentId];
         pendingAttackerName.textContent = `กำลังดวลกับ ${opponent ? opponent.name : 'ศัตรู'}`;
-        btnDodge.textContent = 'สู้กลับด้วย SLASH 1 ใบ';
+        const needed = pending.slashNeeded || 1;
+        btnDodge.textContent = needed > 1 ? `สู้กลับด้วย SLASH (${needed} ใบ)` : 'สู้กลับด้วย SLASH 1 ใบ';
         btnTakeDamage.textContent = 'ยอมแพ้และรับความเสียหาย (1 HP)';
       } else if (pending.type === 'WAITING_FOR_AOE') {
         const aoeName = pending.aoeType === 'BARBARIAN_INVASION' ? 'คนเถื่อนบุกรุก!' : 'ธนูหมื่นดอก!';

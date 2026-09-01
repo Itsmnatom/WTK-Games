@@ -45,6 +45,14 @@ function runBotTurn(room, botId) {
         return;
     }
     let actionTaken = false;
+    // 0. Huang Gai Ku Rou if HP >= 3
+    if (!actionTaken && (0, phaseLogic_1.hasCharacter)(bot, 'HUANG_GAI') && bot.hp >= 3) {
+        bot.hp -= 1;
+        (0, phaseLogic_1.drawCards)(room, 2).forEach((c) => bot.hand.push(c));
+        room._emitAll && room._emitAll('card_played', { playerId: botId, cardName: 'สกิล Ku Rou (โบยตนเอง)' });
+        room._broadcastFn && room._broadcastFn();
+        actionTaken = true;
+    }
     // 1. Heal with PEACH if damaged
     if (!actionTaken && bot.hp < bot.maxHp) {
         const peachIdx = bot.hand.findIndex((c) => c.name === 'PEACH');
@@ -394,11 +402,24 @@ function handleBotDuelSlash(room) {
     const bot = room.players[botId];
     if (!bot || !bot.isAlive)
         return;
-    const slashIdx = bot.hand.findIndex((c) => c.name === 'SLASH');
-    if (slashIdx !== -1) {
-        const card = bot.hand.splice(slashIdx, 1)[0];
-        room.discardPile.push(card);
-        pending.currentPlayerToSlash = pending.currentPlayerToSlash === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
+    const needed = pending.slashNeeded || 1;
+    let slashes = [];
+    bot.hand.forEach((c) => {
+        if (c.name === 'SLASH' || ((0, phaseLogic_1.hasCharacter)(bot, 'ZHAO_YUN') && c.name === 'DODGE') || ((0, phaseLogic_1.hasCharacter)(bot, 'GUAN_YU') && (c.suit === 'HEART' || c.suit === 'DIAMOND'))) {
+            slashes.push(c);
+        }
+    });
+    if (slashes.length >= needed) {
+        for (let i = 0; i < needed; i++) {
+            const card = slashes[i];
+            const idx = bot.hand.findIndex(c => c.id === card.id);
+            if (idx !== -1)
+                room.discardPile.push(bot.hand.splice(idx, 1)[0]);
+        }
+        const nextSlashPlayerId = pending.currentPlayerToSlash === pending.sourcePlayerId ? pending.targetPlayerId : pending.sourcePlayerId;
+        const isBotLuBu = (0, phaseLogic_1.hasCharacter)(bot, 'LV_BU') || (0, phaseLogic_1.hasCharacter)(bot, 'LU_BU');
+        pending.currentPlayerToSlash = nextSlashPlayerId;
+        pending.slashNeeded = isBotLuBu ? 2 : 1;
         pending.timeoutAt = Date.now() + 15000;
         room._broadcastFn && room._broadcastFn();
         if (room.players[pending.currentPlayerToSlash]?.isBot) {
@@ -590,31 +611,34 @@ function handleBotBorrowSlash(room) {
         return;
     const botId = pending.targetPlayerId;
     const bot = room.players[botId];
-    if (!bot?.isAlive)
+    if (!bot || !bot.isAlive)
         return;
-    const slashIdx = bot.hand.findIndex((c) => c.name === 'SLASH');
+    const slashIdx = bot.hand.findIndex((c) => c.name === 'SLASH' || ((0, phaseLogic_1.hasCharacter)(bot, 'ZHAO_YUN') && c.name === 'DODGE') || ((0, phaseLogic_1.hasCharacter)(bot, 'GUAN_YU') && (c.suit === 'HEART' || c.suit === 'DIAMOND')));
     if (slashIdx !== -1) {
-        const slashCard = bot.hand.splice(slashIdx, 1)[0];
-        room.discardPile.push(slashCard);
+        const card = bot.hand.splice(slashIdx, 1)[0];
+        room.discardPile.push(card);
         const damage = bot.wineActive ? 2 : 1;
         bot.wineActive = false;
+        const dodgeNeeded = ((0, phaseLogic_1.hasCharacter)(bot, 'LV_BU') || (0, phaseLogic_1.hasCharacter)(bot, 'LU_BU')) ? 2 : 1;
         room.pendingAction = {
             type: 'WAITING_FOR_DODGE', sourcePlayerId: botId, targetPlayerId: pending.victimId,
-            damage, cardUsedId: slashCard.id, originalAttackerId: pending.sourcePlayerId,
-            timeoutAt: Date.now() + 15000, dodgeNeeded: (0, phaseLogic_1.hasCharacter)(bot, 'LV_BU') ? 2 : 1,
-            damageType: bot.equipment?.weapon?.name === 'FEATHERED_FAN' ? 'FIRE' : 'NORMAL'
+            damage, cardUsedId: card.id, originalAttackerId: pending.sourcePlayerId,
+            dodgeNeeded, damageType: bot.equipment?.weapon?.name === 'FEATHERED_FAN' ? 'FIRE' : 'NORMAL',
+            timeoutAt: Date.now() + 15000
         };
         room._broadcastFn && room._broadcastFn();
-        if (room.players[pending.victimId]?.isBot)
+        const playerC = room.players[pending.victimId];
+        if (playerC?.isBot)
             setTimeout(() => handleBotDodge(room, pending.victimId, damage), 1200);
     }
     else {
-        if (bot.equipment?.weapon) {
-            const weapon = bot.equipment.weapon;
+        const playerA = room.players[pending.sourcePlayerId];
+        if (bot.equipment?.weapon && playerA) {
+            const w = bot.equipment.weapon;
+            playerA.hand.push(w);
             bot.equipment.weapon = null;
-            const playerA = room.players[pending.sourcePlayerId];
-            if (playerA)
-                playerA.hand.push(weapon);
+            if (w.name === 'SILVER_LION_HELMET')
+                bot.hp = Math.min(bot.maxHp, bot.hp + 1);
         }
         room.pendingAction = null;
         (0, combatLogic_1.resumeAfterAttack)(room);

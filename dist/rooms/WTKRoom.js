@@ -797,10 +797,25 @@ class WTKRoom extends colyseus_1.Room {
                     gs.discardPile.push(player.hand.splice(idx, 1)[0]);
                     count++;
                 }
+                else if (player.equipment) {
+                    const slots = ['weapon', 'armor', 'offensiveHorse', 'defensiveHorse', 'treasure'];
+                    for (const slot of slots) {
+                        if (player.equipment[slot]?.id === cid) {
+                            const eq = player.equipment[slot];
+                            gs.discardPile.push(eq);
+                            player.equipment[slot] = null;
+                            count++;
+                            if (eq.name === 'SILVER_LION_HELMET')
+                                player.hp = Math.min(player.maxHp, player.hp + 1);
+                            break;
+                        }
+                    }
+                }
             });
             if (count > 0) {
                 (0, phaseLogic_1.drawCards)(gs, count).forEach(c => player.hand.push(c));
                 player.skillResignationUsed = true;
+                this.broadcast('card_played', { playerId, cardName: 'สกิล Zhiheng (ผลัดการ์ด)' });
                 this._broadcastAll();
             }
         });
@@ -809,22 +824,50 @@ class WTKRoom extends colyseus_1.Room {
             if (!playerId)
                 return;
             const player = gs.players[playerId];
-            if (!(0, phaseLogic_1.hasCharacter)(player, 'LIU_BEI') || gs.currentPhase !== 'PLAY' || player.liuBeiHealedThisTurn)
+            if (!(0, phaseLogic_1.hasCharacter)(player, 'LIU_BEI') || gs.currentPhase !== 'PLAY')
                 return;
-            const { targetPlayerId, cardId } = data;
+            const { targetPlayerId, cardId, cardIds } = data;
             const target = gs.players[targetPlayerId];
-            if (!target?.isAlive)
+            if (!target?.isAlive || targetPlayerId === playerId)
                 return;
-            const cardIdx = player.hand.findIndex(c => c.id === cardId);
-            if (cardIdx === -1)
+            const toGiveIds = cardIds || (cardId ? [cardId] : []);
+            if (toGiveIds.length === 0)
                 return;
-            const card = player.hand.splice(cardIdx, 1)[0];
-            target.hand.push(card);
-            if (target.hp < target.maxHp) {
-                player.hp = Math.min(player.maxHp, player.hp + 1);
-                player.liuBeiHealedThisTurn = true;
+            let givenCount = 0;
+            toGiveIds.forEach((cid) => {
+                const idx = player.hand.findIndex(c => c.id === cid);
+                if (idx !== -1) {
+                    const card = player.hand.splice(idx, 1)[0];
+                    target.hand.push(card);
+                    givenCount++;
+                }
+            });
+            if (givenCount > 0) {
+                player.cardsGivenThisTurn = (player.cardsGivenThisTurn || 0) + givenCount;
+                if (player.cardsGivenThisTurn >= 2 && !player.liuBeiHealedThisTurn) {
+                    player.hp = Math.min(player.maxHp, player.hp + 1);
+                    player.liuBeiHealedThisTurn = true;
+                }
+                this.broadcast('card_played', { playerId, cardName: 'สกิล Rende (ปันสุข)', targetId: targetPlayerId });
+                this._broadcastAll();
             }
-            this._broadcastAll();
+        });
+        this.onMessage('use_huang_gai_skill', (client) => {
+            const playerId = this._getPlayerIdByClient(client);
+            if (!playerId)
+                return;
+            const player = gs.players[playerId];
+            if (!(0, phaseLogic_1.hasCharacter)(player, 'HUANG_GAI') || gs.turnOrder[gs.currentTurnIndex] !== playerId || gs.currentPhase !== 'PLAY')
+                return;
+            player.hp -= 1;
+            (0, phaseLogic_1.drawCards)(gs, 2).forEach(c => player.hand.push(c));
+            this.broadcast('card_played', { playerId, cardName: 'สกิล Ku Rou (โบยตนเอง)' });
+            if (player.hp <= 0) {
+                (0, combatLogic_1.startDyingPhase)(gs, playerId, null);
+            }
+            else {
+                this._broadcastAll();
+            }
         });
         this.onMessage('use_diao_chan_skill', (client, data) => {
             const playerId = this._getPlayerIdByClient(client);

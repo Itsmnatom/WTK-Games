@@ -93,8 +93,14 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
     // Chain reaction for elemental
     if (targetPlayer.isChained && (damageType === 'FIRE' || damageType === 'THUNDER')) {
         targetPlayer.isChained = false;
+        const chainedVictims = [];
         room.turnOrder.forEach((pid) => {
             if (pid !== targetPlayerId && room.players[pid]?.isAlive && room.players[pid].isChained) {
+                chainedVictims.push(pid);
+            }
+        });
+        chainedVictims.forEach((pid) => {
+            if (room.players[pid]?.isAlive) {
                 room.players[pid].isChained = false;
                 dealDamage(room, pid, finalDamage, cardUsed, attackerId, damageType);
             }
@@ -139,6 +145,15 @@ function dealDamage(room, targetPlayerId, damage, cardUsed, attackerId, damageTy
 // ─── Dying Phase ──────────────────────────────────────────────────────────────
 function startDyingPhase(room, dyingPlayerId, attackerId = null) {
     const dyingPlayer = room.players[dyingPlayerId];
+    if (!dyingPlayer || !dyingPlayer.isAlive)
+        return;
+    if (room.pendingAction && room.pendingAction.type === 'DYING') {
+        room.dyingQueue = room.dyingQueue || [];
+        if (!room.dyingQueue.some((item) => item.dyingPlayerId === dyingPlayerId)) {
+            room.dyingQueue.push({ dyingPlayerId, attackerId });
+        }
+        return;
+    }
     const needed = 1 - dyingPlayer.hp;
     room.pendingAction = {
         type: 'DYING',
@@ -179,7 +194,13 @@ function checkDyingAskerBot(room) {
                 if (pending.peachNeeded <= 0) {
                     room.pendingAction = null;
                     room._broadcastFn && room._broadcastFn();
-                    resumeAfterAttack(room);
+                    if (room.dyingQueue && room.dyingQueue.length > 0) {
+                        const nextDying = room.dyingQueue.shift();
+                        startDyingPhase(room, nextDying.dyingPlayerId, nextDying.attackerId);
+                    }
+                    else {
+                        resumeAfterAttack(room);
+                    }
                 }
                 else {
                     checkDyingAskerBot(room);
@@ -255,7 +276,11 @@ function advanceDyingAsker(room) {
         const isGameOver = checkGameOver(room);
         room._broadcastFn && room._broadcastFn();
         if (!isGameOver) {
-            if (room.turnOrder[room.currentTurnIndex] === pending.targetPlayerId) {
+            if (room.dyingQueue && room.dyingQueue.length > 0) {
+                const nextDying = room.dyingQueue.shift();
+                startDyingPhase(room, nextDying.dyingPlayerId, nextDying.attackerId);
+            }
+            else if (room.turnOrder[room.currentTurnIndex] === pending.targetPlayerId) {
                 (0, phaseLogic_1.endPlayerTurn)(room);
             }
             else {

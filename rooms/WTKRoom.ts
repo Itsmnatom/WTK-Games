@@ -24,7 +24,7 @@ import {
 } from '../game/cardLogic';
 import { recordPlayerStats, saveMatchHistory } from '../db/database';
 import pluginManager from '../plugins/plugin_manager';
-import type { GameRoom, Player, SocketLike } from '../game/types';
+import type { GameRoom, Player, Card, SocketLike } from '../game/types';
 
 // ─── Bot name pool ────────────────────────────────────────────────────────────
 const BOT_NAMES = [
@@ -695,25 +695,79 @@ export class WTKRoom extends Room<WTKState> {
       let count = 0;
       (data.cardIds || []).forEach((cid: string) => {
         const idx = player.hand.findIndex(c => c.id === cid);
-        if (idx !== -1) { gs.discardPile.push(player.hand.splice(idx, 1)[0]); count++; }
+        if (idx !== -1) {
+          gs.discardPile.push(player.hand.splice(idx, 1)[0]);
+          count++;
+        } else if (player.equipment) {
+          const slots = ['weapon', 'armor', 'offensiveHorse', 'defensiveHorse', 'treasure'] as const;
+          for (const slot of slots) {
+            if ((player.equipment[slot] as Card)?.id === cid) {
+              const eq = player.equipment[slot] as Card;
+              gs.discardPile.push(eq);
+              player.equipment[slot] = null;
+              count++;
+              if (eq.name === 'SILVER_LION_HELMET') player.hp = Math.min(player.maxHp, player.hp + 1);
+              break;
+            }
+          }
+        }
       });
-      if (count > 0) { drawCards(gs, count).forEach(c => player.hand.push(c)); player.skillResignationUsed = true; this._broadcastAll(); }
+      if (count > 0) {
+        drawCards(gs, count).forEach(c => player.hand.push(c));
+        player.skillResignationUsed = true;
+        this.broadcast('card_played', { playerId, cardName: 'สกิล Zhiheng (ผลัดการ์ด)' });
+        this._broadcastAll();
+      }
     });
 
     this.onMessage('use_liu_bei_skill', (client, data) => {
       const playerId = this._getPlayerIdByClient(client);
       if (!playerId) return;
       const player = gs.players[playerId];
-      if (!hasCharacter(player, 'LIU_BEI') || gs.currentPhase !== 'PLAY' || player.liuBeiHealedThisTurn) return;
-      const { targetPlayerId, cardId } = data;
+      if (!hasCharacter(player, 'LIU_BEI') || gs.currentPhase !== 'PLAY') return;
+      const { targetPlayerId, cardId, cardIds } = data;
       const target = gs.players[targetPlayerId];
-      if (!target?.isAlive) return;
-      const cardIdx = player.hand.findIndex(c => c.id === cardId);
-      if (cardIdx === -1) return;
-      const card = player.hand.splice(cardIdx, 1)[0];
-      target.hand.push(card);
-      if (target.hp < target.maxHp) { player.hp = Math.min(player.maxHp, player.hp + 1); player.liuBeiHealedThisTurn = true; }
-      this._broadcastAll();
+      if (!target?.isAlive || targetPlayerId === playerId) return;
+
+      const toGiveIds: string[] = cardIds || (cardId ? [cardId] : []);
+      if (toGiveIds.length === 0) return;
+
+      let givenCount = 0;
+      toGiveIds.forEach((cid: string) => {
+        const idx = player.hand.findIndex(c => c.id === cid);
+        if (idx !== -1) {
+          const card = player.hand.splice(idx, 1)[0];
+          target.hand.push(card);
+          givenCount++;
+        }
+      });
+
+      if (givenCount > 0) {
+        player.cardsGivenThisTurn = (player.cardsGivenThisTurn || 0) + givenCount;
+        if (player.cardsGivenThisTurn >= 2 && !player.liuBeiHealedThisTurn) {
+          player.hp = Math.min(player.maxHp, player.hp + 1);
+          player.liuBeiHealedThisTurn = true;
+        }
+        this.broadcast('card_played', { playerId, cardName: 'สกิล Rende (ปันสุข)', targetId: targetPlayerId });
+        this._broadcastAll();
+      }
+    });
+
+    this.onMessage('use_huang_gai_skill', (client) => {
+      const playerId = this._getPlayerIdByClient(client);
+      if (!playerId) return;
+      const player = gs.players[playerId];
+      if (!hasCharacter(player, 'HUANG_GAI') || gs.turnOrder[gs.currentTurnIndex] !== playerId || gs.currentPhase !== 'PLAY') return;
+
+      player.hp -= 1;
+      drawCards(gs, 2).forEach(c => player.hand.push(c));
+      this.broadcast('card_played', { playerId, cardName: 'สกิล Ku Rou (โบยตนเอง)' });
+
+      if (player.hp <= 0) {
+        startDyingPhase(gs, playerId, null);
+      } else {
+        this._broadcastAll();
+      }
     });
 
     this.onMessage('use_diao_chan_skill', (client, data) => {
