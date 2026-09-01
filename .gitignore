@@ -28,16 +28,30 @@ Thumbs.db
 logs/
 *.log
 
-# Temp generated PDF/HTML/PPTX reports
+# Temp generated PDF/HTML/PPTX reports & scripts
 weekly_report.*
 generate_pdf.js
+generate_a4_pdf.js
 generate_slides.js
 generate_readme_slides.js
 *.pdf
 *.pptx
 *_print.html
 *_slides.md
+SLIDE.md
+scratch/
+
+# Compiled JS files (from TypeScript tsconfig outDir or root compile)
+colyseus_server.js
+db/database.js
+game/botAI.js
+game/cardLogic.js
+game/combatLogic.js
+game/phaseLogic.js
+rooms/WTKRoom.js
+rooms/schema/WTKSchema.js
 
 skill*
 AGENTS*
+
 

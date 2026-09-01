@@ -120,24 +120,29 @@ graph TD
 
 ```
 WTK-Games/
-├── colyseus_server.js      # Entry Point — Colyseus 0.15 + Express (PORT 3001)
-├── server.js               # Legacy Socket.IO (ไม่ active — npm run start:legacy)
+├── colyseus_server.ts      # Entry Point — Colyseus 0.15 + Express (PORT 3001)
+├── tsconfig.json           # TypeScript Configuration
+├── dist/                   # Compiled JavaScript output (npm run build)
+│   ├── colyseus_server.js
+│   ├── game/
+│   ├── rooms/
+│   └── db/
 ├── rules.json              # ข้อกำหนดและกฎกติกาเกมฉบับมาตรฐาน
 ├── AGENTS.md               # ข้อกำหนดสถาปัตยกรรมและ Skill Registry
 ├── README.md               # คู่มือการเล่นและสื่อการเรียนการสอน
 ├── game/
-│   ├── phaseLogic.js       # Deck, Turn Phases, Role Assignment, HP Setup
-│   ├── cardLogic.js        # Card Use Handlers, Negate Window, Action Chain
-│   ├── combatLogic.js      # dealDamage, checkGameOver, Dying Phase
-│   └── botAI.js            # Bot AI Brain — runBotTurn + Response Handlers
+│   ├── types.ts            # Shared Interfaces & Type Definitions
+│   ├── phaseLogic.ts       # Deck, Turn Phases, Role Assignment, HP Setup
+│   ├── cardLogic.ts        # Card Use Handlers, Negate Window, Action Chain
+│   ├── combatLogic.ts      # dealDamage, checkGameOver, Dying Phase
+│   └── botAI.ts            # Bot AI Brain — runBotTurn + Response Handlers
 ├── rooms/
-│   ├── WTKRoom.js          # Colyseus Room Class — onMessage Handlers ทั้งหมด
-│   └── schema/WTKSchema.js # Colyseus Schema — Delta Encoding State
+│   ├── WTKRoom.ts          # Colyseus Room Class — onMessage Handlers ทั้งหมด
+│   └── schema/WTKSchema.ts # Colyseus Schema — Delta Encoding State
 ├── db/
-│   ├── database.js         # SQLite Helpers (initDatabase, recordPlayerStats, getLeaderboard)
-│   └── view_db.js          # Quick DB Inspection: node db/view_db.js
+│   └── database.ts         # SQLite Helpers (initDatabase, recordPlayerStats, getLeaderboard)
 ├── plugins/
-│   └── plugin_manager.js   # Plugin System + SoundEffectsPlugin v1.2.0
+│   └── plugin_manager.ts   # Plugin System + SoundEffectsPlugin v1.2.0
 ├── public/
 │   ├── colyseus_client.js  # Socket.IO Compat Layer สำหรับ Colyseus.Client
 │   ├── room.html           # หน้าจอเกมหลัก (Glassmorphism 2.0 UI)
@@ -278,7 +283,10 @@ d:\test\db\wtk_game.sqlite
 
 | เวอร์ชั่น | รายละเอียดการปรับปรุง (Key Changes & Feature Additions) |
 | :--- | :--- |
+| **v2.1.2** | 🎴 **3D Card Draw Animation & Complete Admin Spawner**: เพิ่มระบบอนิเมชันจั่วการ์ด 3D (`animateCardDraw`) บินเฉียงโค้งจากกองไพ่กลางสนาม (`#deck-pile`) ลงสู่มือผู้เล่น (`#hand-cards`) ด้วย GSAP 3D flip (หมุนจากหลังการ์ดมังกรทองกลับมาหน้าการ์ด) + เอฟเฟกต์ประกายไฟสว่างเมื่อร่อนลงมือ (`createLandingSparks`), พร้อมอัปเดต Admin Sandbox ให้เสกการ์ดครบ 41 ชนิดผูกระยะอาวุธอัตโนมัติและสลับขุนพลได้ครบทั้ง 12 ตัวละคร |
+| **v2.1.1** | ⚔️ **Borrowed Sword & Character Safety Fix**: แก้ไขบั๊กการ์ด `BORROWED_SWORD` (ยืมดาบฆ่าคน) ทั้ง Client (`room_app.js` เพิ่ม dictionary fallback ระยะอาวุธและกรองเป้าหมาย Step 1/Step 2) และ Server (`game/cardLogic.ts` เพิ่มการคำนวณระยะอาวุธ fallback และ `rooms/WTKRoom.ts` เพิ่มการตรวจสอบประเภทการ์ด SLASH/สกิลขุนพลเมื่อตอบรับการยืมดาบ), พร้อมสกัดกั้น `TypeError: player.character.toUpperCase` กรณี character เป็น object 100% |
 | **v2.1.0** | 📘 **TypeScript Server Migration**: ย้ายโค้ดฝั่ง Server ทั้งหมดจาก JavaScript ไปสู่ TypeScript (`colyseus_server.ts`, `game/types.ts`, `game/phaseLogic.ts`, `game/combatLogic.ts`, `game/cardLogic.ts`, `game/botAI.ts`, `rooms/WTKRoom.ts`, `rooms/schema/WTKSchema.ts`, `db/database.ts`, `plugins/plugin_manager.ts`), เพิ่ม `tsconfig.json`, คอมไพล์ลงโฟลเดอร์ `dist/`, ปรับปรุง `package.json` (`npm run build`, `npm start` -> `node dist/colyseus_server.js`, `npm test` -> `tsc && jest`), ลบไฟล์ `.js` เก่าฝั่ง Server และอัปเดต Unit Tests ทั้ง 19 ข้อให้ผ่าน 100% |
+
 | **v2.0.0** | 🧪 **Jest Unit Test Suite**: เพิ่มชุดทดสอบอัตโนมัติด้วย Jest ครอบคลุม 4 โซนหลัก (`tests/phaseLogic.test.js`, `tests/combatLogic.test.js`, `tests/cardLogic.test.js`, `tests/database.test.js`) จำนวน 19 test cases ให้ผ่าน 100% พร้อมอัปเดตคำสั่ง `npm test` ใน `package.json` (`jest --verbose --forceExit`) |
 | **v1.9.1** | 🎨 **Animation & Motion Polish**: ปรับปรุง physics-like animations ใน `public/style.css` (cubic-bezier cubic transitions, targetPulse, dramatic shake, winnerGlow, card hover/select elevation) |
 | **v1.9.0** | 🖥️ **UX/UI Overhaul**: ปรับปรุง UI หน้า Room (Lobby + Draft + Game Board) เพิ่ม imperial header, player list v2, top bar button system, action bar two-row layout, skill button pills, game over premium overlay |

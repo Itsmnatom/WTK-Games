@@ -20,6 +20,16 @@
     return ranges[name] || null;
   }
 
+  function formatCardRank(rank) {
+    if (!rank || rank === 0) return '';
+    const num = Number(rank);
+    if (num === 1) return 'A';
+    if (num === 11) return 'J';
+    if (num === 12) return 'Q';
+    if (num === 13) return 'K';
+    return String(rank);
+  }
+
   function getEquipTooltip(cardName) {
     const wRange = getWeaponRange(cardName);
     const rInfo = wRange ? ` (ระยะโจมตี: ${wRange})` : '';
@@ -209,6 +219,7 @@
   const btnLiuBeiSkill = $('btn-liu-bei-skill');
   const btnDiaoChanSkill = $('btn-diao-chan-skill');
   const btnZhouYuSkill = $('btn-zhou-yu-skill');
+  const btnHuangGaiSkill = $('btn-huang-gai-skill');
   const btnEndTurn = $('btn-end-turn');
   const targetHint = $('target-hint');
   const targetHintText = $('target-hint-text');
@@ -279,6 +290,16 @@
 
   // Bumper Harvest Container
   const bumperCardsContainer = $('bumper-cards-container');
+
+  // Guanxing & Guicai Overlays
+  const guanxingOverlay = $('guanxing-overlay');
+  const guanxingTopCards = $('guanxing-top-cards');
+  const guanxingBottomCards = $('guanxing-bottom-cards');
+  const btnGuanxingConfirm = $('btn-guanxing-confirm');
+
+  const guicaiOverlay = $('guicai-overlay');
+  const guicaiCards = $('guicai-cards');
+  const btnGuicaiPass = $('btn-guicai-pass');
 
 
   // Hero Modal
@@ -577,8 +598,11 @@
       socket.emit('join_room', { roomId: myRoomId, playerName: playerNameParam });
     }
 
-    // Note: admin_authenticate is sent AFTER room_created/room_joined to avoid race condition
-    // (player must be registered on server before authenticate can look up name)
+    // Auto-authenticate Admin if in test mode or key parameter provided
+    const adminKey = params.get('admin_key') || (isTestSandboxMode ? 'admin123' : '');
+    if (adminKey) {
+      socket.emit('admin_authenticate', { secretKey: adminKey, roomId: myRoomId });
+    }
   });
 
   socket.on('admin_auth_status', ({ isAdmin, message }) => {
@@ -611,9 +635,6 @@
     btnLobbyWaitingText.classList.add('hidden');
     const ctrl = document.getElementById('host-bot-controls');
     if (ctrl) ctrl.classList.remove('hidden');
-    // Send admin_authenticate AFTER player is registered on server (fixes race condition)
-    const adminKey = params.get('admin_key') || (isTestSandboxMode ? 'admin123' : '');
-    if (adminKey) socket.emit('admin_authenticate', { secretKey: adminKey, roomId: myRoomId });
     if (isTestSandboxMode || modeParam === 'BOT') {
       socket.emit('start_game', { roomId: myRoomId, botCount: parseInt(botCountParam) || 3 });
     }
@@ -629,9 +650,6 @@
     btnLobbyWaitingText.classList.remove('hidden');
     const ctrl = document.getElementById('host-bot-controls');
     if (ctrl) ctrl.classList.add('hidden');
-    // Send admin_authenticate AFTER player is registered on server (fixes race condition)
-    const adminKey = params.get('admin_key') || (isTestSandboxMode ? 'admin123' : '');
-    if (adminKey) socket.emit('admin_authenticate', { secretKey: adminKey, roomId: myRoomId });
   });
 
   socket.on('room_state_update', onRoomStateUpdate);
@@ -1070,18 +1088,12 @@
         } else if (selectedCard.name === 'STEAL') {
           inRange = dist <= 1;
           rangeText = inRange ? `<span style="color: #4CAF50;">[อยู่ในระยะขโมย (${dist}/1)]</span>` : `<span style="color: #F44336;">[ไกลไป (${dist}/1)]</span>`;
-        } else if (currentLobbyAction === 'BORROWED_SWORD_STEP1') {
-          const hasWeapon = !!(p.equipment && p.equipment.weapon);
-          inRange = hasWeapon;
-          rangeText = hasWeapon ? `<span style="color: #4CAF50;">[มีอาวุธ - เลือกยืมดาบได้]</span>` : `<span style="color: #F44336;">[ไม่มีอาวุธ]</span>`;
         } else if (currentLobbyAction === 'BORROWED_SWORD_STEP2' && borrowedSwordFirstTargetId) {
           const wHolder = gameState.players[borrowedSwordFirstTargetId];
-          const weaponDict = { 'ZHUGE_CROSSBOW':1,'BLUE_STEEL_SWORD':2,'SIX_SWORDS_WU':2,'KIRIN_BOW':5,'FEATHERED_FAN':4,'SERPENT_SPEAR':3,'FROST_SWORD':2,'TWO_BLADED_TRIDENT':3,'ROCK_CLEAVING_AXE':3,'GREEN_DRAGON_BLADE':3,'SKY_PIERCING_HALBERD':4,'YIN_YANG_SWORDS':2 };
-          const wCard = (wHolder && wHolder.equipment) ? wHolder.equipment.weapon : null;
-          const wRange = wCard ? (wCard.range || weaponDict[wCard.name] || 1) : 1;
+          const wRange = (wHolder && wHolder.equipment && wHolder.equipment.weapon) ? wHolder.equipment.weapon.range : 1;
           const distFromHolder = calculateClientDistance(borrowedSwordFirstTargetId, pId);
-          inRange = (distFromHolder <= wRange) && (pId !== borrowedSwordFirstTargetId);
-          rangeText = inRange ? `<span style="color: #4CAF50;">[ระยะอาวุธ (${distFromHolder}/${wRange})]</span>` : (pId === borrowedSwordFirstTargetId ? `<span style="color: #FF9800;">[ผู้ถูกยืมดาบ]</span>` : `<span style="color: #F44336;">[นอกระยะอาวุธ (${distFromHolder}/${wRange})]</span>`);
+          inRange = distFromHolder <= wRange;
+          rangeText = inRange ? `<span style="color: #4CAF50;">[ระยะดาบคนแรก (${distFromHolder}/${wRange})]</span>` : `<span style="color: #F44336;">[ไกลจากคนแรก (${distFromHolder}/${wRange})]</span>`;
         } else if (selectedCard.name === 'SABOTAGE' || selectedCard.name === 'DUEL' || selectedCard.name === 'FIRE_ATTACK' || selectedCard.name === 'IRON_CHAIN' || selectedCard.name === 'ACEDIA' || selectedCard.name === 'STARVATION' || currentLobbyAction) {
           rangeText = `<span style="color: #2196F3;">[เลือกได้]</span>`;
         }
@@ -1136,11 +1148,6 @@
         });
       }
 
-      let hpDots = '';
-      for (let j = 0; j < p.maxHp; j++) {
-        hpDots += `<div class="hp-point ${j >= p.hp ? 'empty' : ''}"></div>`;
-      }
-
       card.innerHTML = `
         <div class="opponent-header" style="cursor:pointer;" onclick="window.showHeroInfo('${p.character}')">
           <div id="opp-avatar-${pId}" class="opponent-avatar" ${avatarStyle}>${avatarContent}</div>
@@ -1149,8 +1156,14 @@
             <div class="opponent-role ${roleCss}" style="${isDead ? 'font-size: 1.2em; font-weight: bold;' : ''}">${roleLabel}${p.character ? ` · ${p.character}` : ''}</div>
           </div>
         </div>
-        <div class="hp-container" style="margin-bottom: 8px;">
-          ${p.hp <= 0 && p.isAlive ? `<span style="color: #ef4444; font-weight: bold; font-size: 11px;">🆘 ${p.hp} (ใกล้ตาย)</span>` : hpDots}
+        <div class="hp-bar-container">
+          <div class="hp-label">
+            <span>HP</span>
+            <span class="mono">${p.hp <= 0 ? (p.isAlive ? `<span style="color: #ef4444; font-weight: bold;">🆘 ${p.hp} (ใกล้ตาย)</span>` : `0`) : p.hp} / ${p.maxHp}</span>
+          </div>
+          <div class="hp-bar-track">
+            <div class="hp-bar-fill ${hpClass}" style="width: ${hpPercent}%"></div>
+          </div>
         </div>
         <div class="opponent-meta">
           <span class="meta-tag"><span class="tag-icon">🃏</span>${p.handCount} ใบ</span>
@@ -1299,116 +1312,10 @@
     if (skillBoxDesc) skillBoxDesc.innerHTML = skillDesc.replace(/\n/g, '<br>');
   }
 
-  let previousMyHandCount = 0;
-
-  function animateCardDraw(count) {
-    const deckElem = document.getElementById('deck-pile');
-    const handElem = document.getElementById('hand-cards');
-    if (!deckElem || !handElem) return;
-
-    const deckRect = deckElem.getBoundingClientRect();
-    const handRect = handElem.getBoundingClientRect();
-
-    const startX = deckRect.left + deckRect.width / 2;
-    const startY = deckRect.top + deckRect.height / 2;
-    const endX = handRect.left + handRect.width / 2;
-    const endY = handRect.top + handRect.height / 2;
-
-    for (let i = 0; i < count; i++) {
-      const flyCard = document.createElement('div');
-      flyCard.className = 'flying-card-draw';
-      flyCard.style.position = 'fixed';
-      flyCard.style.left = `${startX - 45}px`;
-      flyCard.style.top = `${startY - 65}px`;
-      flyCard.style.width = '90px';
-      flyCard.style.height = '130px';
-      flyCard.style.zIndex = '99999';
-      flyCard.style.pointerEvents = 'none';
-      flyCard.style.borderRadius = '10px';
-      flyCard.style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
-      flyCard.style.border = '2px solid #f59e0b';
-      flyCard.style.boxShadow = '0 0 24px rgba(245, 158, 11, 0.85), inset 0 0 12px rgba(245, 158, 11, 0.4)';
-      flyCard.style.transformStyle = 'preserve-3d';
-
-      flyCard.innerHTML = `
-        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f59e0b;font-size:32px;font-weight:bold;background:radial-gradient(circle, rgba(245,158,11,0.2) 0%, transparent 70%);">
-          🐉
-          <span style="font-size:9px;color:#fbbf24;letter-spacing:1px;margin-top:4px;">WTK CARD</span>
-        </div>
-      `;
-      document.body.appendChild(flyCard);
-
-      const delay = i * 0.12;
-
-      if (typeof gsap !== 'undefined') {
-        gsap.set(flyCard, { scale: 0.3, rotationY: 180, rotationZ: -25, opacity: 0 });
-        gsap.to(flyCard, {
-          duration: 0.55,
-          delay: delay,
-          x: endX - startX,
-          y: endY - startY,
-          scale: 1,
-          rotationY: 0,
-          rotationZ: 0,
-          opacity: 1,
-          ease: 'power2.out',
-          onComplete: () => {
-            createLandingSparks(endX, endY);
-            flyCard.remove();
-          }
-        });
-      } else {
-        setTimeout(() => { flyCard.remove(); }, 600);
-      }
-    }
-  }
-
-  function createLandingSparks(x, y) {
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.left = `${x}px`;
-    container.style.top = `${y}px`;
-    container.style.pointerEvents = 'none';
-    container.style.zIndex = '99999';
-    document.body.appendChild(container);
-
-    for (let i = 0; i < 10; i++) {
-      const spark = document.createElement('div');
-      spark.style.position = 'absolute';
-      spark.style.width = '6px';
-      spark.style.height = '6px';
-      spark.style.borderRadius = '50%';
-      spark.style.background = '#f59e0b';
-      spark.style.boxShadow = '0 0 10px #fbbf24';
-      container.appendChild(spark);
-
-      const angle = (i / 10) * Math.PI * 2;
-      const dist = 35 + Math.random() * 25;
-      if (typeof gsap !== 'undefined') {
-        gsap.to(spark, {
-          x: Math.cos(angle) * dist,
-          y: Math.sin(angle) * dist,
-          opacity: 0,
-          scale: 0.2,
-          duration: 0.45,
-          ease: 'power1.out',
-          onComplete: () => spark.remove()
-        });
-      }
-    }
-    setTimeout(() => container.remove(), 550);
-  }
-
   function renderHand() {
     handCards.innerHTML = '';
     const me = gameState.players[myPlayerId];
     if (!me || !me.hand) return;
-
-    const drawnDiff = me.hand.length - previousMyHandCount;
-    if (drawnDiff > 0 && previousMyHandCount > 0) {
-      animateCardDraw(Math.min(drawnDiff, 5));
-    }
-    previousMyHandCount = me.hand.length;
 
     // Dispatch hand cards to Phaser canvas renderer
     window.dispatchEvent(new CustomEvent('updatePhaserHand', { detail: { cards: me.hand } }));
@@ -1438,8 +1345,6 @@
         }
       }
 
-
-
       let displayName = dictInfo.name;
       const wRange = getWeaponRange(c.name);
       if (wRange > 0) {
@@ -1449,15 +1354,17 @@
       const suitClass = (c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade';
       const suitSymbol = c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣';
       
+      const rankDisplay = formatCardRank(c.rank);
+      
       cardDiv.innerHTML = `
         ${picHtml}
         <div class="card-top ${suitClass}">
-          <span>${c.rank}</span>
+          <span>${rankDisplay}</span>
           <span class="card-suit">${suitSymbol}</span>
         </div>
         <div class="card-name-v2" style="color: ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'var(--hp-full)' : '#fff'};">${displayName}</div>
         <div class="card-tooltip">
-          <strong>${displayName}</strong><br/>
+          <strong>${displayName}</strong> [${suitSymbol} ${rankDisplay}]<br/>
           <span style="color:#ddd; font-size:11px;">${dictInfo.desc}</span>
         </div>
       `;
@@ -1492,8 +1399,9 @@
     // GSAP Hand Card Entrance Animation (Animate container to preserve individual card fan transforms)
     if (typeof gsap !== 'undefined' && cards.length > 0) {
       gsap.from(handCards, {
-        duration: 0.3,
-        y: 20,
+        duration: 0.4,
+        y: 35,
+        opacity: 0.3,
         ease: 'power2.out'
       });
     }
@@ -1541,36 +1449,41 @@
       btnPlayCard.disabled = !isTurn || phase !== 'PLAY' || !cardIdToCheck || isInvalidPeach;
       btnEndTurn.disabled = !isTurn || phase !== 'PLAY';
 
-      const allowSkills = isTestSandboxMode || (me && hasCharacter(me.character, 'SUN_QUAN'));
-      if (me && allowSkills && isTurn && phase === 'PLAY' && (!me.skillResignationUsed || isTestSandboxMode)) {
+      if (me && hasCharacter(me.character, 'SUN_QUAN') && isTurn && phase === 'PLAY' && !me.skillResignationUsed) {
         btnSunQuanSkill.classList.remove('hidden');
         btnSunQuanSkill.disabled = selectedDiscardIds.length === 0;
       } else {
         btnSunQuanSkill.classList.add('hidden');
       }
 
-      const allowLiuBei = isTestSandboxMode || (me && hasCharacter(me.character, 'LIU_BEI'));
-      if (me && allowLiuBei && isTurn && phase === 'PLAY') {
+      if (me && hasCharacter(me.character, 'LIU_BEI') && isTurn && phase === 'PLAY') {
         btnLiuBeiSkill.classList.remove('hidden');
         btnLiuBeiSkill.disabled = selectedDiscardIds.length === 0;
       } else {
         btnLiuBeiSkill.classList.add('hidden');
       }
 
-      const allowDiaoChan = isTestSandboxMode || (me && hasCharacter(me.character, 'DIAO_CHAN'));
-      if (me && allowDiaoChan && isTurn && phase === 'PLAY' && (!me.skillDiaoChanUsed || isTestSandboxMode)) {
+      if (me && hasCharacter(me.character, 'DIAO_CHAN') && isTurn && phase === 'PLAY' && !me.skillDiaoChanUsed) {
         btnDiaoChanSkill.classList.remove('hidden');
         btnDiaoChanSkill.disabled = selectedDiscardIds.length !== 1;
       } else {
         btnDiaoChanSkill.classList.add('hidden');
       }
 
-      const allowZhouYu = isTestSandboxMode || (me && hasCharacter(me.character, 'ZHOU_YU'));
-      if (me && allowZhouYu && isTurn && phase === 'PLAY' && (!me.skillZhouYuUsed || isTestSandboxMode)) {
+      if (me && hasCharacter(me.character, 'ZHOU_YU') && isTurn && phase === 'PLAY' && !me.skillZhouYuUsed) {
         btnZhouYuSkill.classList.remove('hidden');
         btnZhouYuSkill.disabled = selectedDiscardIds.length !== 1;
       } else {
         btnZhouYuSkill.classList.add('hidden');
+      }
+
+      if (me && hasCharacter(me.character, 'HUANG_GAI') && isTurn && phase === 'PLAY') {
+        if (btnHuangGaiSkill) {
+          btnHuangGaiSkill.classList.remove('hidden');
+          btnHuangGaiSkill.disabled = false;
+        }
+      } else {
+        if (btnHuangGaiSkill) btnHuangGaiSkill.classList.add('hidden');
       }
     }
 
@@ -2135,6 +2048,13 @@
     updateActionButtons();
   });
 
+  // Huang Gai skill event
+  if (btnHuangGaiSkill) {
+    btnHuangGaiSkill.addEventListener('click', () => {
+      socket.emit('use_huang_gai_skill', { roomId: myRoomId });
+    });
+  }
+
   // --- REACTION / DODGE OVERLAYS ---
 
   function renderPendingAction() {
@@ -2538,6 +2458,87 @@
       btnTakeDamage.classList.remove('hidden');
       bumperCardsContainer.classList.add('hidden');
     }
+  }
+
+    // 9. Guanxing (Zhuge Liang) Stargazing
+    if (pending && pending.type === 'GUANXING' && pending.targetPlayerId === myPlayerId) {
+      if (guanxingOverlay) {
+        guanxingOverlay.classList.remove('hidden');
+        renderGuanxingModal(pending.cards || []);
+      }
+    } else {
+      if (guanxingOverlay) guanxingOverlay.classList.add('hidden');
+    }
+  }
+
+  let guanxingState = { topCards: [], bottomCards: [] };
+  function renderGuanxingModal(cards) {
+    guanxingState.topCards = [...cards];
+    guanxingState.bottomCards = [];
+    updateGuanxingDisplay();
+  }
+
+  function updateGuanxingDisplay() {
+    if (!guanxingTopCards || !guanxingBottomCards) return;
+    guanxingTopCards.innerHTML = '';
+    guanxingBottomCards.innerHTML = '';
+
+    const globalDict = globalThis.CARD_DICT || {};
+
+    guanxingState.topCards.forEach((c, idx) => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card-v2';
+      cardEl.style.cursor = 'pointer';
+      const pic = globalDict[c.name]?.pic || '';
+      cardEl.innerHTML = `
+        ${pic ? `<div class="card-image-bg" style="background-image: url('${pic}');"></div>` : ''}
+        <div class="card-top ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade'}">
+          <span>${c.rank}</span>
+          <span class="card-suit">${c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣'}</span>
+        </div>
+        <div class="card-name-v2" style="font-size: 10px;">${c.name}</div>
+        <span style="position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #38bdf8;">⬇️ ย้าย</span>
+      `;
+      cardEl.onclick = () => {
+        guanxingState.topCards.splice(idx, 1);
+        guanxingState.bottomCards.push(c);
+        updateGuanxingDisplay();
+      };
+      guanxingTopCards.appendChild(cardEl);
+    });
+
+    guanxingState.bottomCards.forEach((c, idx) => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card-v2';
+      cardEl.style.cursor = 'pointer';
+      const pic = globalDict[c.name]?.pic || '';
+      cardEl.innerHTML = `
+        ${pic ? `<div class="card-image-bg" style="background-image: url('${pic}');"></div>` : ''}
+        <div class="card-top ${(c.suit === 'HEART' || c.suit === 'DIAMOND') ? 'suit-heart' : 'suit-spade'}">
+          <span>${c.rank}</span>
+          <span class="card-suit">${c.suit === 'HEART' ? '♥' : c.suit === 'DIAMOND' ? '♦' : c.suit === 'SPADE' ? '♠' : '♣'}</span>
+        </div>
+        <div class="card-name-v2" style="font-size: 10px;">${c.name}</div>
+        <span style="position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #fbbf24;">⬆️ ย้าย</span>
+      `;
+      cardEl.onclick = () => {
+        guanxingState.bottomCards.splice(idx, 1);
+        guanxingState.topCards.push(c);
+        updateGuanxingDisplay();
+      };
+      guanxingBottomCards.appendChild(cardEl);
+    });
+  }
+
+  if (btnGuanxingConfirm) {
+    btnGuanxingConfirm.addEventListener('click', () => {
+      socket.emit('use_skill_guanxing', {
+        roomId: myRoomId,
+        topCards: guanxingState.topCards,
+        bottomCards: guanxingState.bottomCards
+      });
+      if (guanxingOverlay) guanxingOverlay.classList.add('hidden');
+    });
   }
 
   // Register Event Listeners for new overlays

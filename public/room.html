@@ -18,9 +18,8 @@
     };
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Three Kingdoms — WTK สามก๊ก | Online Card Game</title>
-  <meta name="description" content="เกมไพ่สามก๊กออนไลน์ — War of the Three Kingdoms Board Game">
-  <link rel="stylesheet" href="/style.css?v=19">
+  <title>Three Kingdoms Room</title>
+  <link rel="stylesheet" href="/style.css?v=5">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 </head>
@@ -31,42 +30,29 @@
        ========================================== -->
   <div id="lobby-screen">
     <div class="lobby-container glass-panel">
-
-      <!-- Imperial Header -->
-      <div class="lobby-imperial-header">
-        <span class="lobby-seal">🐉</span>
-        <h1 class="lobby-title-v2">War of the Three Kingdoms</h1>
-        <p class="lobby-subtitle-v2">สงครามสามก๊ก — ห้องพักผู้เล่น</p>
-      </div>
-
-      <!-- Mode Indicator -->
-      <div class="mode-indicator" id="lobby-room-mode-text">⚔️ โหมดเกม: กำลังโหลด...</div>
+      <span class="lobby-icon">⏳</span>
+      <h1 class="lobby-title">ห้องพักผู้เล่น</h1>
+      <p class="lobby-subtitle" id="lobby-room-mode-text">โหมดเกม: ...</p>
 
       <div class="menu-panel">
-        <!-- Room Code -->
-        <div class="room-code-badge-v2">
-          <span class="rc-label">รหัสห้อง</span>
-          <strong class="rc-value" id="display-lobby-room-code">ROOM_XXXX</strong>
+        <div class="lobby-room-code-badge">
+          <span>รหัสห้อง:</span>
+          <strong id="display-lobby-room-code">ROOM_XXXX</strong>
         </div>
-
-        <!-- Players List -->
+        
         <div class="lobby-players-list-container">
-          <div class="lobby-players-header">
-            <span class="lobby-players-title">👥 ผู้เล่นในห้อง</span>
-            <span class="lobby-players-count-pill"><span id="lobby-players-count">0</span>/10</span>
-          </div>
-          <ul class="lobby-players-list lobby-players-list-v2" id="lobby-players-list">
+          <h3>ผู้เล่นที่รออยู่ในห้อง (<span id="lobby-players-count">0</span>/10)</h3>
+          <ul class="lobby-players-list" id="lobby-players-list">
             <!-- Dynamically populated -->
           </ul>
         </div>
 
-        <!-- Actions -->
         <div class="menu-actions">
-          <div id="host-bot-controls" class="hidden" style="display: flex; gap: 8px; width: 100%; margin-bottom: 10px;">
-            <button class="btn-tb btn-tb--guide" id="btn-lobby-add-bot" style="flex:1; justify-content:center; padding: 10px 16px; font-size:13px;">🤖 เพิ่มบอท (Add Bot)</button>
+          <div id="host-bot-controls" class="hidden" style="display: flex; gap: 10px; width: 100%; margin-bottom: 12px;">
+            <button class="btn-action btn-play" id="btn-lobby-add-bot" style="background: var(--accent-cyan); color: #000; flex: 1;">เพิ่มบอท (Add Bot)</button>
           </div>
-          <button class="btn-menu btn-accent hidden" id="btn-lobby-start-game">⚔️ เริ่มการสู้รบ (Start Game)</button>
-          <p class="lobby-waiting-text" id="lobby-waiting-text">⏳ รอโฮสต์เริ่มเกม...</p>
+          <button class="btn-menu btn-accent hidden" id="btn-lobby-start-game">▶ เริ่มเกม (Start Game)</button>
+          <p class="lobby-waiting-text" id="lobby-waiting-text">รอโฮสต์เริ่มเกม...</p>
         </div>
       </div>
     </div>
@@ -95,23 +81,18 @@
     <!-- Phaser 3 Hybrid Canvas Container -->
     <div id="phaser-game-container" style="position: fixed; inset: 0; pointer-events: none; z-index: 10;"></div>
 
-    <!-- Top Bar v2 -->
+    <!-- Top Bar -->
     <div class="top-bar glass-panel">
-      <div class="top-bar-left">
-        <span class="game-title-v2">⚔️ สามก๊ก</span>
-        <span class="room-id-badge" id="display-room-id">ROOM_TEST</span>
+      <span class="game-title">⚔️ Three Kingdoms Board</span>
+      <div class="phase-badge" id="phase-badge">
+        <span>⏳</span>
+        <span id="phase-text">PLAY</span>
       </div>
-      <div class="top-bar-center">
-        <div class="phase-badge" id="phase-badge">
-          <span>⏳</span>
-          <span id="phase-text">PLAY</span>
-        </div>
-        <div class="turn-indicator" id="turn-indicator-badge">🎮 รอเทิร์น</div>
-      </div>
-      <div class="top-bar-right">
-        <button class="btn-tb btn-tb--admin hidden" id="btn-admin-sandbox-toggle">🛠️ Admin</button>
-        <button class="btn-tb btn-tb--guide" id="btn-card-guide">📖 การ์ด</button>
-        <button class="btn-tb btn-tb--leave" id="btn-game-leave">🚪 ออก</button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="room-id" id="display-room-id">ROOM_TEST</span>
+        <button class="btn-action btn-accent hidden" id="btn-admin-sandbox-toggle" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: bold;">🛠️ Admin Sandbox</button>
+        <button class="btn-action btn-accent" id="btn-card-guide" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; font-weight: bold;">📖 คำอธิบายการ์ด</button>
+        <button class="btn-back" id="btn-game-leave" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset;">🚪 ออกจากห้อง</button>
       </div>
     </div>
 
@@ -155,20 +136,16 @@
           <!-- Dynamically populated -->
         </div>
 
-        <!-- Action Bar v2: Primary row + Skill row -->
-        <div class="action-bar-v2" id="action-buttons-zone" data-od-id="action-bar">
-          <div class="action-row-primary">
-            <button class="btn-play-v2" id="btn-play-card" disabled>⚔️ ใช้การ์ด</button>
-            <button class="btn-end-turn-v2" id="btn-end-turn" disabled>✓ จบช่วงร่าย</button>
-            <button class="btn-discard-confirm-v2 hidden" id="btn-discard-confirm">🗑️ ยืนยันทิ้งการ์ด</button>
-          </div>
-          <div class="action-row-skills">
-            <button class="btn-skill btn-skill--sun-quan hidden" id="btn-sun-quan-skill">👑 ผลัดการ์ด</button>
-            <button class="btn-skill btn-skill--liu-bei hidden" id="btn-liu-bei-skill">💝 ปันสุข</button>
-            <button class="btn-skill btn-skill--diao-chan hidden" id="btn-diao-chan-skill">🌸 บ่วงเสน่หา</button>
-            <button class="btn-skill btn-skill--zhou-yu hidden" id="btn-zhou-yu-skill">🔥 บ่มเพลิง</button>
-            <button class="btn-skill btn-skill--serpent hidden" id="btn-serpent-spear">🐍 หอกงู</button>
-          </div>
+        <div class="action-bar" id="action-buttons-zone" data-od-id="action-bar">
+          <button class="btn-action btn-play" id="btn-play-card" disabled>ใช้การ์ด</button>
+          <button class="btn-action btn-primary hidden" id="btn-sun-quan-skill" style="background: var(--accent-gold); color: #000;">👑 สกิล: ผลัดการ์ด</button>
+          <button class="btn-action btn-primary hidden" id="btn-liu-bei-skill" style="background: var(--hp-full); color: #000;">💝 สกิล: ปันสุข</button>
+          <button class="btn-action btn-primary hidden" id="btn-diao-chan-skill" style="background: #ec4899; color: #fff;">🌸 สกิล: บ่วงเสน่หา</button>
+          <button class="btn-action btn-primary hidden" id="btn-zhou-yu-skill" style="background: #3b82f6; color: #fff;">🔥 สกิล: บ่มเพลิง</button>
+          <button class="btn-action btn-primary hidden" id="btn-huang-gai-skill" style="background: #dc2626; color: #fff;">🩸 สกิล: โบยตนเอง</button>
+          <button class="btn-action btn-primary hidden" id="btn-serpent-spear" style="background: #7c3aed; color: #fff;">🐍 หอกงู: ทิ้ง 2 โจมตี</button>
+          <button class="btn-action btn-end-turn" id="btn-end-turn" disabled>จบช่วงร่าย</button>
+          <button class="btn-action btn-discard hidden" id="btn-discard-confirm">ยืนยันการทิ้งการ์ด</button>
         </div>
       </div>
       
@@ -238,14 +215,14 @@
        GAME OVER OVERLAY
        ========================================== -->
   <div class="pending-overlay hidden" id="game-over-overlay">
-    <div class="pending-modal glass-panel game-over-modal-v2" style="border-color: var(--accent-gold);">
-      <span class="game-over-seal">🏆</span>
-      <h1 class="game-over-title-v2">จบสิ้นการศึก!</h1>
-      <h2 class="game-over-winner-text-v2" id="game-over-winner-role">ฝ่ายกบฏชนะ</h2>
-      <p class="game-over-desc-v2" id="game-over-winner-text">คำอธิบายผลแพ้ชนะ...</p>
-      <div class="game-over-players-grid" id="game-over-players-grid">
-        <!-- populated by room_app.js -->
-      </div>
+    <div class="pending-modal glass-panel" style="max-width: 480px; border-color: var(--accent-cyan);">
+      <span class="pending-icon" style="font-size: 64px;">🏆</span>
+      <h1 style="font-size: 32px; font-weight: 800; background: linear-gradient(135deg, var(--accent-gold), var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px;">จบสิ้นการศึก!</h1>
+      <h2 id="game-over-winner-role" style="font-size: 20px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 12px;">ฝ่ายกบฏชนะ</h2>
+      <p id="game-over-winner-text" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; line-height: 1.6;">
+        คำอธิบายผลแพ้ชนะ...
+      </p>
+
       <button class="btn-menu btn-accent" id="btn-return-lobby">🏠 กลับสู่ล็อบบี้หลัก</button>
     </div>
   </div>
@@ -409,6 +386,46 @@
   </div>
 
   <!-- ==========================================
+       ZHOU LIANG GUANXING (STARGAZING) OVERLAY
+       ========================================== -->
+  <div class="pending-overlay hidden" id="guanxing-overlay" style="z-index: 10002;">
+    <div class="pending-modal glass-panel" style="max-width: 500px; text-align: center; border-color: var(--accent-gold);">
+      <span class="pending-icon" style="font-size: 48px;">🌟</span>
+      <h2 style="font-size: 22px; font-weight: 800; color: var(--accent-gold); margin-bottom: 8px;">สกิลดูดาว (Guanxing)</h2>
+      <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
+        ดูการ์ดบนสุดของกองไพ่ และเลือกจัดวางไว้ที่ <strong style="color: var(--accent-gold);">บนสุด (จั่วก่อน)</strong> หรือ <strong style="color: var(--accent-cyan);">ล่างสุด</strong>:
+      </p>
+      
+      <div style="margin-bottom: 12px; text-align: left;">
+        <label style="font-size: 12px; font-weight: bold; color: var(--accent-gold);">⬆️ วางไว้บนสุดกองไพ่ (Top Deck):</label>
+        <div id="guanxing-top-cards" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 80px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px dashed var(--accent-gold); margin-top: 4px;"></div>
+      </div>
+
+      <div style="margin-bottom: 20px; text-align: left;">
+        <label style="font-size: 12px; font-weight: bold; color: var(--accent-cyan);">⬇️ ย้ายไปล่างสุดกองไพ่ (Bottom Deck):</label>
+        <div id="guanxing-bottom-cards" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 80px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px dashed var(--accent-cyan); margin-top: 4px;"></div>
+      </div>
+
+      <button class="btn-primary" id="btn-guanxing-confirm" style="width: 100%; padding: 12px; font-weight: bold;">✔️ ยืนยันการจัดลำดับดวงดาว</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SIMA YI GUICAI (JUDGMENT RETRIBUTION) OVERLAY
+       ========================================== -->
+  <div class="pending-overlay hidden" id="guicai-overlay" style="z-index: 10002;">
+    <div class="pending-modal glass-panel" style="max-width: 440px; text-align: center; border-color: #a855f7;">
+      <span class="pending-icon" style="font-size: 48px;">🔮</span>
+      <h2 style="font-size: 20px; font-weight: 800; color: #c084fc; margin-bottom: 8px;">สกิลเปลี่ยนชะตา (Guicai)</h2>
+      <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">
+        เกิดการทำนายชะตาขึ้น! ต้องการทิ้งการ์ดบนมือเพื่อเปลี่ยนการ์ดผลทำนายหรือไม่?
+      </p>
+      <div id="guicai-cards" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px;"></div>
+      <button class="btn-take-damage" id="btn-guicai-pass" style="width: 100%;">❌ ไม่เปลี่ยน (ผ่าน)</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
        CARD GUIDE / DICTIONARY OVERLAY
        ========================================== -->
   <div class="pending-overlay hidden" id="card-guide-modal" style="z-index: 10000;">
@@ -421,127 +438,106 @@
     </div>
   </div>
 
-  <!-- Admin Sandbox Modal v2 -->
+  <!-- Admin Sandbox Modal -->
   <div class="pending-overlay hidden" id="admin-sandbox-modal" style="z-index: 10001;">
-    <div class="pending-modal glass-panel" style="max-width: 540px; text-align: left; border: 1.5px solid rgba(245,158,11,0.5); display: flex; flex-direction: column; gap: 14px; width: 90%; padding: 28px 28px;">
-
-      <!-- Header -->
-      <div class="modal-v2-header">
-        <span style="font-size:22px;">🛠️</span>
-        <h2 class="modal-v2-title">Admin Sandbox</h2>
-        <span style="font-size:11px; color:var(--text-muted); font-weight:600;">โหมดทดสอบ</span>
-      </div>
-
+    <div class="pending-modal glass-panel" style="max-width: 540px; text-align: left; border: 2px solid var(--accent-gold); display: flex; flex-direction: column; gap: 14px; width: 90%;">
+      <h2 style="color: var(--accent-gold); font-size: 20px; margin: 0; font-weight: 800; border-bottom: 1.5px solid var(--border-glass); padding-bottom: 8px;">🛠️ Admin Test Sandbox (โหมดทดสอบการ์ด/ขุนพล)</h2>
+      
       <!-- Hero Switcher -->
-      <div class="modal-v2-section">
-        <div class="modal-v2-section-label" style="color:#fbbf24;">🧙 เปลี่ยนขุนพล</div>
-        <div style="display:flex; gap:8px;">
-          <select id="admin-hero-select" style="flex:1; background:rgba(15,23,42,0.8); color:#fff; padding:8px 10px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.12); font-family:'Outfit',sans-serif; font-size:13px;">
-            <option value="LIU_BEI">เล่าปี่ (Liu Bei) HP4</option>
-            <option value="GUAN_YU">กวนอู (Guan Yu) HP4</option>
-            <option value="ZHAO_YUN">จูล่ง (Zhao Yun) HP4</option>
-            <option value="ZHANG_FEI">เตียวหุย (Zhang Fei) HP4</option>
-            <option value="CAO_CAO">โจโฉ (Cao Cao) HP4</option>
-            <option value="SIMA_YI">สุมาอี้ (Sima Yi) HP3</option>
-            <option value="ZHEN_JI">เจินจี (Zhen Ji) HP3</option>
-            <option value="SUN_QUAN">ซุนกวน (Sun Quan) HP4</option>
-            <option value="ZHOU_YU">จิวยี่ (Zhou Yu) HP3</option>
-            <option value="LU_BU">ลิโป้ (Lu Bu) HP5</option>
-            <option value="DIAO_CHAN">เตียวเสี้ยน (Diao Chan) HP3</option>
-            <option value="ZHUGE_LIANG">ขงเบ้ง (Zhuge Liang) HP3</option>
+      <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;">
+        <label style="color:#fbbf24; font-weight:bold; font-size:14px; display:block; margin-bottom: 6px;">🧙‍♂️ เลือกเปลี่ยนขุนพล (Hero Switcher):</label>
+        <div style="display:flex; gap: 8px;">
+          <select id="admin-hero-select" style="flex:1; background:#1e293b; color:#fff; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.2);">
+            <option value="LIU_BEI">เล่าปี่ (Liu Bei) - HP 4</option>
+            <option value="GUAN_YU">กวนอู (Guan Yu) - HP 4</option>
+            <option value="ZHAO_YUN">จูล่ง (Zhao Yun) - HP 4</option>
+            <option value="ZHANG_FEI">เตียวหุย (Zhang Fei) - HP 4</option>
+            <option value="CAO_CAO">โจโฉ (Cao Cao) - HP 4</option>
+            <option value="ZHOU_YU">จิวยี่ (Zhou Yu) - HP 3</option>
+            <option value="SUN_QUAN">ซุนกวน (Sun Quan) - HP 4</option>
+            <option value="LU_BU">ลิโป้ (Lu Bu) - HP 5</option>
+            <option value="DIAO_CHAN">เตียวเสี้ยน (Diao Chan) - HP 3</option>
+            <option value="ZHEN_JI">เตียวซี/เอี๋ยมสี (Zhen Ji) - HP 3</option>
+            <option value="HUANG_GAO">อุยกาย (Huang Gai) - HP 4</option>
+            <option value="SIMA_YI">สุมาอี้ (Sima Yi) - HP 3</option>
           </select>
-          <button id="btn-admin-change-hero" class="btn-admin-sm btn-admin-sm--gold">เปลี่ยน</button>
+          <button id="btn-admin-change-hero" class="btn-action" style="padding: 6px 14px; background: var(--accent-gold); color:#000; font-weight:bold; height:auto; min-height:unset;">เปลี่ยนขุนพล</button>
         </div>
       </div>
 
       <!-- Card Spawner -->
-      <div class="modal-v2-section">
-        <div class="modal-v2-section-label" style="color:var(--accent-cyan);">🃏 เสกการ์ดขึ้นมือ</div>
-        <div style="display:flex; gap:8px;">
-          <select id="admin-card-select" style="flex:1; background:rgba(15,23,42,0.8); color:#fff; padding:8px 10px; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.12); font-family:'Outfit',sans-serif; font-size:13px;">
-            <optgroup label="🃏 การ์ดพื้นฐาน (Basic)">
+      <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;">
+        <label style="color:#38bdf8; font-weight:bold; font-size:14px; display:block; margin-bottom: 6px;">🃏 เสกการ์ดขึ้นมือ (Card Spawner):</label>
+        <div style="display:flex; gap: 8px;">
+          <select id="admin-card-select" style="flex:1; background:#1e293b; color:#fff; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.2);">
+            <optgroup label="🃏 การ์ดพื้นฐาน (Basic Cards)">
               <option value="SLASH">SLASH (โจมตี)</option>
               <option value="DODGE">DODGE (หลบหลีก)</option>
-              <option value="PEACH">PEACH (ฟื้น HP)</option>
-              <option value="WINE">WINE (สุรา)</option>
-              <option value="THUNDER_ATTACK">THUNDER_ATTACK (โจมตีสายฟ้า)</option>
+              <option value="PEACH">PEACH (ลูกท้อ ฟื้นฟู HP)</option>
+              <option value="WINE">WINE (สุรากุหลาบ)</option>
             </optgroup>
-            <optgroup label="📜 กลยุทธ์ (Kit / Stratagems)">
+            <optgroup label="📜 การ์ดกลยุทธ์ (Stratagems)">
               <option value="STEAL">STEAL (ขโมยไพ่)</option>
               <option value="SABOTAGE">SABOTAGE (ทำลายไพ่)</option>
-              <option value="DUEL">DUEL (ดวลไพ่)</option>
+              <option value="DUEL">DUEL (การดวล)</option>
               <option value="FIRE_ATTACK">FIRE_ATTACK (โจมตีด้วยไฟ)</option>
               <option value="IRON_CHAIN">IRON_CHAIN (โซ่เหล็ก)</option>
-              <option value="EX_NIHILO">EX_NIHILO (สืบเนื่องไร้ขอบเขต - จั่ว 2 ใบ)</option>
-              <option value="BARBARIAN_INVASION">BARBARIAN_INVASION (คนเถื่อนบุก)</option>
-              <option value="ARROW_BARRAGE">ARROW_BARRAGE (ฝนธนู)</option>
-              <option value="PEACH_GARDEN">PEACH_GARDEN (สวนท้อรวมใจ)</option>
-              <option value="BUMPER_HARVEST">BUMPER_HARVEST (เก็บเกี่ยวอุดม)</option>
+              <option value="EX_NIHILO">EX_NIHILO (จั่วการ์ด 2 ใบ)</option>
+              <option value="BARBARIAN_INVASION">BARBARIAN_INVASION (คนเถื่อนบุกรุก)</option>
+              <option value="ARROW_BARRAGE">ARROW_BARRAGE (ธนูหมื่นดอก)</option>
+              <option value="PEACH_GARDEN">PEACH_GARDEN (สวนท้อ ฮีลทุกคน)</option>
+              <option value="BUMPER_HARVEST">BUMPER_HARVEST (เก็บเกี่ยวสมบูรณ์)</option>
               <option value="BORROWED_SWORD">BORROWED_SWORD (ยืมดาบฆ่าคน)</option>
               <option value="NEGATE">NEGATE (ไร้ข้อกังขา)</option>
             </optgroup>
-            <optgroup label="⏳ หน่วงเวลา (Delayed Kits)">
+            <optgroup label="⏳ การ์ดพิจารณาหน่วงเวลา (Delayed Kits)">
               <option value="ACEDIA">ACEDIA (สุขไม่คิดกลับ)</option>
-              <option value="STARVATION">STARVATION (เสบียงขาดแคลน)</option>
-              <option value="LIGHTNING">LIGHTNING (อัศนีบาต)</option>
+              <option value="STARVATION">STARVATION (เสบียงขาด)</option>
+              <option value="LIGHTNING">LIGHTNING (อัสนีบาต)</option>
             </optgroup>
-            <optgroup label="🗡️ อาวุธ (Weapons)">
-              <option value="ZHUGE_CROSSBOW">ZHUGE_CROSSBOW (หน้าไม้น่อกมม - ระยะ 1)</option>
-              <option value="BLUE_STEEL_SWORD">BLUE_STEEL_SWORD (กระบี่ชิงหลง - ระยะ 2)</option>
-              <option value="SIX_SWORDS_WU">SIX_SWORDS_WU (กระบี่หกเล่ม - ระยะ 2)</option>
-              <option value="FROST_SWORD">FROST_SWORD (กระบี่เหมันต์ - ระยะ 2)</option>
-              <option value="YIN_YANG_SWORDS">YIN_YANG_SWORDS (กระบี่หยินหยาง - ระยะ 2)</option>
-              <option value="SERPENT_SPEAR">SERPENT_SPEAR (ทวนอสรพิษ - ระยะ 3)</option>
-              <option value="TWO_BLADED_TRIDENT">TWO_BLADED_TRIDENT (ทวนสองเล่ม - ระยะ 3)</option>
-              <option value="ROCK_CLEAVING_AXE">ROCK_CLEAVING_AXE (ขวานผ่าหิน - ระยะ 3)</option>
-              <option value="GREEN_DRAGON_BLADE">GREEN_DRAGON_BLADE (ง้าวมังกรเขียว - ระยะ 3)</option>
-              <option value="FEATHERED_FAN">FEATHERED_FAN (พัดขนนก - ระยะ 4)</option>
-              <option value="SKY_PIERCING_HALBERD">SKY_PIERCING_HALBERD (ง้าวกรีดฟ้า - ระยะ 4)</option>
-              <option value="KIRIN_BOW">KIRIN_BOW (เกาทัณฑ์กิเลน - ระยะ 5)</option>
-            </optgroup>
-            <optgroup label="🛡️ เกราะ (Armor)">
-              <option value="EIGHT_TRIGRAMS_FORMATION">EIGHT_TRIGRAMS_FORMATION (ประยุทธ์แปดทิศ)</option>
-              <option value="NIO_SHIELD">NIO_SHIELD (โล่ต่อพงศ์)</option>
+            <optgroup label="🛡️ ชุดอุปกรณ์สวมใส่ (Equipments)">
+              <option value="EIGHT_TRIGRAMS_FORMATION">EIGHT_TRIGRAMS_FORMATION (เกราะประยุทธ์แปดทิศ)</option>
+              <option value="NIO_SHIELD">NIO_SHIELD (เกราะเสือโคร่ง)</option>
               <option value="SILVER_LION_HELMET">SILVER_LION_HELMET (หมวกสิงโตเงิน)</option>
               <option value="RATTAN_ARMOR">RATTAN_ARMOR (เกราะหวาย)</option>
-            </optgroup>
-            <optgroup label="🐎 ม้า (Mounts)">
-              <option value="RED_HARE">RED_HARE (เซ็กเธาว์ - โจมตี -1)</option>
-              <option value="SHADOWRUNNER">SHADOWRUNNER (เงาพยับ - โจมตี -1)</option>
-              <option value="LIGHTNING_HOOF">LIGHTNING_HOOF (สายฟ้า - ป้องกัน +1)</option>
-              <option value="FERGANA_STEED">FERGANA_STEED (ต้าอวี่ - ป้องกัน +1)</option>
-            </optgroup>
-            <optgroup label="📦 สมบัติ (Treasure)">
-              <option value="WOODEN_CART">WOODEN_CART (เกวียนไม้)</option>
+              <option value="ZHUGE_CROSSBOW">ZHUGE_CROSSBOW (หน้าไม้น่อกมม - ระยะ 1)</option>
+              <option value="GREEN_DRAGON_BLADE">GREEN_DRAGON_BLADE (ง้าวเขียวมังกรดำ - ระยะ 3)</option>
+              <option value="SERPENT_SPEAR">SERPENT_SPEAR (ทวนอสรพิษ - ระยะ 3)</option>
+              <option value="ROCK_CLEAVING_AXE">ROCK_CLEAVING_AXE (ขวานผ่าหิน - ระยะ 3)</option>
+              <option value="KIRIN_BOW">KIRIN_BOW (คันธนูเกิลหลิน - ระยะ 5)</option>
+              <option value="BLUE_STEEL_SWORD">BLUE_STEEL_SWORD (กระบี่เหล็กฟ้า - ระยะ 2)</option>
+              <option value="YIN_YANG_SWORDS">YIN_YANG_SWORDS (กระบี่คู่หยินหยาง - ระยะ 2)</option>
+              <option value="FEATHERED_FAN">FEATHERED_FAN (พัดขนนก - ระยะ 4)</option>
+              <option value="RED_HARE">RED_HARE (ม้ากระต่ายแดง)</option>
             </optgroup>
           </select>
-          <button id="btn-admin-spawn-card" class="btn-admin-sm btn-admin-sm--cyan">เสก</button>
+          <button id="btn-admin-spawn-card" class="btn-action" style="padding: 6px 14px; background: var(--accent-cyan); color:#000; font-weight:bold; height:auto; min-height:unset;">เสกขึ้นมือ</button>
         </div>
       </div>
 
-      <!-- HP Controls -->
-      <div class="modal-v2-section">
-        <div class="modal-v2-section-label" style="color:#4ade80;">❤️ HP Controls</div>
-        <div class="modal-v2-btn-row">
-          <button id="btn-admin-hp-plus"  class="btn-admin-sm btn-admin-sm--green">+1 HP</button>
-          <button id="btn-admin-hp-minus" class="btn-admin-sm btn-admin-sm--red">-1 HP</button>
-          <button id="btn-admin-hp-dying" class="btn-admin-sm btn-admin-sm--gold">ตั้ง HP=1</button>
+      <!-- HP & Bot Controls -->
+      <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;">
+        <label style="color:#4ade80; font-weight:bold; font-size:14px; display:block; margin-bottom: 6px;">❤️ ปรับพลังชีวิต (HP Controls):</label>
+        <div style="display:flex; flex-wrap:wrap; gap: 8px;">
+          <button id="btn-admin-hp-plus" class="btn-action" style="padding: 6px 12px; font-size:12px; background:#22c55e; height:auto; min-height:unset;">+1 HP</button>
+          <button id="btn-admin-hp-minus" class="btn-action" style="padding: 6px 12px; font-size:12px; background:#ef4444; height:auto; min-height:unset;">-1 HP</button>
+          <button id="btn-admin-hp-dying" class="btn-action" style="padding: 6px 12px; font-size:12px; background:#f59e0b; height:auto; min-height:unset;">ตั้ง HP = 1 (ทดสอบชุบชีวิต)</button>
         </div>
       </div>
 
-      <!-- Bot Controller -->
-      <div class="modal-v2-section">
-        <div class="modal-v2-section-label" style="color:#c084fc;">🤖 Bot Controller</div>
-        <div class="modal-v2-btn-row">
-          <button id="btn-admin-spawn-bot"     class="btn-admin-sm btn-admin-sm--blue">➕ เพิ่มบอท</button>
-          <button id="btn-admin-remove-bot"    class="btn-admin-sm btn-admin-sm--red">➖ ลบบอท</button>
-          <button id="btn-admin-toggle-bot-ai" class="btn-admin-sm btn-admin-sm--purple">⏸️ Passive</button>
-          <button id="btn-admin-bot-pass"      class="btn-admin-sm btn-admin-sm--gray">⏩ Pass Turn</button>
-          <button id="btn-admin-bot-slash"     class="btn-admin-sm btn-admin-sm--red">⚔️ Bot Slash</button>
+      <!-- Bot Action Controller -->
+      <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;">
+        <label style="color:#c084fc; font-weight:bold; font-size:14px; display:block; margin-bottom: 6px;">🤖 ควบคุมบอท (Bot Controller & Management):</label>
+        <div style="display:flex; flex-wrap:wrap; gap: 8px;">
+          <button id="btn-admin-spawn-bot" class="btn-action" style="padding: 6px 12px; font-size:12px; background:#3b82f6; height:auto; min-height:unset;">➕ เพิ่มบอท</button>
+          <button id="btn-admin-remove-bot" class="btn-action" style="padding: 6px 12px; font-size:12px; background:#e11d48; height:auto; min-height:unset;">➖ ลบบอทออก</button>
+          <button id="btn-admin-toggle-bot-ai" class="btn-action" style="padding: 6px 12px; font-size:12px; background:#8b5cf6; height:auto; min-height:unset;">⏸️ บอทอยู่เฉยๆ (Passive)</button>
+          <button id="btn-admin-bot-pass" class="btn-action" style="padding: 6px 12px; font-size:12px; background:#64748b; height:auto; min-height:unset;">⏩ สั่งบอทผ่านเทิร์น</button>
+          <button id="btn-admin-bot-slash" class="btn-action" style="padding: 6px 12px; font-size:12px; background:#dc2626; height:auto; min-height:unset;">⚔️ สั่งบอทฟันใส่เรา</button>
         </div>
       </div>
 
-      <button class="btn-back" id="btn-close-admin-sandbox" style="width:100%; margin-top:4px;">✕ ปิด Admin Sandbox</button>
+      <button class="btn-back" id="btn-close-admin-sandbox" style="width: 100%; margin-top: 8px;">❌ ปิดเมนู Admin Sandbox</button>
     </div>
   </div>
 
@@ -549,7 +545,7 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Colyseus Client SDK -->
-  <link rel="stylesheet" href="/style.css?v=19">
+  <link rel="stylesheet" href="/style.css?v=18">
   <script src="https://unpkg.com/colyseus.js@0.15.23/dist/colyseus.js"></script>
   <script src="/colyseus_client.js?v=1"></script>
   <script src="/phaser_card_scene.js?v=1"></script>
