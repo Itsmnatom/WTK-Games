@@ -1167,7 +1167,7 @@
         </div>
         <div class="opponent-meta">
           <span class="meta-tag"><span class="tag-icon">🃏</span>${p.handCount} ใบ</span>
-          <span class="meta-tag" style="background: rgba(255,255,255,0.1);"><span class="tag-icon">📏</span>ระยะ: ${isDead ? '-' : dist}</span>
+          <span class="meta-tag" style="background: rgba(198,161,91,0.08);"><span class="tag-icon">📏</span>ระยะ: ${isDead ? '-' : dist}</span>
           ${rangeText}
           ${equipTags}
         </div>
@@ -1187,32 +1187,36 @@
         if (numOpp === 1) {
           angle = Math.PI / 2; // Top center (90 deg)
         } else {
-          // Span from 10 deg to 170 deg (Right to Left across top arc)
-          const startAngle = 10 * (Math.PI / 180);
-          const endAngle = 170 * (Math.PI / 180);
+          // Span from 15 deg to 165 deg (Right to Left across top arc)
+          const startAngle = 15 * (Math.PI / 180);
+          const endAngle = 165 * (Math.PI / 180);
           const angleRange = endAngle - startAngle;
           const step = angleRange / (numOpp - 1);
           angle = startAngle + (i * step);
         }
         
-        const rx = 42; // % of table width 
-        const ry = 32; // % of table height
+        const rx = 38; // % of table width (slightly smaller to avoid edge overflow)
+        const ry = 30; // % of table height
         
-        const left = 50 + Math.cos(angle) * rx;
-        const top = 44 - Math.sin(angle) * ry;
+        let left = 50 + Math.cos(angle) * rx;
+        let top = 48 - Math.sin(angle) * ry;
+        
+        // Clamp positions to keep cards inside visible area
+        left = Math.max(10, Math.min(90, left));
+        top = Math.max(8, Math.min(82, top));
         
         card.style.left = `${left}%`;
         card.style.top = `${top}%`;
 
         // Dynamic width scaling for 6-player and 8-player rooms so cards never overlap!
         if (numOpp >= 5) {
-          card.style.width = '175px';
+          card.style.width = '170px';
           card.style.padding = '8px 10px';
         } else if (numOpp >= 3) {
-          card.style.width = '215px';
+          card.style.width = '200px';
           card.style.padding = '10px 12px';
         } else {
-          card.style.width = '250px';
+          card.style.width = '240px';
         }
       }
 
@@ -2459,7 +2463,6 @@
       btnTakeDamage.classList.remove('hidden');
       bumperCardsContainer.classList.add('hidden');
     }
-  }
 
     // 9. Guanxing (Zhuge Liang) Stargazing
     if (pending && pending.type === 'GUANXING' && pending.targetPlayerId === myPlayerId) {

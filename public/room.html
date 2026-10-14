@@ -90,8 +90,8 @@
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <span class="room-id" id="display-room-id">ROOM_TEST</span>
-        <button class="btn-action btn-accent hidden" id="btn-admin-sandbox-toggle" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: bold;">🛠️ Admin Sandbox</button>
-        <button class="btn-action btn-accent" id="btn-card-guide" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; font-weight: bold;">📖 คำอธิบายการ์ด</button>
+        <button class="btn-action btn-accent hidden" id="btn-admin-sandbox-toggle" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset; background: var(--bg-surface); color: #000; font-weight: bold;">🛠️ Admin Sandbox</button>
+        <button class="btn-action btn-accent" id="btn-card-guide" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset; background: var(--bg-surface); color: #000; font-weight: bold;">📖 คำอธิบายการ์ด</button>
         <button class="btn-back" id="btn-game-leave" style="padding: 6px 12px; font-size: 12px; margin: 0; min-height: unset; height: unset;">🚪 ออกจากห้อง</button>
       </div>
     </div>
@@ -217,7 +217,7 @@
   <div class="pending-overlay hidden" id="game-over-overlay">
     <div class="pending-modal glass-panel" style="max-width: 480px; border-color: var(--accent-cyan);">
       <span class="pending-icon" style="font-size: 64px;">🏆</span>
-      <h1 style="font-size: 32px; font-weight: 800; background: linear-gradient(135deg, var(--accent-gold), var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px;">จบสิ้นการศึก!</h1>
+      <h1 style="font-size: 32px; font-weight: 800; background: var(--bg-surface), var(--accent-cyan)); -webkit-background-clip: text;  margin-bottom: 8px;">จบสิ้นการศึก!</h1>
       <h2 id="game-over-winner-role" style="font-size: 20px; font-weight: 700; color: var(--accent-cyan); margin-bottom: 12px;">ฝ่ายกบฏชนะ</h2>
       <p id="game-over-winner-text" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; line-height: 1.6;">
         คำอธิบายผลแพ้ชนะ...
