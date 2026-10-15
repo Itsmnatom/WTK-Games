@@ -1,4 +1,37 @@
 'use strict';
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -49,10 +82,14 @@ app.use('/colyseus', (req, res, next) => {
 }, (0, monitor_1.monitor)());
 // ─── Static Routes ────────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.redirect('/lobby'));
-app.get('/lobby', (req, res) => res.sendFile(path_1.default.join(publicDir, 'lobby.html')));
-app.get('/room', (req, res) => res.sendFile(path_1.default.join(publicDir, 'room.html')));
-app.get('/app/:roomId', (req, res) => res.sendFile(path_1.default.join(publicDir, 'room.html')));
-app.get('/room/:roomId', (req, res) => res.sendFile(path_1.default.join(publicDir, 'room.html')));
+const pixelPage = path_1.default.join(publicDir, 'pixel', 'index.html');
+const serveClient = (legacy) => (req, res) => res.sendFile(fs_1.default.existsSync(pixelPage) ? pixelPage : path_1.default.join(publicDir, legacy));
+app.get('/lobby', serveClient('lobby.html'));
+app.get('/room', serveClient('room.html'));
+app.get('/app/:roomId', serveClient('room.html'));
+app.get('/room/:roomId', serveClient('room.html'));
+app.get('/legacy/lobby', (req, res) => res.sendFile(path_1.default.join(publicDir, 'lobby.html')));
+app.get('/legacy/room', (req, res) => res.sendFile(path_1.default.join(publicDir, 'room.html')));
 app.get('/test', (req, res) => res.redirect('/app/ROOM_TEST?test=true&mode=BOT&action=create'));
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.get('/api/leaderboard', async (req, res) => {
@@ -64,14 +101,15 @@ app.get('/api/leaderboard', async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
-app.get('/api/rooms', (req, res) => {
+app.get('/api/rooms', async (req, res) => {
     try {
-        const rooms = gameServer.driver?.rooms || [];
+        const { matchMaker } = await Promise.resolve().then(() => __importStar(require('colyseus')));
+        const rooms = await matchMaker.query({ name: 'wtk_room', locked: false });
         const publicRooms = rooms.map((r) => ({
             roomId: r.roomId,
-            players: r.clients?.length || 0,
+            players: r.clients || 0,
             maxPlayers: r.maxClients || 10,
-            status: r.metadata?.status || 'LOBBY',
+            status: 'LOBBY',
         }));
         res.json({ success: true, rooms: publicRooms });
     }
@@ -88,7 +126,7 @@ gameServer.define('wtk_room', WTKRoom_1.WTKRoom)
     .filterBy(['mode']) // allow filtering rooms by mode (BOT/ONLINE)
     .sortBy({ clients: -1 }); // prefer rooms with more players
 // ─── Boot ─────────────────────────────────────────────────────────────────────
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = Number(process.env.PORT) || 3002;
 async function boot() {
     // Init SQL database
     await (0, database_1.initDatabase)().catch(err => console.error('[DB] Init Error:', err));

@@ -9,13 +9,22 @@ exports.WTKRoom = void 0;
  * Colyseus 0.15 Room class — replaces socket.io handlers in server.js
  */
 const colyseus_1 = require("colyseus");
+const catalog_1 = require("../shared/catalog");
+const roomLifecycle_1 = require("../game/roomLifecycle");
+const commandPolicy_1 = require("../game/commandPolicy");
+const runtime_1 = require("../game/runtime");
+const presentationEvents_1 = require("../game/presentationEvents");
+const heroLogic_1 = require("../game/heroLogic");
+const combatLogic_1 = require("../game/combatLogic");
 const WTKSchema_1 = require("./schema/WTKSchema");
 const phaseLogic_1 = require("../game/phaseLogic");
-const combatLogic_1 = require("../game/combatLogic");
+const combatLogic_2 = require("../game/combatLogic");
 const botAI_1 = require("../game/botAI");
 const cardLogic_1 = require("../game/cardLogic");
 const database_1 = require("../db/database");
 const plugin_manager_1 = __importDefault(require("../plugins/plugin_manager"));
+const experimental_1 = require("../game/experimental");
+const expandedHeroes_1 = require("../game/expandedHeroes");
 // ─── Bot name pool ────────────────────────────────────────────────────────────
 const BOT_NAMES = [
     'Zhuge Liang (Bot)', 'Guan Yu (Bot)', 'Cao Cao (Bot)', 'Diao Chan (Bot)',
@@ -37,6 +46,8 @@ class WTKRoom extends colyseus_1.Room {
             roomId: this.roomId,
             status: 'LOBBY',
             mode: options.mode || 'ONLINE',
+            ruleset: options.ruleset === 'EXPERIMENTAL' ? 'EXPERIMENTAL' : 'STANDARD',
+            spectatorChat: [], turnNumber: 0,
             hostSocketId: null,
             turnOrder: [],
             currentTurnIndex: 0,
@@ -46,7 +57,7 @@ class WTKRoom extends colyseus_1.Room {
             players: {},
             pendingAction: null,
             attacksPlayedInTurn: 0,
-            isBotPassive: false,
+            isBotPassive: !!options.sandbox,
             chat: [],
             bumperHarvestCards: [],
             actionChain: [],
@@ -56,7 +67,7 @@ class WTKRoom extends colyseus_1.Room {
         };
         // Attach broadcast helpers to gameState so game logic modules can call them
         this.gameState._broadcastFn = () => this._broadcastAll();
-        this.gameState._emitAll = (event, data) => this.broadcast(event, data);
+        this.gameState._emitAll = (event, data) => this.broadcast(event, ['card_played', 'damage_log', 'judgement_result'].includes(event) ? (0, presentationEvents_1.withPresentationIdentity)(this.gameState, data) : data);
         // Colyseus Schema state (used for delta encoding)
         this.setState(new WTKSchema_1.WTKState());
         this.state.roomId = this.roomId;
@@ -67,6 +78,7 @@ class WTKRoom extends colyseus_1.Room {
         if (plugin_manager_1.default.onRoomCreate)
             plugin_manager_1.default.onRoomCreate(this.roomId);
         // Register all onMessage handlers
+        (0, roomLifecycle_1.attachRoomLifecycle)(this.gameState, this.clock, () => this._broadcastAll());
         this._registerHandlers();
         // Test sandbox: auto-fill with 3 bots
         if (this.roomId === 'ROOM_TEST' || this.roomId.startsWith('ROOM_TEST')) {
@@ -79,49 +91,13 @@ class WTKRoom extends colyseus_1.Room {
         const gs = this.gameState;
         const { playerName, roomAction, reconnectPlayerId, mode } = options || {};
         const action = options?._action || roomAction || 'join';
-        // ── RECONNECT PATH ──
-        if (roomAction === 'reconnect' && reconnectPlayerId) {
-            const player = gs.players[reconnectPlayerId];
-            if (player && player.isDisconnected) {
-                player.socketId = client.sessionId;
-                player.isDisconnected = false;
-                this._reconnectTokens[reconnectPlayerId] = client.auth;
-                if ((player.name || '').toLowerCase() === 'admin') {
-                    this._adminSockets.add(client.sessionId);
-                    client.send('admin_auth_status', { isAdmin: true, message: '🔓 ยืนยันสิทธิ์ Admin สำเร็จ! (ชื่อ Admin)' });
-                }
-                console.log(`[WTKRoom] ${player.name} reconnected (client: ${client.sessionId})`);
-                client.send('reconnect_success', { roomId: this.roomId, playerId: reconnectPlayerId });
-                this._broadcastAll();
-                return;
-            }
-        }
-        // ── JOIN PLAYING ROOM ──
-        if (gs.status !== 'LOBBY') {
-            const existingId = Object.keys(gs.players).find(pid => {
-                return gs.players[pid].name === (playerName || '') && gs.players[pid].isDisconnected;
-            });
-            if (existingId) {
-                const player = gs.players[existingId];
-                player.socketId = client.sessionId;
-                player.isDisconnected = false;
-                if ((player.name || '').toLowerCase() === 'admin') {
-                    this._adminSockets.add(client.sessionId);
-                    client.send('admin_auth_status', { isAdmin: true, message: '🔓 ยืนยันสิทธิ์ Admin สำเร็จ! (ชื่อ Admin)' });
-                }
-                client.send('reconnect_success', { roomId: this.roomId, playerId: existingId });
-                this._broadcastAll();
-                return;
-            }
-            client.send('game_error', { message: 'เกมก้าวสู่การเล่นไปแล้ว' });
-            return;
-        }
+        if (gs.status !== 'LOBBY')
+            throw new Error('เกมเริ่มแล้ว กรุณา reconnect ด้วย token เดิม');
         if (gs.turnOrder.length >= 10) {
-            client.send('game_error', { message: 'ห้องนี้เต็มแล้ว (สูงสุด 10 คน)' });
-            return;
+            throw new Error('ห้องนี้เต็มแล้ว (สูงสุด 10 คน)');
         }
-        const isHost = gs.turnOrder.length === 0;
-        const playerId = 'p' + (gs.turnOrder.length + 1);
+        const isHost = !gs.hostSocketId || gs.turnOrder.length === 0;
+        const playerId = 'p' + ((gs._nextPlayerNumber = (gs._nextPlayerNumber || 0) + 1));
         if (isHost && mode)
             gs.mode = mode;
         gs.players[playerId] = {
@@ -165,7 +141,7 @@ class WTKRoom extends colyseus_1.Room {
         console.log(`[WTKRoom] ${gs.players[playerId].name} (${playerId}) ${isHost ? 'CREATED' : 'joined'} ${this.roomId}`);
         if ((this.roomId === 'ROOM_TEST' || this.roomId.startsWith('ROOM_TEST')) && isHost) {
             for (let i = 0; i < 3; i++) {
-                const bId = 'p' + (gs.turnOrder.length + 1);
+                const bId = 'p' + ((gs._nextPlayerNumber = (gs._nextPlayerNumber || 0) + 1));
                 gs.players[bId] = {
                     id: bId, name: BOT_NAMES[i], socketId: '',
                     role: 'UNKNOWN', character: '', characterChoices: [],
@@ -184,18 +160,22 @@ class WTKRoom extends colyseus_1.Room {
     // ─── onLeave ──────────────────────────────────────────────────────────────
     async onLeave(client, consented) {
         const gs = this.gameState;
+        const roomHasEnded = () => gs.status === 'ENDED' || !!gs._disposed;
+        // Finished matches must acknowledge departure without reopening gameplay.
+        if (roomHasEnded())
+            return;
         const playerId = this._getPlayerIdByClient(client);
         if (!playerId)
             return;
         const player = gs.players[playerId];
         if (!player)
             return;
-        if (gs.status !== 'LOBBY' && player.isAlive) {
+        if (gs.status !== 'LOBBY' && (player.isAlive || (0, experimental_1.experimental)(gs))) {
             console.log(`[WTKRoom] ${player.name} disconnected. Allowing 45s reconnect...`);
             player.isDisconnected = true;
             this._broadcastAll();
             try {
-                const reconnection = await this.allowReconnection(client, 45);
+                const reconnection = await this.allowReconnection(client, catalog_1.RULES.reconnectSeconds);
                 player.socketId = reconnection.sessionId;
                 player.isDisconnected = false;
                 reconnection.send('reconnect_success', { roomId: this.roomId, playerId });
@@ -203,44 +183,22 @@ class WTKRoom extends colyseus_1.Room {
                 console.log(`[WTKRoom] ${player.name} reconnected successfully.`);
             }
             catch (e) {
+                // The match may finish while the existing reconnect grace is pending.
+                if (roomHasEnded())
+                    return;
                 console.log(`[WTKRoom] ${player.name} failed to reconnect. Removing from game.`);
-                player.hp = 0;
-                player.isAlive = false;
                 player.isDisconnected = false;
-                if (player.hand) {
-                    gs.discardPile.push(...player.hand);
-                    player.hand = [];
-                }
-                if (player.delayedKitZone) {
-                    gs.discardPile.push(...player.delayedKitZone);
-                    player.delayedKitZone = [];
-                }
-                if (player.equipment) {
-                    ['weapon', 'armor', 'defensiveHorse', 'offensiveHorse'].forEach(slot => {
-                        if (player.equipment[slot]) {
-                            gs.discardPile.push(player.equipment[slot]);
-                            player.equipment[slot] = null;
-                        }
-                    });
-                }
-                const isGameOver = (0, combatLogic_1.checkGameOver)(gs);
-                if (!isGameOver) {
-                    if (gs.turnOrder[gs.currentTurnIndex] === playerId) {
-                        gs.currentPhase = 'DISCARD';
-                        (0, phaseLogic_1.checkDiscardRequirement)(gs);
-                    }
-                    else {
-                        this._broadcastAll();
-                    }
-                }
-                else {
-                    this._broadcastAll();
-                }
+                (0, combatLogic_1.killPlayer)(gs, playerId);
+                this._broadcastAll();
             }
         }
         else if (gs.status === 'LOBBY') {
             delete gs.players[playerId];
             gs.turnOrder = gs.turnOrder.filter(id => id !== playerId);
+            if (gs.hostSocketId === client.sessionId) {
+                const next = Object.values(gs.players).find(p => !p.isBot);
+                gs.hostSocketId = next?.socketId || null;
+            }
             console.log(`[WTKRoom] ${player.name} left lobby.`);
             this._broadcastAll();
         }
@@ -248,6 +206,8 @@ class WTKRoom extends colyseus_1.Room {
     // ─── onDispose ────────────────────────────────────────────────────────────
     async onDispose() {
         const gs = this.gameState;
+        gs._disposed = true;
+        this.clock.clear();
         console.log(`[WTKRoom] Room ${this.roomId} disposed.`);
         if (gs.status === 'ENDED') {
             try {
@@ -256,13 +216,13 @@ class WTKRoom extends colyseus_1.Room {
                     roomId: gs.roomId,
                     winnerRole: gs.winnerRole || 'UNKNOWN',
                     playerCount: players.length,
-                    durationSeconds: 0
+                    durationSeconds: Math.round((Date.now() - (gs.startedAt || Date.now())) / 1000)
                 });
                 for (const p of players) {
                     if (!p.isBot) {
                         await (0, database_1.recordPlayerStats)({
                             name: p.name,
-                            isWin: p.role === gs.winnerRole,
+                            isWin: p.role === gs.winnerRole || gs.winnerRole === 'LORD' && p.role === 'LOYALIST',
                         });
                     }
                 }
@@ -277,13 +237,53 @@ class WTKRoom extends colyseus_1.Room {
     // ─── Message Handlers ─────────────────────────────────────────────────────
     _registerHandlers() {
         const gs = this.gameState;
-        this.onMessage('add_bot', (client) => {
+        const on = (name, handler) => {
+            gs._commandHandlers || (gs._commandHandlers = {});
+            gs._commandHandlers[name] = handler;
+            this.onMessage(name, (client, input) => {
+                const error = (0, commandPolicy_1.validateCommand)(gs, client.sessionId, name, input);
+                if (error) {
+                    client.send('game_error', { message: error });
+                    return;
+                }
+                try {
+                    handler(client, input || {});
+                    if (gs.status === 'PLAYING' && !gs.pendingAction)
+                        (0, combatLogic_2.resumeAfterAttack)(gs);
+                }
+                catch (error) {
+                    console.error('[command]', name, error);
+                    client.send('game_error', { message: 'คำสั่งไม่สำเร็จ กรุณาตรวจตัวเลือกแล้วลองใหม่' });
+                }
+            });
+        };
+        gs._borrowedProxyResponse = (id, cardId) => gs._commandHandlers.resolve_borrowed_sword({ _playerId: id, sessionId: gs.players[id].socketId, send: () => { } }, { cardId });
+        on('choose_strategy', (client, data) => { const p = gs.players[this._getPlayerIdByClient(client)]; if (!(0, experimental_1.chooseStrategy)(gs, p, data.strategyId))
+            client.send('game_error', { message: 'เลือกแผนไม่สำเร็จ หรือหมดเวลาแล้ว' }); });
+        on('use_strategy', (client, data) => { const { useStrategy } = require('../game/experimental'); if (!useStrategy(gs, gs.players[this._getPlayerIdByClient(client)], data.cardId))
+            client.send('game_error', { message: 'ต้องเลือกไพ่บนมือหนึ่งใบ และแผนยังไม่ถูกใช้' }); });
+        on('use_hua_tuo_skill', (client, data) => { if (!(0, expandedHeroes_1.qingnang)(gs, gs.players[this._getPlayerIdByClient(client)], data))
+            client.send('game_error', { message: 'เลือกไพ่บนมือหนึ่งใบและผู้บาดเจ็บ ใช้ได้เทิร์นละครั้ง' }); });
+        on('spectator_chat', (client, data) => {
+            const p = gs.players[this._getPlayerIdByClient(client)];
+            if (!(0, experimental_1.experimental)(gs) || p.isAlive || !['PLAYING', 'ENDED'].includes(gs.status) || typeof data.text !== 'string' || Date.now() - (p._lastSpectatorChat || 0) < 1500)
+                return;
+            const text = data.text.trim().slice(0, 240);
+            if (!text)
+                return;
+            p._lastSpectatorChat = Date.now();
+            gs.spectatorChat.push({ sender: p.name, text, time: new Date().toLocaleTimeString('th-TH') });
+            if (gs.spectatorChat.length > 100)
+                gs.spectatorChat.shift();
+            this._broadcastAll();
+        });
+        on('add_bot', (client) => {
             if (gs.status !== 'LOBBY')
                 return;
             if (gs.turnOrder.length >= 10) {
                 return client.send('game_error', { message: 'ผู้เล่นและบอทเต็มห้องแล้ว (สูงสุด 10 คน)' });
             }
-            const bId = 'p' + (gs.turnOrder.length + 1);
+            const bId = 'p' + ((gs._nextPlayerNumber = (gs._nextPlayerNumber || 0) + 1));
             const botName = BOT_NAMES[(gs.turnOrder.length - 1) % BOT_NAMES.length] || `Bot ${gs.turnOrder.length}`;
             gs.players[bId] = {
                 id: bId, name: botName, socketId: '',
@@ -297,7 +297,7 @@ class WTKRoom extends colyseus_1.Room {
             console.log(`[WTKRoom] Added bot ${botName} (${bId}) to ${this.roomId}`);
             this._broadcastAll();
         });
-        this.onMessage('remove_bot', () => {
+        on('remove_bot', () => {
             if (gs.status !== 'LOBBY')
                 return;
             const botPlayers = Object.values(gs.players).filter(p => p.isBot);
@@ -309,18 +309,18 @@ class WTKRoom extends colyseus_1.Room {
             console.log(`[WTKRoom] Removed bot ${lastBot.name} (${lastBot.id}) from ${this.roomId}`);
             this._broadcastAll();
         });
-        this.onMessage('start_game', (client, data) => {
+        on('start_game', (client, data) => {
             if (gs.status !== 'LOBBY')
                 return;
             const { botCount } = data || {};
-            if (gs.mode !== 'BOT' && gs.turnOrder.length < 2) {
-                return client.send('game_error', { message: 'ต้องมีผู้เล่นในห้องอย่างน้อย 2 คนจึงจะเริ่มเกมได้' });
+            if (gs.mode !== 'BOT' && gs.turnOrder.length < catalog_1.RULES.minPlayers) {
+                return client.send('game_error', { message: 'ต้องมีผู้เล่นในห้องอย่างน้อย 4 คนจึงจะเริ่มเกมได้' });
             }
             if (gs.mode === 'BOT') {
-                const targetCount = botCount || 4;
+                const targetCount = Math.max(catalog_1.RULES.minPlayers, Math.min(catalog_1.RULES.maxPlayers, Number(data?.totalPlayers || (botCount ? Number(botCount) + 1 : catalog_1.RULES.defaultPlayers))));
                 let botIdx = 0;
                 while (gs.turnOrder.length < targetCount) {
-                    const bId = 'p' + (gs.turnOrder.length + 1);
+                    const bId = 'p' + ((gs._nextPlayerNumber = (gs._nextPlayerNumber || 0) + 1));
                     gs.players[bId] = {
                         id: bId, name: BOT_NAMES[botIdx++] || 'Bot ' + gs.turnOrder.length,
                         socketId: '', role: 'UNKNOWN', character: '', characterChoices: [],
@@ -332,11 +332,13 @@ class WTKRoom extends colyseus_1.Room {
                     gs.turnOrder.push(bId);
                 }
             }
+            this.lock();
+            gs.startedAt = Date.now();
             (0, phaseLogic_1.assignRoles)(gs);
             (0, phaseLogic_1.startDraftPhase)(gs);
             this._broadcastAll();
         });
-        this.onMessage('choose_character', (client, data) => {
+        on('choose_character', (client, data) => {
             if (gs.status !== 'DRAFTING')
                 return;
             const playerId = this._getPlayerIdByClient(client);
@@ -345,27 +347,29 @@ class WTKRoom extends colyseus_1.Room {
             const player = gs.players[playerId];
             const rawChar = data.characterId;
             const charId = typeof rawChar === 'object' ? (rawChar.id || rawChar.name || '') : rawChar;
-            player.character = charId;
+            if (player.character || !player.characterChoices?.some(h => (0, catalog_1.canonicalHero)(h.id) === (0, catalog_1.canonicalHero)(charId)))
+                return client.send('game_error', { message: 'เลือกขุนพลจากชุดที่เสนอให้เท่านั้น' });
+            player.character = (0, catalog_1.canonicalHero)(charId);
             (0, phaseLogic_1.setupCharacterHp)(player, gs.turnOrder.length);
-            const allChosen = Object.values(gs.players).every(p => p.character !== '');
+            const allChosen = Object.values(gs.players).filter(p => p.isAlive).every(p => p.character !== '');
             if (allChosen)
                 (0, phaseLogic_1.startPlayPhase)(gs);
             else
                 this._broadcastAll();
         });
-        this.onMessage('use_card', (client, data) => {
+        on('use_card', (client, data) => {
             if (gs.status !== 'PLAYING')
                 return;
             const socketLike = this._makeSocketLike(client);
             (0, cardLogic_1.handleUseCard)(gs, socketLike, { ...data, roomId: this.roomId });
         });
-        this.onMessage('resolve_pending', (client, data) => {
+        on('resolve_pending', (client, data) => {
             if (gs.status !== 'PLAYING')
                 return;
             const socketLike = this._makeSocketLike(client);
             (0, cardLogic_1.handleResolvePending)(gs, socketLike, { ...data, roomId: this.roomId });
         });
-        this.onMessage('end_turn', (client) => {
+        on('end_turn', (client) => {
             if (gs.status !== 'PLAYING')
                 return;
             const playerId = this._getPlayerIdByClient(client);
@@ -374,7 +378,7 @@ class WTKRoom extends colyseus_1.Room {
             gs.currentPhase = 'DISCARD';
             (0, phaseLogic_1.checkDiscardRequirement)(gs);
         });
-        this.onMessage('discard_cards', (client, data) => {
+        on('discard_cards', (client, data) => {
             if (gs.currentPhase !== 'DISCARD')
                 return;
             const playerId = this._getPlayerIdByClient(client);
@@ -385,7 +389,7 @@ class WTKRoom extends colyseus_1.Room {
             const hasAll = cardIds.every(cid => player.hand.some(c => c.id === cid));
             if (!hasAll)
                 return client.send('game_error', { message: 'ไม่พบการ์ดที่ระบุในกองมือ' });
-            const requiredDiscard = player.hand.length - player.hp;
+            const requiredDiscard = Math.max(0, player.hand.length - player.hp - (player.equipment.treasure?.name === 'WOODEN_CART' ? 1 : 0));
             if (cardIds.length !== requiredDiscard)
                 return client.send('game_error', { message: `กรุณาทิ้งการ์ดทั้งหมด ${requiredDiscard} ใบ` });
             cardIds.forEach(cid => {
@@ -394,62 +398,43 @@ class WTKRoom extends colyseus_1.Room {
             });
             (0, phaseLogic_1.endPlayerTurn)(gs);
         });
-        this.onMessage('use_peach_dying', (client, data) => {
-            if (!gs.pendingAction || gs.pendingAction.type !== 'DYING')
+        on('use_peach_dying', (client, data) => {
+            const id = this._getPlayerIdByClient(client);
+            if (!id)
                 return;
-            const pending = gs.pendingAction;
-            const askerId = gs.turnOrder[pending.currentAskerIdx];
-            const playerId = this._getPlayerIdByClient(client);
-            if (playerId !== askerId)
-                return;
-            const asker = gs.players[askerId];
-            const dyingPlayer = gs.players[pending.targetPlayerId];
             if (data.usePeach) {
-                let peachIdx = asker.hand.findIndex(c => c.name === 'PEACH');
-                if (askerId === pending.targetPlayerId && peachIdx === -1)
-                    peachIdx = asker.hand.findIndex(c => c.name === 'WINE');
-                if (peachIdx === -1)
-                    return client.send('game_error', { message: 'คุณไม่มีการ์ด PEACH หรือ WINE สำหรับฟื้นชีวิต' });
-                const card = asker.hand.splice(peachIdx, 1)[0];
-                gs.discardPile.push(card);
-                dyingPlayer.hp += 1;
-                pending.peachNeeded -= 1;
-                if (pending.peachNeeded <= 0) {
-                    gs.pendingAction = null;
-                    this._broadcastAll();
-                    (0, combatLogic_1.resumeAfterAttack)(gs);
-                }
-                else
-                    this._broadcastAll();
+                if (!(0, combatLogic_1.rescueDying)(gs, id, data.cardId))
+                    client.send('game_error', { message: 'เลือกสวนท้อ หรือสุราเพื่อช่วยตนเอง' });
             }
-            else {
-                (0, combatLogic_1.advanceDyingAsker)(gs);
-            }
+            else if (gs.pendingAction?.type === 'DYING' && gs.turnOrder[gs.pendingAction.currentAskerIdx] === id)
+                (0, combatLogic_2.advanceDyingAsker)(gs);
         });
-        this.onMessage('play_negate', (client, data) => {
+        on('play_negate', (client, data) => {
             if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_NEGATE')
                 return;
             const playerId = this._getPlayerIdByClient(client);
             if (!playerId)
                 return;
             const player = gs.players[playerId];
+            if (!player.isAlive || gs.actionChain.length === 1 && gs.actionChain[0]?.sourceId === playerId)
+                return;
             const cardIdx = player.hand.findIndex(c => c.id === data.cardId && c.name === 'NEGATE');
             if (cardIdx === -1)
                 return client.send('game_error', { message: 'ไม่มีการ์ด NEGATE ใบนี้' });
             const cardUsed = player.hand.splice(cardIdx, 1)[0];
             gs.discardPile.push(cardUsed);
-            this.broadcast('card_played', { playerId, cardName: 'NEGATE' });
+            (0, presentationEvents_1.emitCardPlay)(gs, playerId, cardUsed, { cardName: 'NEGATE', kind: 'RESPONSE', targetId: gs.actionChain[gs.actionChain.length - 1]?.sourceId });
             gs.actionChain.push({ type: 'NEGATE', sourceId: playerId, cardUsed });
             gs.negatePassedPlayers = [];
-            gs.pendingAction.timeoutAt = Date.now() + 5000;
+            gs.pendingAction.timeoutAt = (0, runtime_1.deadline)(gs);
             this._broadcastAll();
-            const chainLen = gs.actionChain.length;
-            setTimeout(() => {
-                if (gs.pendingAction?.type === 'WAITING_FOR_NEGATE' && gs.actionChain.length === chainLen)
+            const chainLen = gs.actionChain.length, pending = gs.pendingAction, expectedDeadline = gs.pendingAction.timeoutAt;
+            (0, runtime_1.schedule)(gs, () => {
+                if (gs.pendingAction === pending && gs.pendingAction?.timeoutAt === expectedDeadline && gs.actionChain.length === chainLen)
                     (0, cardLogic_1.resolveActionChain)(gs);
-            }, 5000);
+            }, catalog_1.RULES.reactionMs);
         });
-        this.onMessage('pass_negate', (client) => {
+        on('pass_negate', (client) => {
             if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_NEGATE')
                 return;
             const playerId = this._getPlayerIdByClient(client);
@@ -458,10 +443,11 @@ class WTKRoom extends colyseus_1.Room {
             if (!gs.negatePassedPlayers.includes(playerId))
                 gs.negatePassedPlayers.push(playerId);
             const aliveCount = Object.values(gs.players).filter(p => p.isAlive).length;
+            gs.negatePassedPlayers = gs.negatePassedPlayers.filter(id => gs.players[id]?.isAlive);
             if (gs.negatePassedPlayers.length >= aliveCount)
                 (0, cardLogic_1.resolveActionChain)(gs);
         });
-        this.onMessage('pick_bumper_card', (client, data) => {
+        on('pick_bumper_card', (client, data) => {
             if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_BUMPER_PICK')
                 return;
             const playerId = this._getPlayerIdByClient(client);
@@ -485,102 +471,96 @@ class WTKRoom extends colyseus_1.Room {
                 }
                 if (nextPickerId) {
                     gs.pendingAction.currentPickerId = nextPickerId;
-                    gs.pendingAction.timeoutAt = Date.now() + 15000;
+                    gs.pendingAction.timeoutAt = (0, runtime_1.deadline)(gs);
                     this._broadcastAll();
                     if (gs.players[nextPickerId]?.isBot)
-                        setTimeout(() => (0, botAI_1.handleBotBumperPick)(gs), 1200);
+                        (0, runtime_1.schedule)(gs, () => (0, botAI_1.handleBotBumperPick)(gs), 1200);
                 }
                 else {
                     gs.discardPile.push(...gs.bumperHarvestCards);
                     gs.bumperHarvestCards = [];
                     gs.pendingAction = null;
-                    (0, combatLogic_1.resumeAfterAttack)(gs);
+                    (0, combatLogic_2.resumeAfterAttack)(gs);
                     this._broadcastAll();
                 }
             }
             else {
                 gs.bumperHarvestCards = [];
                 gs.pendingAction = null;
-                (0, combatLogic_1.resumeAfterAttack)(gs);
+                (0, combatLogic_2.resumeAfterAttack)(gs);
                 this._broadcastAll();
             }
         });
-        this.onMessage('trigger_luo_river', (client) => {
-            if (!gs.pendingAction || gs.pendingAction.type !== 'LUO_RIVER')
+        on('trigger_luo_river', (client, data) => {
+            const pending = gs.pendingAction, id = this._getPlayerIdByClient(client);
+            if (pending?.type !== 'LUO_RIVER' || pending.targetPlayerId !== id)
                 return;
-            const playerId = this._getPlayerIdByClient(client);
-            if (playerId !== gs.pendingAction.targetPlayerId)
+            const player = gs.players[id], drawn = (0, phaseLogic_1.drawCards)(gs, 1)[0];
+            if (!drawn) {
+                gs.pendingAction = null;
+                pending.resume?.();
                 return;
-            const pending = gs.pendingAction;
-            const player = gs.players[playerId];
-            const drawn = (0, phaseLogic_1.drawCards)(gs, 1);
-            if (drawn.length > 0) {
-                const card = drawn[0];
-                if (card.suit === 'SPADE' || card.suit === 'CLUB') {
-                    player.hand.push(card);
+            }
+            if (!pending.presentationAnnounced) {
+                pending.presentationAnnounced = true;
+                (0, presentationEvents_1.emitHeroSkill)(gs, id, 'LUOSHEN');
+            }
+            (0, heroLogic_1.judgeWithHeroes)(gs, player, drawn, { name: 'LUO_RIVER' }, final => {
+                gs._emitAll?.('judgement_result', { title: 'Luoshen', card: final, isSuccess: final.suit === 'SPADE' || final.suit === 'CLUB', targetPlayerId: id, targetPlayerName: player.name });
+                if (final.suit === 'SPADE' || final.suit === 'CLUB') {
+                    player.hand.push(final);
+                    pending.timeoutAt = (0, runtime_1.deadline)(gs);
+                    gs.pendingAction = pending;
                     this._broadcastAll();
                 }
                 else {
-                    gs.discardPile.push(card);
+                    gs.discardPile.push(final);
                     gs.pendingAction = null;
-                    (0, phaseLogic_1.executeDrawPhase)(gs, player, pending.skipDrawPhase, pending.skipPlayPhase);
+                    pending.resume?.();
                 }
-            }
+            });
         });
-        this.onMessage('skip_luo_river', (client) => {
-            if (!gs.pendingAction || gs.pendingAction.type !== 'LUO_RIVER')
+        on('skip_luo_river', (client, data) => {
+            const pending = gs.pendingAction, id = this._getPlayerIdByClient(client);
+            if (pending?.type !== 'LUO_RIVER' || pending.targetPlayerId !== id)
                 return;
-            const playerId = this._getPlayerIdByClient(client);
-            if (playerId !== gs.pendingAction.targetPlayerId)
-                return;
-            const pending = gs.pendingAction;
-            const player = gs.players[playerId];
             gs.pendingAction = null;
-            (0, phaseLogic_1.executeDrawPhase)(gs, player, pending.skipDrawPhase, pending.skipPlayPhase);
+            pending.resume?.();
         });
-        this.onMessage('resolve_borrowed_sword', (client, data) => {
-            if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_BORROW_SLASH')
+        on('resolve_borrowed_sword', (client, data) => {
+            const pending = gs.pendingAction, id = this._getPlayerIdByClient(client);
+            if (pending?.type !== 'WAITING_FOR_BORROW_SLASH' || pending.targetPlayerId !== id)
                 return;
-            const playerId = this._getPlayerIdByClient(client);
-            if (playerId !== gs.pendingAction.targetPlayerId)
-                return;
-            const playerB = gs.players[playerId];
-            const playerA = gs.players[gs.pendingAction.sourcePlayerId];
+            const bearer = gs.players[id], caster = gs.players[pending.sourcePlayerId], victim = gs.players[pending.victimId];
             if (data.cardId) {
-                const cardIdx = playerB.hand.findIndex(c => c.id === data.cardId);
-                if (cardIdx !== -1) {
-                    const slashCard = playerB.hand[cardIdx];
-                    const isSlash = slashCard.name === 'SLASH' || slashCard.name === 'THUNDER_ATTACK' ||
-                        ((0, phaseLogic_1.hasCharacter)(playerB, 'ZHAO_YUN') && slashCard.name === 'DODGE') ||
-                        ((0, phaseLogic_1.hasCharacter)(playerB, 'GUAN_YU') && (slashCard.suit === 'HEART' || slashCard.suit === 'DIAMOND'));
-                    if (!isSlash)
-                        return client.send('game_error', { message: 'การ์ดที่เลือกใช้แทน SLASH ไม่ถูกต้อง' });
-                    playerB.hand.splice(cardIdx, 1);
-                    gs.discardPile.push(slashCard);
-                    const damage = playerB.wineActive ? 2 : 1;
-                    playerB.wineActive = false;
-                    gs.pendingAction = {
-                        type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId, targetPlayerId: gs.pendingAction.victimId,
-                        damage, cardUsedId: slashCard.id, originalAttackerId: gs.pendingAction.sourcePlayerId,
-                        timeoutAt: Date.now() + 15000, dodgeNeeded: (0, phaseLogic_1.hasCharacter)(playerB, 'LV_BU') ? 2 : 1,
-                        damageType: playerB.equipment?.weapon?.name === 'FEATHERED_FAN' ? 'FIRE' : 'NORMAL'
-                    };
-                    this._broadcastAll();
-                    const playerC = gs.players[gs.pendingAction.targetPlayerId];
-                    if (playerC?.isBot)
-                        setTimeout(() => (0, botAI_1.handleBotDodge)(gs, gs.pendingAction.targetPlayerId, damage), 1200);
+                const found = bearer.hand.find(c => c.id === data.cardId) || ((0, catalog_1.canonicalHero)(bearer.character) === 'GUAN_YU' ? Object.values(bearer.equipment).find(c => c?.id === data.cardId) : undefined);
+                if (!found || !(0, heroLogic_1.canRespond)(bearer, found, 'SLASH'))
+                    return client.send('game_error', { message: 'เลือกการ์ดที่ใช้เป็นโจมตีได้' });
+                if (!victim?.isAlive)
                     return;
-                }
+                const used = (0, heroLogic_1.removeOwnedCard)(gs, bearer, found.id, (0, catalog_1.canonicalHero)(bearer.character) === 'GUAN_YU');
+                used.effectName = used.name === 'THUNDER_ATTACK' ? 'THUNDER_ATTACK' : 'SLASH';
+                gs.discardPile.push(used);
+                (0, presentationEvents_1.emitCardPlay)(gs, id, used, { cardName: used.effectName, kind: 'RESPONSE', targetId: victim.id });
+                const damage = bearer.wineActive ? 2 : 1;
+                bearer.wineActive = false;
+                gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: id, targetPlayerId: victim.id, damage, cardUsedId: used.id, originalAttackerId: pending.sourcePlayerId, timeoutAt: (0, runtime_1.deadline)(gs), dodgeNeeded: (0, catalog_1.canonicalHero)(bearer.character) === 'LV_BU' ? 2 : 1, damageType: used.name === 'THUNDER_ATTACK' ? 'THUNDER' : bearer.equipment.weapon?.name === 'FEATHERED_FAN' ? 'FIRE' : 'NORMAL' };
+                const defense = gs.pendingAction;
+                if (victim.isBot)
+                    (0, runtime_1.schedule)(gs, () => { if (gs.pendingAction === defense)
+                        (0, botAI_1.handleBotDodge)(gs, victim.id, damage); }, 700);
+                this._broadcastAll();
+                return;
             }
-            if (playerB.equipment?.weapon) {
-                playerA.hand.push(playerB.equipment.weapon);
-                playerB.equipment.weapon = null;
+            if (bearer.equipment.weapon) {
+                caster.hand.push(bearer.equipment.weapon);
+                bearer.equipment.weapon = null;
             }
             gs.pendingAction = null;
-            (0, combatLogic_1.resumeAfterAttack)(gs);
+            (0, combatLogic_2.resumeAfterAttack)(gs);
             this._broadcastAll();
         });
-        this.onMessage('resolve_fire_reveal', (client, data) => {
+        on('resolve_fire_reveal', (client, data) => {
             if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_FIRE_REVEAL')
                 return;
             const playerId = this._getPlayerIdByClient(client);
@@ -591,10 +571,10 @@ class WTKRoom extends colyseus_1.Room {
             if (!revealedCard)
                 return client.send('game_error', { message: 'ไม่พบการ์ดที่เลือก' });
             gs.chat.push({ sender: 'System', text: `${target.name} เปิดเผยการ์ด ${revealedCard.name} (${revealedCard.suit})`, time: new Date().toLocaleTimeString('th-TH') });
-            gs.pendingAction = { type: 'WAITING_FOR_FIRE_MATCH', sourcePlayerId: gs.pendingAction.sourcePlayerId, targetPlayerId: playerId, requiredSuit: revealedCard.suit, revealedCard, timeoutAt: Date.now() + 15000 };
+            gs.pendingAction = { type: 'WAITING_FOR_FIRE_MATCH', sourcePlayerId: gs.pendingAction.sourcePlayerId, targetPlayerId: playerId, requiredSuit: revealedCard.suit, revealedCard, timeoutAt: (0, runtime_1.deadline)(gs) };
             this._broadcastAll();
         });
-        this.onMessage('resolve_fire_match', (client, data) => {
+        on('resolve_fire_match', (client, data) => {
             if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_FIRE_MATCH')
                 return;
             const playerId = this._getPlayerIdByClient(client);
@@ -603,7 +583,7 @@ class WTKRoom extends colyseus_1.Room {
             const attacker = gs.players[playerId];
             if (data.cancel) {
                 gs.pendingAction = null;
-                (0, combatLogic_1.resumeAfterAttack)(gs);
+                (0, combatLogic_2.resumeAfterAttack)(gs);
                 this._broadcastAll();
                 return;
             }
@@ -616,12 +596,12 @@ class WTKRoom extends colyseus_1.Room {
             gs.discardPile.push(attacker.hand.splice(matchIdx, 1)[0]);
             const targetId = gs.pendingAction.targetPlayerId;
             gs.pendingAction = null;
-            (0, combatLogic_1.dealDamage)(gs, targetId, 1, null, playerId, 'FIRE');
+            (0, combatLogic_2.dealDamage)(gs, targetId, 1, null, playerId, 'FIRE');
             if (!gs.pendingAction)
-                (0, combatLogic_1.resumeAfterAttack)(gs);
+                (0, combatLogic_2.resumeAfterAttack)(gs);
             this._broadcastAll();
         });
-        this.onMessage('resolve_yinyang_choice', (client, data) => {
+        on('resolve_yinyang_choice', (client, data) => {
             if (!gs.pendingAction || gs.pendingAction.type !== 'WAITING_FOR_YINYANG_CHOICE')
                 return;
             const playerId = this._getPlayerIdByClient(client);
@@ -638,102 +618,70 @@ class WTKRoom extends colyseus_1.Room {
                 (0, phaseLogic_1.drawCards)(gs, 1).forEach(c => attacker.hand.push(c));
             }
             gs.pendingAction = null;
-            (0, combatLogic_1.resumeAfterAttack)(gs);
+            (0, combatLogic_2.resumeAfterAttack)(gs);
             this._broadcastAll();
         });
-        this.onMessage('resolve_weapon_skill', (client, data) => {
-            if (!gs.pendingAction)
+        on('resolve_weapon_skill', (client, data) => {
+            const pending = gs.pendingAction, id = this._getPlayerIdByClient(client);
+            if (!pending || pending.sourcePlayerId !== id)
                 return;
-            const playerId = this._getPlayerIdByClient(client);
-            if (playerId !== gs.pendingAction.sourcePlayerId)
+            if (!['WAITING_FOR_GREEN_DRAGON', 'WAITING_FOR_AXE_DISCARD', 'WAITING_FOR_TRIDENT_DISCARD', 'WAITING_FOR_FROST_DISCARD'].includes(pending.type))
                 return;
-            const pending = gs.pendingAction;
-            const attacker = gs.players[playerId];
-            const target = gs.players[pending.targetPlayerId];
+            const attacker = gs.players[id], target = gs.players[pending.targetPlayerId];
+            if (!target?.isAlive)
+                return;
             if (!data.accept) {
-                if (pending.type === 'WAITING_FOR_FROST_DISCARD') {
-                    gs.pendingAction = null;
-                    (0, combatLogic_1.dealDamage)(gs, target.id, pending.originalDamage, (0, combatLogic_1.getCardById)(gs, pending.cardUsedId), attacker.id, pending.damageType);
-                    if (!gs.pendingAction)
-                        (0, combatLogic_1.resumeAfterAttack)(gs);
-                }
-                else if (['WAITING_FOR_GREEN_DRAGON', 'WAITING_FOR_AXE_DISCARD', 'WAITING_FOR_TRIDENT_DISCARD'].includes(pending.type)) {
-                    gs.pendingAction = null;
-                    (0, combatLogic_1.resumeAfterAttack)(gs);
-                }
+                gs.pendingAction = null;
+                if (pending.type === 'WAITING_FOR_FROST_DISCARD')
+                    (0, combatLogic_2.dealDamage)(gs, target.id, pending.originalDamage, (0, combatLogic_2.getCardById)(gs, pending.cardUsedId), id, pending.damageType, pending.attack);
+                if (!gs.pendingAction)
+                    (0, combatLogic_2.resumeAfterAttack)(gs);
                 this._broadcastAll();
                 return;
             }
             if (pending.type === 'WAITING_FOR_GREEN_DRAGON') {
-                const slashIdx = attacker.hand.findIndex(c => c.id === data.cardId && (c.name === 'SLASH' || c.name === 'THUNDER_ATTACK'));
-                if (slashIdx !== -1) {
-                    const slashCard = attacker.hand.splice(slashIdx, 1)[0];
-                    gs.discardPile.push(slashCard);
-                    const dmg = attacker.wineActive ? 2 : 1;
-                    attacker.wineActive = false;
-                    gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId, targetPlayerId: target.id, cardUsedId: slashCard.id, damage: dmg, dodgeNeeded: 1, damageType: 'NORMAL', timeoutAt: Date.now() + 15000 };
-                    this._broadcastAll();
-                    if (target.isBot)
-                        setTimeout(() => (0, botAI_1.handleBotDodge)(gs, target.id, dmg), 1200);
-                }
-                else {
-                    gs.pendingAction = null;
-                    (0, combatLogic_1.resumeAfterAttack)(gs);
-                    this._broadcastAll();
-                }
+                const card = attacker.hand.find(c => c.id === data.cardId) || Object.values(attacker.equipment).find(c => c?.id === data.cardId);
+                if (!card || !(0, heroLogic_1.canRespond)(attacker, card, 'SLASH'))
+                    return client.send('game_error', { message: 'เลือกการ์ดที่ใช้เป็นโจมตีได้' });
+                const used = (0, heroLogic_1.removeOwnedCard)(gs, attacker, card.id);
+                used.effectName = 'SLASH';
+                gs.discardPile.push(used);
+                (0, presentationEvents_1.emitCardPlay)(gs, id, used, { cardName: used.name === 'THUNDER_ATTACK' ? 'THUNDER_ATTACK' : 'SLASH', kind: 'RESPONSE', targetId: target.id });
+                const damage = attacker.wineActive ? 2 : 1;
+                attacker.wineActive = false;
+                gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: id, targetPlayerId: target.id, cardUsedId: used.id, damage, dodgeNeeded: (0, catalog_1.canonicalHero)(attacker.character) === 'LV_BU' ? 2 : 1, damageType: used.name === 'THUNDER_ATTACK' ? 'THUNDER' : 'NORMAL', timeoutAt: (0, runtime_1.deadline)(gs) };
+                if (target.isBot)
+                    (0, runtime_1.schedule)(gs, () => (0, botAI_1.handleBotDodge)(gs, target.id, damage), 700);
+                this._broadcastAll();
+                return;
             }
-            else if (pending.type === 'WAITING_FOR_AXE_DISCARD' || pending.type === 'WAITING_FOR_TRIDENT_DISCARD') {
-                const discard2 = pending.type === 'WAITING_FOR_AXE_DISCARD';
-                const cardIds = data.cardIds || [];
-                const needed = discard2 ? 2 : 1;
-                if (cardIds.length < needed)
-                    return client.send('game_error', { message: `กรุณาเลือกการ์ดทิ้ง ${needed} ใบ` });
-                cardIds.forEach((cid) => {
-                    const idx = attacker.hand.findIndex(c => c.id === cid);
-                    if (idx !== -1)
-                        gs.discardPile.push(attacker.hand.splice(idx, 1)[0]);
-                    else {
-                        const slots = ['weapon', 'armor', 'offensiveHorse', 'defensiveHorse', 'treasure'];
-                        for (const slot of slots) {
-                            if (attacker.equipment[slot]?.id === cid) {
-                                gs.discardPile.push(attacker.equipment[slot]);
-                                attacker.equipment[slot] = null;
-                                break;
-                            }
-                        }
-                    }
-                });
+            const frost = pending.type === 'WAITING_FOR_FROST_DISCARD', owner = frost ? target : attacker, ids = data.cardIds || [], need = pending.type === 'WAITING_FOR_TRIDENT_DISCARD' ? 1 : 2;
+            const available = owner.hand.length + Object.values(owner.equipment).filter(Boolean).length;
+            const actualNeed = frost ? Math.min(2, available) : need;
+            if (frost && actualNeed === 0) {
                 gs.pendingAction = null;
-                (0, combatLogic_1.dealDamage)(gs, target.id, pending.originalDamage, (0, combatLogic_1.getCardById)(gs, pending.cardUsedId), attacker.id, pending.damageType);
+                (0, combatLogic_2.dealDamage)(gs, target.id, pending.originalDamage, (0, combatLogic_2.getCardById)(gs, pending.cardUsedId), id, pending.damageType, pending.attack);
                 if (!gs.pendingAction)
-                    (0, combatLogic_1.resumeAfterAttack)(gs);
+                    (0, combatLogic_2.resumeAfterAttack)(gs);
                 this._broadcastAll();
+                return;
             }
-            else if (pending.type === 'WAITING_FOR_FROST_DISCARD') {
-                const cardIds = data.cardIds || [];
-                if (cardIds.length < 2)
-                    return client.send('game_error', { message: 'กรุณาเลือกการ์ดทิ้ง 2 ใบ' });
-                cardIds.slice(0, 2).forEach((cid) => {
-                    const idx = target.hand.findIndex(c => c.id === cid);
-                    if (idx !== -1)
-                        gs.discardPile.push(target.hand.splice(idx, 1)[0]);
-                    else {
-                        const slots = ['weapon', 'armor', 'offensiveHorse', 'defensiveHorse', 'treasure'];
-                        for (const slot of slots) {
-                            if (target.equipment[slot]?.id === cid) {
-                                gs.discardPile.push(target.equipment[slot]);
-                                target.equipment[slot] = null;
-                                break;
-                            }
-                        }
-                    }
-                });
-                gs.pendingAction = null;
-                (0, combatLogic_1.resumeAfterAttack)(gs);
-                this._broadcastAll();
+            const randomCount = ids.filter(cid => cid.startsWith('hand_')).length;
+            if (ids.length !== actualNeed || randomCount > owner.hand.length || ids.some(cid => cid.startsWith('hand_') ? !frost : !owner.hand.some(c => c.id === cid) && !Object.values(owner.equipment).some(c => c?.id === cid)))
+                return client.send('game_error', { message: 'เลือกการ์ดจริงตามจำนวนที่ต้องทิ้ง' });
+            for (const cid of ids) {
+                const card = cid.startsWith('hand_') ? owner.hand.splice(Math.floor(Math.random() * owner.hand.length), 1)[0] : (0, heroLogic_1.removeOwnedCard)(gs, owner, cid);
+                if (card)
+                    gs.discardPile.push(card);
             }
+            gs.pendingAction = null;
+            if (!frost)
+                (0, combatLogic_2.dealDamage)(gs, target.id, pending.originalDamage, (0, combatLogic_2.getCardById)(gs, pending.cardUsedId), id, pending.damageType, pending.attack);
+            if (!gs.pendingAction)
+                (0, combatLogic_2.resumeAfterAttack)(gs);
+            this._broadcastAll();
         });
-        this.onMessage('use_serpent_spear', (client, data) => {
+        on('use_serpent_spear', (client, data) => {
             if (gs.pendingAction)
                 return client.send('game_error', { message: 'กรุณารอการประมวลผลก่อนหน้า' });
             const playerId = this._getPlayerIdByClient(client);
@@ -749,7 +697,7 @@ class WTKRoom extends colyseus_1.Room {
                 return client.send('game_error', { message: 'ไม่พบการ์ดที่ระบุบนมือ' });
             const hasZhuge = player.equipment.weapon.name === 'ZHUGE_CROSSBOW';
             const isZhangFei = (0, phaseLogic_1.hasCharacter)(player, 'ZHANG_FEI');
-            if (gs.attacksPlayedInTurn >= 1 && !hasZhuge && !isZhangFei)
+            if (gs.attacksPlayedInTurn >= 1 + (player.extraAttacks || 0) && !hasZhuge && !isZhangFei)
                 return client.send('game_error', { message: 'คุณใช้สิทธิ์โจมตีครบแล้วในเทิร์นนี้' });
             const target = gs.players[targetPlayerId];
             if (!target?.isAlive)
@@ -760,30 +708,23 @@ class WTKRoom extends colyseus_1.Room {
                 return client.send('game_error', { message: `ระยะไม่ถึง! เป้าหมายอยู่ห่าง ${dist} แต่ระยะโจมตีคือ ${weaponRange}` });
             if ((0, phaseLogic_1.hasCharacter)(target, 'ZHUGE_LIANG') && target.hand.length === 0)
                 return client.send('game_error', { message: 'ขงเบ้งเปิดใช้สกิล เมืองว่างเปล่า ไม่สามารถตกเป็นเป้าหมายได้!' });
+            const materials = cardIds.map((cid) => player.hand.find(c => c.id === cid));
             cardIds.forEach((cid) => { const idx = player.hand.findIndex(c => c.id === cid); if (idx !== -1)
                 gs.discardPile.push(player.hand.splice(idx, 1)[0]); });
+            const colors = materials.map(card => ['HEART', 'DIAMOND'].includes(card.suit) ? 'RED' : 'BLACK');
+            const attack = { name: 'SLASH', color: colors[0] === colors[1] ? colors[0] : 'COLORLESS', materialCardIds: materials.map(card => card.id) };
             const damage = player.wineActive ? 2 : 1;
             player.wineActive = false;
             gs.attacksPlayedInTurn += 1;
             player.slashedThisTurn = true;
-            gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId, targetPlayerId, cardUsedId: `serpent_${Date.now()}`, damage, dodgeNeeded: (0, phaseLogic_1.hasCharacter)(player, 'LV_BU') ? 2 : 1, damageType: 'NORMAL', timeoutAt: Date.now() + 15000 };
-            this.broadcast('card_played', { playerId: playerId, cardName: 'SERPENT_SPEAR', targetId: targetPlayerId });
+            gs.pendingAction = { type: 'WAITING_FOR_DODGE', sourcePlayerId: playerId, targetPlayerId, cardUsedId: null, attack, damage, dodgeNeeded: (0, phaseLogic_1.hasCharacter)(player, 'LV_BU') ? 2 : 1, damageType: 'NORMAL', timeoutAt: (0, runtime_1.deadline)(gs) };
+            (0, presentationEvents_1.emitCardPlay)(gs, playerId, null, { cardName: 'SLASH', targetId: targetPlayerId });
             this._broadcastAll();
             if (target.isBot)
-                setTimeout(() => (0, botAI_1.handleBotDodge)(gs, targetPlayerId, damage), 1200);
-            else
-                setTimeout(() => {
-                    if (gs.pendingAction?.type === 'WAITING_FOR_DODGE' && gs.pendingAction.sourcePlayerId === playerId) {
-                        gs.pendingAction = null;
-                        (0, combatLogic_1.dealDamage)(gs, targetPlayerId, damage, null, playerId, 'NORMAL');
-                        if (!gs.pendingAction)
-                            (0, combatLogic_1.resumeAfterAttack)(gs);
-                        this._broadcastAll();
-                    }
-                }, 15000);
+                (0, runtime_1.schedule)(gs, () => (0, botAI_1.handleBotDodge)(gs, targetPlayerId, damage), 1200);
         });
         // Character Skills
-        this.onMessage('use_sun_quan_skill', (client, data) => {
+        on('use_sun_quan_skill', (client, data) => {
             const playerId = this._getPlayerIdByClient(client);
             if (!playerId)
                 return;
@@ -815,11 +756,11 @@ class WTKRoom extends colyseus_1.Room {
             if (count > 0) {
                 (0, phaseLogic_1.drawCards)(gs, count).forEach(c => player.hand.push(c));
                 player.skillResignationUsed = true;
-                this.broadcast('card_played', { playerId, cardName: 'สกิล Zhiheng (ผลัดการ์ด)' });
+                (0, presentationEvents_1.emitHeroSkill)(gs, playerId, 'ZHIHENG');
                 this._broadcastAll();
             }
         });
-        this.onMessage('use_liu_bei_skill', (client, data) => {
+        on('use_liu_bei_skill', (client, data) => {
             const playerId = this._getPlayerIdByClient(client);
             if (!playerId)
                 return;
@@ -848,94 +789,37 @@ class WTKRoom extends colyseus_1.Room {
                     player.hp = Math.min(player.maxHp, player.hp + 1);
                     player.liuBeiHealedThisTurn = true;
                 }
-                this.broadcast('card_played', { playerId, cardName: 'สกิล Rende (ปันสุข)', targetId: targetPlayerId });
+                (0, presentationEvents_1.emitHeroSkill)(gs, playerId, 'RENDE', [targetPlayerId]);
                 this._broadcastAll();
             }
         });
-        this.onMessage('use_huang_gai_skill', (client) => {
-            const playerId = this._getPlayerIdByClient(client);
-            if (!playerId)
-                return;
-            const player = gs.players[playerId];
-            if (!(0, phaseLogic_1.hasCharacter)(player, 'HUANG_GAI') || gs.turnOrder[gs.currentTurnIndex] !== playerId || gs.currentPhase !== 'PLAY')
-                return;
-            player.hp -= 1;
-            (0, phaseLogic_1.drawCards)(gs, 2).forEach(c => player.hand.push(c));
-            this.broadcast('card_played', { playerId, cardName: 'สกิล Ku Rou (โบยตนเอง)' });
-            if (player.hp <= 0) {
-                (0, combatLogic_1.startDyingPhase)(gs, playerId, null);
-            }
-            else {
-                this._broadcastAll();
-            }
+        on('use_huang_gai_skill', (client, data) => {
+            const id = this._getPlayerIdByClient(client);
+            if (id)
+                (0, heroLogic_1.useKurou)(gs, gs.players[id]);
         });
-        this.onMessage('use_diao_chan_skill', (client, data) => {
-            const playerId = this._getPlayerIdByClient(client);
-            if (!playerId)
-                return;
-            const player = gs.players[playerId];
-            if (!(0, phaseLogic_1.hasCharacter)(player, 'DIAO_CHAN') || gs.turnOrder[gs.currentTurnIndex] !== playerId || gs.currentPhase !== 'PLAY' || player.skillDiaoChanUsed)
-                return;
-            const { targetPlayerId, cardId } = data;
-            const target = gs.players[targetPlayerId];
-            if (!target?.isAlive || targetPlayerId === playerId)
-                return;
-            const cardIdx = player.hand.findIndex(c => c.id === cardId);
-            if (cardIdx === -1)
-                return client.send('game_error', { message: 'ไม่พบการ์ดที่จะทิ้งบนมือ' });
-            gs.discardPile.push(player.hand.splice(cardIdx, 1)[0]);
-            player.skillDiaoChanUsed = true;
-            this.broadcast('card_played', { playerId, cardName: 'สกิล Seduction', targetId: targetPlayerId });
-            gs.pendingAction = { type: 'DIAO_CHAN_SEDUCTION', sourcePlayerId: playerId, targetPlayerId, cardUsedId: cardId, damage: 1, timeoutAt: Date.now() + 15000 };
+        on('use_diao_chan_skill', (client, data) => {
+            const id = this._getPlayerIdByClient(client);
+            if (id && !(0, heroLogic_1.startLijian)(gs, gs.players[id], data))
+                client.send('game_error', { message: 'เลือกการ์ดหนึ่งใบและขุนพลชายอื่นสองคน' });
+        });
+        on('use_zhou_yu_skill', (client, data) => {
+            const id = this._getPlayerIdByClient(client);
+            if (id && !(0, heroLogic_1.startFanjian)(gs, gs.players[id], data))
+                client.send('game_error', { message: 'เลือกการ์ดหนึ่งใบและเป้าหมายที่ยังมีชีวิต' });
+        });
+        on('hero_response', (client, data) => { const id = this._getPlayerIdByClient(client); if (id)
+            (0, heroLogic_1.resolveHeroResponse)(gs, id, data); });
+        on('use_lord_skill', (client, data) => { const id = this._getPlayerIdByClient(client); if (id && !(0, heroLogic_1.startLordSkill)(gs, gs.players[id], data))
+            client.send('game_error', { message: 'ยังใช้สกิลเจ้าเมืองในจังหวะนี้ไม่ได้' }); });
+        on('request_state', (client) => { const id = this._getPlayerIdByClient(client); if (id) {
+            client.send('room_joined', { roomId: this.roomId, playerId: id });
             this._broadcastAll();
-            if (target.isBot)
-                setTimeout(() => (0, botAI_1.handleBotSeduction)(gs, targetPlayerId), 1200);
-            else
-                setTimeout(() => {
-                    if (gs.pendingAction?.type === 'DIAO_CHAN_SEDUCTION' && gs.pendingAction.cardUsedId === cardId) {
-                        gs.pendingAction = null;
-                        (0, combatLogic_1.dealDamage)(gs, targetPlayerId, 1, null, playerId);
-                        if (!gs.pendingAction)
-                            (0, combatLogic_1.resumeAfterAttack)(gs);
-                        this._broadcastAll();
-                    }
-                }, 15000);
-        });
-        this.onMessage('use_zhou_yu_skill', (client, data) => {
-            const playerId = this._getPlayerIdByClient(client);
-            if (!playerId)
-                return;
-            const player = gs.players[playerId];
-            if (!(0, phaseLogic_1.hasCharacter)(player, 'ZHOU_YU') || gs.turnOrder[gs.currentTurnIndex] !== playerId || gs.currentPhase !== 'PLAY' || player.skillZhouYuUsed)
-                return;
-            const { targetPlayerId, cardId } = data;
-            const target = gs.players[targetPlayerId];
-            if (!target?.isAlive || targetPlayerId === playerId)
-                return;
-            const cardIdx = player.hand.findIndex(c => c.id === cardId);
-            if (cardIdx === -1)
-                return client.send('game_error', { message: 'ไม่พบการ์ดที่จะทิ้งบนมือ' });
-            const discarded = player.hand.splice(cardIdx, 1)[0];
-            gs.discardPile.push(discarded);
-            const suitColor = (discarded.suit === 'HEART' || discarded.suit === 'DIAMOND') ? 'RED' : 'BLACK';
-            player.skillZhouYuUsed = true;
-            gs.pendingAction = { type: 'ZHOU_YU_DISCORD', sourcePlayerId: playerId, targetPlayerId, cardUsedId: cardId, requiredColor: suitColor, damage: 1, timeoutAt: Date.now() + 15000 };
-            this._broadcastAll();
-            if (target.isBot)
-                setTimeout(() => (0, botAI_1.handleBotZhouYu)(gs, targetPlayerId, suitColor), 1200);
-            else
-                setTimeout(() => {
-                    if (gs.pendingAction?.type === 'ZHOU_YU_DISCORD' && gs.pendingAction.cardUsedId === cardId) {
-                        gs.pendingAction = null;
-                        (0, combatLogic_1.dealDamage)(gs, targetPlayerId, 1, null, playerId);
-                        if (!gs.pendingAction)
-                            (0, combatLogic_1.resumeAfterAttack)(gs);
-                        this._broadcastAll();
-                    }
-                }, 15000);
-        });
+            if (this._adminSockets.has(client.sessionId))
+                client.send('admin_auth_status', { isAdmin: true });
+        } });
         // Admin Tools
-        this.onMessage('admin_authenticate', (client, data) => {
+        on('admin_authenticate', (client, data) => {
             const { secretKey } = data;
             const playerId = this._getPlayerIdByClient(client);
             const playerName = (playerId && gs.players[playerId]?.name) || '';
@@ -948,63 +832,40 @@ class WTKRoom extends colyseus_1.Room {
                 client.send('admin_auth_status', { isAdmin: false, message: '🔒 รหัสผ่าน Admin ไม่ถูกต้อง!' });
             }
         });
-        this.onMessage('admin_spawn_card', (client, data) => {
-            if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST')
-                return client.send('game_error', { message: '⚠️ ปฏิเสธสิทธิ์: ต้องใช้สิทธิ์ Admin ในการเสกการ์ด' });
-            const playerId = this._getPlayerIdByClient(client);
-            if (!playerId)
+        on('admin_spawn_card', (client, data) => {
+            if (!this._adminSockets.has(client.sessionId))
                 return;
-            const player = gs.players[playerId];
-            const { cardName } = data;
-            let cardType = 'BASIC';
-            const WEAPON_RANGE = { 'ZHUGE_CROSSBOW': 1, 'BLUE_STEEL_SWORD': 2, 'SIX_SWORDS_WU': 2, 'FROST_SWORD': 2, 'YIN_YANG_SWORDS': 2, 'SERPENT_SPEAR': 3, 'TWO_BLADED_TRIDENT': 3, 'ROCK_CLEAVING_AXE': 3, 'GREEN_DRAGON_BLADE': 3, 'FEATHERED_FAN': 4, 'SKY_PIERCING_HALBERD': 4, 'KIRIN_BOW': 5 };
-            const ALL_EQUIPMENT = [...Object.keys(WEAPON_RANGE), 'NIO_SHIELD', 'EIGHT_TRIGRAMS_FORMATION', 'SILVER_LION_HELMET', 'RATTAN_ARMOR', 'RED_HARE', 'SHADOWRUNNER', 'LIGHTNING_HOOF', 'FERGANA_STEED', 'WOODEN_CART'];
-            if (['ACEDIA', 'STARVATION', 'LIGHTNING'].includes(cardName))
-                cardType = 'DELAYED';
-            else if (ALL_EQUIPMENT.includes(cardName))
-                cardType = 'EQUIPMENT';
-            else if (['STEAL', 'SABOTAGE', 'DUEL', 'FIRE_ATTACK', 'IRON_CHAIN', 'EX_NIHILO', 'BARBARIAN_INVASION', 'ARROW_BARRAGE', 'PEACH_GARDEN', 'BUMPER_HARVEST', 'BORROWED_SWORD', 'NEGATE'].includes(cardName))
-                cardType = 'KIT';
-            const extra = {};
-            if (WEAPON_RANGE[cardName])
-                extra.range = WEAPON_RANGE[cardName];
-            player.hand.push({ id: `admin_c_${Date.now()}`, name: cardName, suit: 'HEART', rank: 7, type: cardType, ...extra });
-            gs.chat.push({ sender: 'Admin', text: `🛠️ เสกการ์ด [${cardName}] ขึ้นมือสำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
+            const player = gs.players[data.targetPlayerId || this._getPlayerIdByClient(client)], def = catalog_1.CARD_BY_ID[data.cardName];
+            if (!player || !def)
+                return;
+            const suit = ['SPADE', 'HEART', 'CLUB', 'DIAMOND'].includes(data.suit) ? data.suit : 'HEART';
+            player.hand.push({ id: `admin_${Date.now()}_${gs._adminSerial = (gs._adminSerial || 0) + 1}`, name: def.id, type: def.kind, suit, rank: Math.max(1, Math.min(13, Number(data.rank) || 7)), ...(def.range ? { range: def.range } : {}) });
             this._broadcastAll();
         });
-        this.onMessage('admin_change_hero', (client, data) => {
-            if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST')
-                return client.send('game_error', { message: '⚠️ ปฏิเสธสิทธิ์' });
-            const playerId = this._getPlayerIdByClient(client);
-            if (!playerId)
+        on('admin_change_hero', (client, data) => {
+            if (!this._adminSockets.has(client.sessionId))
                 return;
-            const player = gs.players[playerId];
-            const allHeroes = (0, phaseLogic_1.getAllHeroes)();
-            const rawChar = data.character || data.characterId;
-            const charId = typeof rawChar === 'object' ? (rawChar.id || rawChar.name || '') : String(rawChar || '');
-            player.character = charId;
-            const heroInfo = allHeroes.find((h) => h.id === charId || h.name === charId);
-            if (heroInfo) {
-                player.maxHp = heroInfo.hp || 4;
-                player.hp = Math.min(player.hp, player.maxHp);
-            }
-            gs.chat.push({ sender: 'Admin', text: `🧙 เปลี่ยนขุนพลเป็น [${charId}] สำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
+            const player = gs.players[data.targetPlayerId || this._getPlayerIdByClient(client)], id = (0, catalog_1.canonicalHero)(data.characterId || data.character);
+            if (!player || !catalog_1.HERO_BY_ID[id])
+                return client.send('game_error', { message: 'ไม่พบขุนพลใน catalog' });
+            player.character = id;
+            (0, phaseLogic_1.setupCharacterHp)(player, gs.turnOrder.length);
             this._broadcastAll();
         });
-        this.onMessage('admin_set_hp', (client, data) => {
-            if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST')
-                return client.send('game_error', { message: '⚠️ ปฏิเสธสิทธิ์' });
-            const playerId = this._getPlayerIdByClient(client);
-            if (!playerId)
+        on('admin_set_hp', (client, data) => {
+            if (!this._adminSockets.has(client.sessionId))
                 return;
-            const player = gs.players[playerId];
-            player.hp = Math.max(0, Math.min(data.hp, player.maxHp || 5));
-            if (player.hp > 0)
+            const player = gs.players[data.targetPlayerId || this._getPlayerIdByClient(client)];
+            if (!player || !Number.isFinite(data.hp))
+                return;
+            player.hp = Math.max(0, Math.min(player.maxHp, data.hp));
+            if (player.hp <= 0)
+                (0, combatLogic_2.startDyingPhase)(gs, player.id);
+            else
                 player.isAlive = true;
-            gs.chat.push({ sender: 'Admin', text: `❤️ ปรับพลังชีวิตเป็น [${player.hp}/${player.maxHp}]`, time: new Date().toLocaleTimeString('th-TH') });
             this._broadcastAll();
         });
-        this.onMessage('admin_spawn_bot', (client) => {
+        on('admin_spawn_bot', (client) => {
             if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST')
                 return client.send('game_error', { message: '⚠️ ปฏิเสธสิทธิ์' });
             const botId = `bot_${Date.now().toString().slice(-4)}`;
@@ -1022,7 +883,7 @@ class WTKRoom extends colyseus_1.Room {
             gs.chat.push({ sender: 'Admin', text: `🤖 เพิ่มบอททดสอบ [${gs.players[botId].name}] สำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
             this._broadcastAll();
         });
-        this.onMessage('admin_remove_bot', (client, data) => {
+        on('admin_remove_bot', (client, data) => {
             if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST')
                 return client.send('game_error', { message: '⚠️ ปฏิเสธสิทธิ์' });
             let targetBotId = data.botId;
@@ -1041,14 +902,14 @@ class WTKRoom extends colyseus_1.Room {
             gs.chat.push({ sender: 'Admin', text: `🗑️ ลบบอท [${botName}] ออกจากห้องสำเร็จ!`, time: new Date().toLocaleTimeString('th-TH') });
             this._broadcastAll();
         });
-        this.onMessage('admin_toggle_bot_ai', (client, data) => {
+        on('admin_toggle_bot_ai', (client, data) => {
             if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST')
                 return;
             gs.isBotPassive = data.isPassive;
             gs.chat.push({ sender: 'Admin', text: `🤖 โหมดบอท: ${data.isPassive ? '⏸️ อยู่เฉยๆ (Passive)' : '▶️ เล่นอัตโนมัติ (Auto AI)'}`, time: new Date().toLocaleTimeString('th-TH') });
             this._broadcastAll();
         });
-        this.onMessage('admin_bot_pass_turn', (client) => {
+        on('admin_bot_pass_turn', (client) => {
             if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST')
                 return;
             const currentId = gs.turnOrder[gs.currentTurnIndex];
@@ -1058,7 +919,7 @@ class WTKRoom extends colyseus_1.Room {
                 (0, phaseLogic_1.endPlayerTurn)(gs);
             }
         });
-        this.onMessage('admin_bot_slash', (client, data) => {
+        on('admin_bot_slash', (client, data) => {
             if (!this._adminSockets.has(client.sessionId) && this.roomId !== 'ROOM_TEST')
                 return;
             const bot = gs.players[data.botId] || Object.values(gs.players).find(p => p.isBot);
@@ -1066,12 +927,14 @@ class WTKRoom extends colyseus_1.Room {
             if (!bot || !target)
                 return;
             gs.chat.push({ sender: 'Admin', text: `⚔️ สั่งให้บอท [${bot.name}] ฟัน [${target.name}] ด้วย SLASH`, time: new Date().toLocaleTimeString('th-TH') });
-            (0, combatLogic_1.dealDamage)(gs, target.id, 1, { id: `admin_slash_${Date.now()}`, name: 'SLASH', suit: 'SPADE', rank: 8, type: 'BASIC' }, bot.id, 'NORMAL');
+            (0, combatLogic_2.dealDamage)(gs, target.id, 1, { id: `admin_slash_${Date.now()}`, name: 'SLASH', suit: 'SPADE', rank: 8, type: 'BASIC' }, bot.id, 'NORMAL');
         });
     }
     // ─── Helpers ───────────────────────────────────────────────────────────────
     _getPlayerIdByClient(client) {
         const gs = this.gameState;
+        if (client._playerId && gs.players[client._playerId])
+            return client._playerId;
         return Object.keys(gs.players).find(pid => gs.players[pid].socketId === client.sessionId) || null;
     }
     _makeSocketLike(client) {
@@ -1086,6 +949,10 @@ class WTKRoom extends colyseus_1.Room {
     // ─── Broadcast all clients with sanitized state ────────────────────────────
     _broadcastAll() {
         const gs = this.gameState;
+        if (gs._offerRedirection?.())
+            return;
+        if (gs.chat.length > 300)
+            gs.chat.splice(0, gs.chat.length - 300);
         this.state.status = gs.status;
         this.state.currentPhase = gs.currentPhase;
         this.state.currentTurnPlayerId = gs.turnOrder[gs.currentTurnIndex] || '';

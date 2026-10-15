@@ -1,6 +1,6 @@
 import type { Card, GameRoom, Player } from './types';
 declare function hasCharacter(player: Player | null | undefined, charName: string): boolean;
-declare function initDeck(): Card[];
+declare function initDeck(seed?: number): Card[];
 declare function drawCards(room: GameRoom, count: number): Card[];
 declare function assignRoles(room: GameRoom): void;
 declare function setupCharacterHp(player: Player, playerCount?: number): void;

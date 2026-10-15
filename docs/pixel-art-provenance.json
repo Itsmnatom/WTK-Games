@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-14",
+  "updated": "2026-10-15",
+  "verificationNote": "Existing generation prompts below are historical records. The final active card atlas source and runtime row mapping were documented from handoff facts and current source; no further image inspection or asset audit was performed after the user's no-testing instruction.",
+  "entries": [
+    {
+      "asset": "public/art/courtyard.png",
+      "method": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Asset type: wide pixel-art game environment key art. Create an exquisite isometric ancient Chinese imperial palace courtyard at dusk for a Three Kingdoms strategy card game. Genuine crisp hand-crafted 16-bit pixel art: stepped discrete pixels, limited ink-blue, jade-green, warm gold and terracotta palette. Timber pavilion with curved tiled roofs, lanterns casting amber light, chunky cubic trees, stone courtyard, a jade tactical tabletop in the center. Cinematic but clearly pixel art, atmospheric depth, no smooth photorealism. Wide landscape composition, restful darker space toward the left for HTML title; most pavilion detail on right. No people, no typography, no letters, no watermark. This is artwork, not a UI screenshot."
+    },
+    {
+      "asset": "public/art/card-back.png",
+      "method": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Asset type: single portrait card back texture for a Three Kingdoms pixel-art game. Front-facing perfectly rectangular ornate card back, full image filled by the card surface, no perspective and no surrounding table. Genuine crisp 16-bit pixel art with discrete square pixels. Ink-navy field, jade lattice corners, elegant gold imperial dragon seal centered, symmetrical gold border, warm parchment edge, subtle pixel texture. Precious restrained palace aesthetic, legible strong silhouette. No text, no numbers, no watermark, no gradient smoothing."
+    },
+    {
+      "asset": "public/art/cards-atlas.png",
+      "method": "built-in image_gen",
+      "finalSource": "C:/Users/s0956/.codex/generated_images/01a13a44-6cbf-7161-8574-46f37475c4c7/exec-16f3629d-5e65-41fd-abe8-ac14320aa2a2.png",
+      "finalGenerationPrompt": null,
+      "finalGenerationPromptNote": "Exact final-generation prompt was not available in the retained handoff. Historical prompt and editPrompt below are not claimed to be the final-generation prompt.",
+      "runtimeMappingSource": "client/src/ui.ts art(index, hero=false), shared/catalog.ts CARDS[].art",
+      "runtimeMapping": {
+        "indexConvention": "Zero-based row, column and catalog art indexes",
+        "rows": 6,
+        "defaultColumns": 7,
+        "row4Columns": 8,
+        "row4": [
+          "ROCK_CLEAVING_AXE",
+          "GREEN_DRAGON_BLADE",
+          "SKY_PIERCING_HALBERD",
+          "YIN_YANG_SWORDS",
+          "NIO_SHIELD",
+          "EIGHT_TRIGRAMS_FORMATION",
+          "unused duplicate trigrams tile",
+          "SILVER_LION_HELMET"
+        ],
+        "row5": [
+          "RATTAN_ARMOR",
+          "LIGHTNING_HOOF",
+          "RED_HARE",
+          "FERGANA_STEED",
+          "SHADOWRUNNER",
+          "WOODEN_CART",
+          "unused ornamental tile"
+        ],
+        "note": "Catalog indexes 28 through 33 use row 4 columns 0 through 5; index 34 skips the duplicate cell and uses column 7. Catalog indexes 35 through 40 use row 5 columns 0 through 5. Rows 0 through 3 use seven columns in catalog order. This maps the 41 canonical card subjects without claiming a uniform 7x6 final atlas."
+      },
+      "intermediateArtifact": "artifacts/pixel-migration/cards-atlas-draft.png",
+      "prompt": "Use case: stylized-concept. Asset type: a production sprite atlas for pixel-art Three Kingdoms card illustrations. ONE single sprite-sheet asset. EXACTLY 7 equal columns by 6 equal rows, all cells same dimensions, straight aligned boundaries, no gutters, each cell filled edge-to-edge with its own illustration. Front-facing rectangular sheet, no perspective. Crisp authentic 16-bit pixel art, ink-blue/jade/gold/terracotta palette, no text or numbers anywhere, no UI frames, no labels, no watermark. Each illustration has centered clearly recognizable subject and simple dark backdrop. Subjects row-major order MUST be: row1: sword slash; dodge nimble warrior silhouette; peach fruit; ceramic wine flask; crackling thunder sword; thief hand taking pouch; shattered scroll. row2: treasure chest coins; two crossed duel swords; barbarian horned army; shower of arrows; blossoming peach garden; iron chain links; burning fire orb. row3: protective magic talisman; golden wheat harvest; two warriors borrowing a sword; lightning bolt storm; idle court noble resting; empty grain sacks; repeating crossbow. row4: blue steel straight sword; six swords fan formation; ornate kirin bow; white feather fan; serpent headed spear; icy sword; two bladed trident. row5: heavy rock axe; green dragon guandao; sky piercing halberd; black-white twin swords; tiger shield; eight trigrams shield; silver lion helmet; woven rattan armor. row6: gray lightning hoof horse; red hare horse; white Fergana horse; black shadow runner horse; wooden transport cart; empty dark jade ornamental square; empty dark jade ornamental square. Flat exact 7x6 tile layout; all 42 tile positions present. Each tile is separate contained art with nothing crossing boundaries.",
+      "editPrompt": "Edit this production pixel-art sprite atlas. Preserve its exact 7 equal columns by 6 equal rows, dimensions, alignment and all artwork in rows 1 through 5 unchanged. Change ONLY the bottom row (row6). It must contain exactly seven cells left-to-right: 1 woven rattan body armor on a dark background, 2 gray lightning-hoof horse, 3 red hare horse, 4 white Fergana horse, 5 black shadow runner horse, 6 wooden transport cart, 7 dark jade ornamental empty square. Move the existing bottom-row horse and cart illustrations one cell to the right so a new rattan armor fits in cell1. Preserve their pixel-art style, colors, scale and framing. Each tile edge-to-edge, no gutters, no text, no labels, no watermark. Do not alter any other row. The missing rattan armor must be clearly recognizable woven bamboo armor, distinct from the silver lion helmet in row5cell7."
+    },
+    {
+      "asset": "public/art/heroes-atlas.png",
+      "method": "built-in image_gen",
+      "prompt": "Use case: stylized-concept. Asset type: ONE single portrait sprite atlas for a Three Kingdoms game. EXACTLY 5 equal columns by 3 equal rows, uniform tiles, no gutters or margins, aligned straight grid. Crisp hand-crafted 16-bit pixel art bust portraits, restrained ink-blue jade gold terracotta palette, dark backgrounds, expressive distinct faces, square discrete pixels, no text no numbers no labels no watermark, no framing mockup. The portraits in row-major order must be: row1 Cao Cao stern middle-aged Wei lord in blue ornate robes; Liu Bei kind bearded Shu lord in red and gold; Sun Quan young Wu lord in green with amber beard; Guan Yu long luxuriant black beard red face green robes; Zhang Fei rugged wild black beard dark red armor. row2 Zhao Yun handsome silver-armored young general; Zhen Ji elegant pale woman in blue imperial dress; Lu Bu imposing warrior with two tall red pheasant plumes gold armor; Diao Chan graceful woman with pink hair ornaments; Sima Yi elderly sharp-eyed strategist in indigo hood. row3 Zhuge Liang serene scholar with white feather fan and green robes; Zhou Yu refined handsome young general in crimson ceremonial armor; Huang Gai weathered old warrior bare shoulder and red battle armor; empty ink-jade ornamental tile; empty ink-jade ornamental tile. Keep every portrait centered in its exact tile, no subject crosses cell boundaries. Authentic retro strategy game artwork, not photorealism."
+    }
+  ]
+}

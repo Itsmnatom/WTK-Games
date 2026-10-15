@@ -1,0 +1,35 @@
+.ruleset-field{max-width:660px;margin:0 auto 28px;padding:18px;border:1px solid var(--line);background:var(--panel)}
+.ruleset-field label{display:block;margin-bottom:8px;color:var(--gold)}
+.ruleset-field select,.gift-grid select{width:100%;min-height:44px;padding:10px;background:var(--ink);color:var(--paper);border:1px solid var(--line);font:inherit}
+.ruleset-field p{font-size:12px;color:var(--muted);margin-top:8px}
+.experimental-hud{flex-shrink:0;background:#13252a;border-top:1px solid var(--line);font-size:12px}
+.experimental-hud:empty{display:none}
+.experiment-summary{display:flex;align-items:center;gap:12px;padding:7px 16px;flex-wrap:wrap}
+.experiment-label{color:var(--gold)}
+.experiment-buttons{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.experiment-buttons .button{min-height:36px;padding:6px 10px;border:1px solid var(--line)}
+
+
+
+.strategy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1100px;margin:auto}
+.strategy-card{border:1px solid var(--line);background:var(--panel);padding:28px;display:flex;flex-direction:column;gap:18px}
+.strategy-card h2{color:var(--gold)}
+.strategy-card p{color:var(--muted);font-size:14px;flex:1}
+.strategy-card.selected{border-color:var(--gold)}
+
+
+
+
+
+.gift-grid{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0;max-height:210px;overflow:auto}
+.gift-grid>div{display:grid;gap:8px}
+.gift-grid .hand-card{position:relative;transform:none;width:90px;height:125px;pointer-events:none}
+.gift-grid .card-art{height:90px}
+.gift-grid label{font-size:12px;display:grid;gap:4px}
+.seat-plan{display:block;color:var(--gold);font-size:10px;white-space:nowrap}
+#spectator-messages{max-height:40svh;overflow:auto;margin:15px 0}
+#spectator-form{display:grid;grid-template-columns:1fr auto;gap:10px}
+#spectator-form label{grid-column:1/-1;font-size:13px}
+#spectator-text{min-width:0;width:100%;padding:10px;color:var(--paper);background:var(--ink);border:1px solid var(--line);font:inherit}
+@media(max-width:700px){.strategy-grid{grid-template-columns:1fr;gap:12px}.strategy-card{padding:18px}.strategy-card p{font-size:13px}.experiment-summary{gap:6px;padding:6px 10px;font-size:11px}.experiment-buttons{gap:5px}.experiment-buttons .button{min-height:40px}.seat-plan{font-size:9px}}
+@media(max-height:600px) and (min-width:701px){.experiment-summary{padding:3px 10px;font-size:10px}.experiment-buttons .button{min-height:28px;padding:3px 8px}.gift-grid{max-height:120px}.strategy-card{padding:16px;gap:10px}.strategy-page{padding-top:18px}}

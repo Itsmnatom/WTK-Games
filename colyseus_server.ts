@@ -52,10 +52,14 @@ app.use('/colyseus', (req: Request, res: Response, next: NextFunction) => {
 
 // ─── Static Routes ────────────────────────────────────────────────────────────
 app.get('/', (req: Request, res: Response) => res.redirect('/lobby'));
-app.get('/lobby', (req: Request, res: Response) => res.sendFile(path.join(publicDir, 'lobby.html')));
-app.get('/room', (req: Request, res: Response) => res.sendFile(path.join(publicDir, 'room.html')));
-app.get('/app/:roomId', (req: Request, res: Response) => res.sendFile(path.join(publicDir, 'room.html')));
-app.get('/room/:roomId', (req: Request, res: Response) => res.sendFile(path.join(publicDir, 'room.html')));
+const pixelPage = path.join(publicDir, 'pixel', 'index.html');
+const serveClient = (legacy: string) => (req: Request,res: Response) => res.sendFile(fs.existsSync(pixelPage) ? pixelPage : path.join(publicDir,legacy));
+app.get('/lobby', serveClient('lobby.html'));
+app.get('/room', serveClient('room.html'));
+app.get('/app/:roomId', serveClient('room.html'));
+app.get('/room/:roomId', serveClient('room.html'));
+app.get('/legacy/lobby', (req:Request,res:Response)=>res.sendFile(path.join(publicDir,'lobby.html')));
+app.get('/legacy/room', (req:Request,res:Response)=>res.sendFile(path.join(publicDir,'room.html')));
 app.get('/test', (req: Request, res: Response) => res.redirect('/app/ROOM_TEST?test=true&mode=BOT&action=create'));
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -68,14 +72,15 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/rooms', (req: Request, res: Response) => {
+app.get('/api/rooms', async (req: Request, res: Response) => {
   try {
-    const rooms = (gameServer as any).driver?.rooms || [];
+    const { matchMaker } = await import('colyseus');
+    const rooms = await matchMaker.query({name:'wtk_room',locked:false});
     const publicRooms = rooms.map((r: any) => ({
       roomId: r.roomId,
-      players: r.clients?.length || 0,
+      players: r.clients || 0,
       maxPlayers: r.maxClients || 10,
-      status: r.metadata?.status || 'LOBBY',
+      status: 'LOBBY',
     }));
     res.json({ success: true, rooms: publicRooms });
   } catch (err: any) {
@@ -94,7 +99,7 @@ gameServer.define('wtk_room', WTKRoom)
   .sortBy({ clients: -1 });    // prefer rooms with more players
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = Number(process.env.PORT) || 3002;
 
 async function boot() {
   // Init SQL database
