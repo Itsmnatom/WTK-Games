@@ -8,6 +8,15 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 *.db
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.db-journal
+*.db-wal
+*.db-shm
 db/wtk_game.sqlite
 
 # System & OS Files
@@ -24,6 +33,8 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
 # .env.example → commit ได้ (ไม่มี secret จริง)
 logs/
 *.log
@@ -40,6 +51,14 @@ generate_readme_slides.js
 *_slides.md
 SLIDE.md
 scratch/
+
+# Local handoffs, draft artwork, screenshots and exploratory profiling
+/artifacts/frontend-handoff/
+/artifacts/wtk-frontend-handoff.zip
+/artifacts/**/*.png
+/artifacts/performance/after-initial.json
+/diff.patch
+/diff_utf8.patch
 
 # Compiled JS files (from TypeScript tsconfig outDir or root compile)
 colyseus_server.js
