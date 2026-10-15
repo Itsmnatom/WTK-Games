@@ -13,7 +13,7 @@ export class GameConnection {
   private client=new Client(import.meta.env.DEV ? 'ws://localhost:3001' : `${location.protocol==='https:'?'wss:':'ws:'}//${location.host}`);
   constructor(private name:string){}
   static saved():SavedSession|null {try{const s=JSON.parse(localStorage.getItem('wtk.session')||'null');return s?.token&&s?.roomId?s:null;}catch{return null;}}
-  async connect(action:string,roomId:string,mode:string,sandbox=false,playerId=''):Promise<void> {
+  async connect(action:string,roomId:string,mode:string,sandbox=false,playerId='',ruleset='STANDARD'):Promise<void> {
     this.onStatus('กำลังเชื่อมต่อ');
     try {
       let room:Room;
@@ -23,7 +23,7 @@ export class GameConnection {
         if(typeof saved.token!=='string'||saved.token.split(':')[0]!==roomId)throw new Error('ข้อมูลเชื่อมต่อเดิมไม่ตรงกับห้องนี้');
         room=await this.client.reconnect(saved.token);
       }else if(action==='join')room=await this.client.joinById(roomId,{playerName:this.name});
-      else room=await this.client.create('wtk_room',{playerName:this.name,mode,sandbox,_action:'create'});
+      else room=await this.client.create('wtk_room',{playerName:this.name,mode,sandbox,ruleset,_action:'create'});
       this.bind(room);
     } catch(error){if(this.disposed)return;this.onStatus('เชื่อมต่อไม่สำเร็จ');this.onEvent('game_error',{message:(error as Error).message||'ไม่พบห้องหรือห้องเริ่มเกมแล้ว'});throw error;}
   }

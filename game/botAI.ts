@@ -11,10 +11,13 @@ import { RULES } from '../shared/catalog';
 import { deadline, schedule } from './runtime';
 import { emitCardPlay, emitHeroSkill } from './presentationEvents';
 import { scheduleResponse, resolvePendingAction, handleResolvePending, handleUseCard, attackDistance } from './cardLogic';
+import { experimental, publicEnemy, experimentalBotTurn } from './experimental';
+import { expandedBotAction } from './expandedHeroes';
 
 // ─── Bot wants to attack helper ───────────────────────────────────────────────
 function botWantsToAttack(bot: Player, target: Player, room: GameRoom): boolean {
   if (bot.id === target.id || !target.isAlive) return false;
+  if(experimental(room))return publicEnemy(room,bot,target);
   if (bot.role === 'LORD' || bot.role === 'LOYALIST') return target.role === 'REBEL' || target.role === 'RENEGADE';
   if (bot.role === 'REBEL') return target.role === 'LORD' || target.role === 'LOYALIST';
   if (bot.role === 'RENEGADE') {
@@ -38,6 +41,7 @@ function runBotTurn(room: GameRoom, botId: string): void {
     return;
   }
   if (room._botHeroAction?.(bot)) return;
+  if(experimentalBotTurn(room,bot)||expandedBotAction(room,bot)){resumeAfterAttack(room);return;}
 
   let actionTaken = false;
 
@@ -131,17 +135,17 @@ function runBotTurn(room: GameRoom, botId: string): void {
       return;
     }
     for (const name of ['ACEDIA', 'STARVATION', 'SABOTAGE', 'STEAL', 'DUEL']) {
-      const card = bot.hand.find(c => c.name === name);
+      const card = bot.hand.find(c => c.name === name)||bot.hand.find(c=>name==='SABOTAGE'&&hasCharacter(bot,'GAN_NING')&&['SPADE','CLUB'].includes(c.suit)||name==='ACEDIA'&&hasCharacter(bot,'DA_QIAO')&&c.suit==='DIAMOND');
       if (!card) continue;
       for (const pid of room.turnOrder) {
         const target = room.players[pid];
         if (!target || !botWantsToAttack(bot, target, room)) continue;
         if (['ACEDIA', 'STARVATION'].includes(name) && target.delayedKitZone?.some(c => c.name === name)) continue;
-        if (name === 'STEAL' && calculateDistance(room, botId, pid) > 1) continue;
+        if (name === 'STEAL' && !hasCharacter(bot,'HUANG_YUEYING') && calculateDistance(room, botId, pid) > 1) continue;
         if (name === 'DUEL' && hasCharacter(target, 'ZHUGE_LIANG') && !target.hand.length) continue;
         const targetZone = target.hand.length ? 'HAND' : target.equipment.weapon ? 'WEAPON' : target.equipment.armor ? 'ARMOR' : target.equipment.defensiveHorse ? 'DEF_HORSE' : target.equipment.offensiveHorse ? 'OFF_HORSE' : target.equipment.treasure ? 'TREASURE' : target.delayedKitZone?.length ? 'DELAYED' : null;
         if (['STEAL', 'SABOTAGE'].includes(name) && !targetZone) continue;
-        handleUseCard(room, null, { playerId: botId, cardId: card.id, targetPlayerId: pid, targetZone });
+        handleUseCard(room, null, { playerId: botId, cardId: card.id, targetPlayerId: pid, targetZone,playAs:card.name!==name?name:undefined });
         if (room.pendingAction) return;
       }
     }
@@ -181,7 +185,7 @@ function runBotTurn(room: GameRoom, botId: string): void {
         const target = room.players[pid];
         return target && botWantsToAttack(bot, target, room) && attackDistance(room, botId, pid, equipSlot) <= weaponRange && !(hasCharacter(target, 'ZHUGE_LIANG') && !target.hand.length);
       }).slice(0, maxTargets);
-      if (targets.length && (room.attacksPlayedInTurn === 0 || hasZhuge || isZhangFei)) {
+      if (targets.length && (room.attacksPlayedInTurn < 1+(bot.extraAttacks||0) || hasZhuge || isZhangFei)) {
         handleUseCard(room, null, { playerId: botId, cardId: slashCard.id, targetPlayerId: targets[0], targetPlayerIds: targets, playAs: ['SLASH', 'THUNDER_ATTACK'].includes(slashCard.name) ? undefined : 'SLASH' });
         return;
       }

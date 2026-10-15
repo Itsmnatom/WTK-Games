@@ -32,7 +32,7 @@ export interface Equipment {
 
 // ─── Player & Role Types ───────────────────────────────────────────────────────
 export type Role = 'LORD' | 'LOYALIST' | 'REBEL' | 'RENEGADE' | 'UNKNOWN';
-export type GameStatus = 'LOBBY' | 'DRAFTING' | 'PLAYING' | 'ENDED';
+export type GameStatus = 'LOBBY' | 'DRAFTING' | 'STRATEGY' | 'PLAYING' | 'ENDED';
 export type Phase = 'START' | 'JUDGEMENT' | 'PREPARATION' | 'DRAW' | 'PLAY' | 'DISCARD';
 export type DamageType = 'NORMAL' | 'FIRE' | 'THUNDER';
 

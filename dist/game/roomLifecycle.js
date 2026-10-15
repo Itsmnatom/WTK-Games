@@ -6,16 +6,24 @@ const phaseLogic_1 = require("./phaseLogic");
 const combatLogic_1 = require("./combatLogic");
 const cardLogic_1 = require("./cardLogic");
 const heroLogic_1 = require("./heroLogic");
+const experimental_1 = require("./experimental");
+const expandedHeroes_1 = require("./expandedHeroes");
 function attachRoomLifecycle(room, clock, broadcast) {
     room._schedule = (callback, ms) => clock.setTimeout(callback, ms);
     room._prepareTurn = (player, done) => (0, heroLogic_1.prepareHeroTurn)(room, player, done);
     room._judgeCard = (player, drawn, reason, done) => (0, heroLogic_1.judgeWithHeroes)(room, player, drawn, reason, done);
-    room._afterDamage = (player, source, card, _damage, attack) => (0, heroLogic_1.queueDamageSkills)(room, player, source, card, attack);
+    room._afterDamage = (player, source, card, damage, attack) => (0, heroLogic_1.queueDamageSkills)(room, player, source, card, attack, damage);
     room._botHeroAction = (player) => (0, heroLogic_1.botHeroAction)(room, player);
     room._botLordResponse = (player, _required) => (0, heroLogic_1.startLordSkill)(room, player, {});
+    room._drawWithHeroes = (player, done) => (0, expandedHeroes_1.drawWithHeroes)(room, player, done);
+    room._offerRedirection = () => (0, expandedHeroes_1.offerRedirection)(room);
     clock.setInterval(() => {
         if (room._disposed || room.status === 'ENDED')
             return;
+        if (room.status === 'STRATEGY') {
+            (0, experimental_1.finishStrategies)(room);
+            return;
+        }
         if (room.status === 'DRAFTING' && room.draftDeadline && Date.now() >= room.draftDeadline) {
             for (const p of Object.values(room.players)) {
                 if (p.isAlive && !p.character && p.characterChoices?.length) {

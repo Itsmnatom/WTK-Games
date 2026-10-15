@@ -32,6 +32,8 @@ import {
 import { recordPlayerStats, saveMatchHistory } from '../db/database';
 import pluginManager from '../plugins/plugin_manager';
 import type { GameRoom, Player, Card, SocketLike, AttackDescriptor } from '../game/types';
+import { chooseStrategy, experimental } from '../game/experimental';
+import { qingnang } from '../game/expandedHeroes';
 
 // ─── Bot name pool ────────────────────────────────────────────────────────────
 const BOT_NAMES = [
@@ -55,6 +57,8 @@ export class WTKRoom extends Room<WTKState> {
       roomId: this.roomId,
       status: 'LOBBY',
       mode: options.mode || 'ONLINE',
+      ruleset: options.ruleset==='EXPERIMENTAL'?'EXPERIMENTAL':'STANDARD',
+      spectatorChat: [], turnNumber: 0,
       hostSocketId: null,
       turnOrder: [],
       currentTurnIndex: 0,
@@ -190,7 +194,7 @@ export class WTKRoom extends Room<WTKState> {
     const player = gs.players[playerId];
     if (!player) return;
 
-    if (gs.status !== 'LOBBY' && player.isAlive) {
+    if (gs.status !== 'LOBBY' && (player.isAlive || experimental(gs))) {
       console.log(`[WTKRoom] ${player.name} disconnected. Allowing 45s reconnect...`);
       player.isDisconnected = true;
       this._broadcastAll();
@@ -259,10 +263,20 @@ export class WTKRoom extends Room<WTKState> {
       this.onMessage(name,(client:Client,input:any) => {
       const error=validateCommand(gs,client.sessionId,name,input);
       if(error){client.send('game_error',{message:error});return;}
-      try{handler(client,input || {});}catch(error){console.error('[command]',name,error);client.send('game_error',{message:'คำสั่งไม่สำเร็จ กรุณาตรวจตัวเลือกแล้วลองใหม่'});}
+      try{handler(client,input || {});if(gs.status==='PLAYING'&&!gs.pendingAction)resumeAfterAttack(gs);}catch(error){console.error('[command]',name,error);client.send('game_error',{message:'คำสั่งไม่สำเร็จ กรุณาตรวจตัวเลือกแล้วลองใหม่'});}
       });
     };
     gs._borrowedProxyResponse=(id:string,cardId:string|null)=>gs._commandHandlers.resolve_borrowed_sword({_playerId:id,sessionId:gs.players[id].socketId,send:()=>{}},{cardId});
+
+    on('choose_strategy',(client,data)=>{const p=gs.players[this._getPlayerIdByClient(client)!];if(!chooseStrategy(gs,p,data.strategyId))client.send('game_error',{message:'เลือกแผนไม่สำเร็จ หรือหมดเวลาแล้ว'});});
+    on('use_strategy',(client,data)=>{const {useStrategy}=require('../game/experimental');if(!useStrategy(gs,gs.players[this._getPlayerIdByClient(client)!],data.cardId))client.send('game_error',{message:'ต้องเลือกไพ่บนมือหนึ่งใบ และแผนยังไม่ถูกใช้'});});
+    on('use_hua_tuo_skill',(client,data)=>{if(!qingnang(gs,gs.players[this._getPlayerIdByClient(client)!],data))client.send('game_error',{message:'เลือกไพ่บนมือหนึ่งใบและผู้บาดเจ็บ ใช้ได้เทิร์นละครั้ง'});});
+    on('spectator_chat',(client,data)=>{
+      const p=gs.players[this._getPlayerIdByClient(client)!];
+      if(!experimental(gs)||p.isAlive||!['PLAYING','ENDED'].includes(gs.status)||typeof data.text!=='string'||Date.now()-(p._lastSpectatorChat||0)<1500)return;
+      const text=data.text.trim().slice(0,240);if(!text)return;p._lastSpectatorChat=Date.now();
+      gs.spectatorChat.push({sender:p.name,text,time:new Date().toLocaleTimeString('th-TH')});if(gs.spectatorChat.length>100)gs.spectatorChat.shift();this._broadcastAll();
+    });
 
     on('add_bot', (client) => {
       if (gs.status !== 'LOBBY') return;
@@ -555,7 +569,7 @@ export class WTKRoom extends Room<WTKState> {
       if (!cardIds.every((cid: string) => player.hand.some(c => c.id === cid))) return client.send('game_error', { message: 'ไม่พบการ์ดที่ระบุบนมือ' });
       const hasZhuge = (player.equipment.weapon as any).name === 'ZHUGE_CROSSBOW';
       const isZhangFei = hasCharacter(player, 'ZHANG_FEI');
-      if (gs.attacksPlayedInTurn >= 1 && !hasZhuge && !isZhangFei) return client.send('game_error', { message: 'คุณใช้สิทธิ์โจมตีครบแล้วในเทิร์นนี้' });
+      if (gs.attacksPlayedInTurn >= 1 + (player.extraAttacks || 0) && !hasZhuge && !isZhangFei) return client.send('game_error', { message: 'คุณใช้สิทธิ์โจมตีครบแล้วในเทิร์นนี้' });
       const target = gs.players[targetPlayerId];
       if (!target?.isAlive) return client.send('game_error', { message: 'เป้าหมายไม่พร้อมรับการโจมตี' });
       const weaponRange = (player.equipment.weapon as any).range || 3;
@@ -767,6 +781,7 @@ export class WTKRoom extends Room<WTKState> {
   // ─── Broadcast all clients with sanitized state ────────────────────────────
   private _broadcastAll(): void {
     const gs = this.gameState;
+    if(gs._offerRedirection?.())return;
     if(gs.chat.length>300)gs.chat.splice(0,gs.chat.length-300);
     this.state.status = gs.status;
     this.state.currentPhase = gs.currentPhase;

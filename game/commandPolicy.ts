@@ -1,6 +1,6 @@
 import type { GameRoom } from './types';
 const HOST=new Set(['start_game','add_bot','remove_bot']);
-const PLAY=new Set(['use_card','end_turn','use_sun_quan_skill','use_liu_bei_skill','use_huang_gai_skill','use_diao_chan_skill','use_zhou_yu_skill','use_serpent_spear']);
+const PLAY=new Set(['use_card','end_turn','use_sun_quan_skill','use_liu_bei_skill','use_huang_gai_skill','use_diao_chan_skill','use_zhou_yu_skill','use_serpent_spear','use_strategy','use_hua_tuo_skill']);
 const RESPONSES=new Set(['resolve_pending','hero_response','play_negate','pass_negate','use_peach_dying','pick_bumper_card','trigger_luo_river','skip_luo_river','resolve_borrowed_sword','resolve_fire_reveal','resolve_fire_match','resolve_yinyang_choice','resolve_weapon_skill']);
 export function validateCommand(room:GameRoom,sessionId:string,name:string,data:any):string|null {
   const player=Object.values(room.players).find(p=>p.socketId===sessionId);
@@ -14,6 +14,6 @@ export function validateCommand(room:GameRoom,sessionId:string,name:string,data:
   for(const field of ['cardIds','topIds','bottomIds','targetPlayerIds']){
     const value=data?.[field];if(value!==undefined&&(!Array.isArray(value)||value.length>(field==='targetPlayerIds'?3:176)||value.some((v:any)=>typeof v!=='string'||v.length>80)||new Set(value).size!==value.length))return 'รายการการ์ดไม่ถูกต้องหรือซ้ำกัน';
   }
-  for(const field of ['cardId','targetCardId','targetPlayerId','secondaryTargetId','characterId','slot','playAs','guess'])if(data?.[field]!==undefined&&(typeof data[field]!=='string'||data[field].length>100))return 'ข้อมูลคำสั่งไม่ถูกต้อง';
+  for(const field of ['cardId','targetCardId','targetPlayerId','secondaryTargetId','characterId','slot','playAs','guess','strategyId','promptId'])if(data?.[field]!==undefined&&(typeof data[field]!=='string'||data[field].length>100))return 'ข้อมูลคำสั่งไม่ถูกต้อง';
   return null;
 }

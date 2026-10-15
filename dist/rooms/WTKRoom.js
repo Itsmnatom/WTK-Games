@@ -23,6 +23,8 @@ const botAI_1 = require("../game/botAI");
 const cardLogic_1 = require("../game/cardLogic");
 const database_1 = require("../db/database");
 const plugin_manager_1 = __importDefault(require("../plugins/plugin_manager"));
+const experimental_1 = require("../game/experimental");
+const expandedHeroes_1 = require("../game/expandedHeroes");
 // ─── Bot name pool ────────────────────────────────────────────────────────────
 const BOT_NAMES = [
     'Zhuge Liang (Bot)', 'Guan Yu (Bot)', 'Cao Cao (Bot)', 'Diao Chan (Bot)',
@@ -44,6 +46,8 @@ class WTKRoom extends colyseus_1.Room {
             roomId: this.roomId,
             status: 'LOBBY',
             mode: options.mode || 'ONLINE',
+            ruleset: options.ruleset === 'EXPERIMENTAL' ? 'EXPERIMENTAL' : 'STANDARD',
+            spectatorChat: [], turnNumber: 0,
             hostSocketId: null,
             turnOrder: [],
             currentTurnIndex: 0,
@@ -166,7 +170,7 @@ class WTKRoom extends colyseus_1.Room {
         const player = gs.players[playerId];
         if (!player)
             return;
-        if (gs.status !== 'LOBBY' && player.isAlive) {
+        if (gs.status !== 'LOBBY' && (player.isAlive || (0, experimental_1.experimental)(gs))) {
             console.log(`[WTKRoom] ${player.name} disconnected. Allowing 45s reconnect...`);
             player.isDisconnected = true;
             this._broadcastAll();
@@ -244,6 +248,8 @@ class WTKRoom extends colyseus_1.Room {
                 }
                 try {
                     handler(client, input || {});
+                    if (gs.status === 'PLAYING' && !gs.pendingAction)
+                        (0, combatLogic_2.resumeAfterAttack)(gs);
                 }
                 catch (error) {
                     console.error('[command]', name, error);
@@ -252,6 +258,25 @@ class WTKRoom extends colyseus_1.Room {
             });
         };
         gs._borrowedProxyResponse = (id, cardId) => gs._commandHandlers.resolve_borrowed_sword({ _playerId: id, sessionId: gs.players[id].socketId, send: () => { } }, { cardId });
+        on('choose_strategy', (client, data) => { const p = gs.players[this._getPlayerIdByClient(client)]; if (!(0, experimental_1.chooseStrategy)(gs, p, data.strategyId))
+            client.send('game_error', { message: 'เลือกแผนไม่สำเร็จ หรือหมดเวลาแล้ว' }); });
+        on('use_strategy', (client, data) => { const { useStrategy } = require('../game/experimental'); if (!useStrategy(gs, gs.players[this._getPlayerIdByClient(client)], data.cardId))
+            client.send('game_error', { message: 'ต้องเลือกไพ่บนมือหนึ่งใบ และแผนยังไม่ถูกใช้' }); });
+        on('use_hua_tuo_skill', (client, data) => { if (!(0, expandedHeroes_1.qingnang)(gs, gs.players[this._getPlayerIdByClient(client)], data))
+            client.send('game_error', { message: 'เลือกไพ่บนมือหนึ่งใบและผู้บาดเจ็บ ใช้ได้เทิร์นละครั้ง' }); });
+        on('spectator_chat', (client, data) => {
+            const p = gs.players[this._getPlayerIdByClient(client)];
+            if (!(0, experimental_1.experimental)(gs) || p.isAlive || !['PLAYING', 'ENDED'].includes(gs.status) || typeof data.text !== 'string' || Date.now() - (p._lastSpectatorChat || 0) < 1500)
+                return;
+            const text = data.text.trim().slice(0, 240);
+            if (!text)
+                return;
+            p._lastSpectatorChat = Date.now();
+            gs.spectatorChat.push({ sender: p.name, text, time: new Date().toLocaleTimeString('th-TH') });
+            if (gs.spectatorChat.length > 100)
+                gs.spectatorChat.shift();
+            this._broadcastAll();
+        });
         on('add_bot', (client) => {
             if (gs.status !== 'LOBBY')
                 return;
@@ -672,7 +697,7 @@ class WTKRoom extends colyseus_1.Room {
                 return client.send('game_error', { message: 'ไม่พบการ์ดที่ระบุบนมือ' });
             const hasZhuge = player.equipment.weapon.name === 'ZHUGE_CROSSBOW';
             const isZhangFei = (0, phaseLogic_1.hasCharacter)(player, 'ZHANG_FEI');
-            if (gs.attacksPlayedInTurn >= 1 && !hasZhuge && !isZhangFei)
+            if (gs.attacksPlayedInTurn >= 1 + (player.extraAttacks || 0) && !hasZhuge && !isZhangFei)
                 return client.send('game_error', { message: 'คุณใช้สิทธิ์โจมตีครบแล้วในเทิร์นนี้' });
             const target = gs.players[targetPlayerId];
             if (!target?.isAlive)
@@ -924,6 +949,8 @@ class WTKRoom extends colyseus_1.Room {
     // ─── Broadcast all clients with sanitized state ────────────────────────────
     _broadcastAll() {
         const gs = this.gameState;
+        if (gs._offerRedirection?.())
+            return;
         if (gs.chat.length > 300)
             gs.chat.splice(0, gs.chat.length - 300);
         this.state.status = gs.status;

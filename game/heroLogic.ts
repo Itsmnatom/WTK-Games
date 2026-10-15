@@ -5,8 +5,11 @@ import { handleUseCard, handleResolvePending } from './cardLogic';
 import { schedule, deadline, once } from './runtime';
 import { emitHeroSkill, publicPlayedCard } from './presentationEvents';
 import type { GameRoom, Player, Card, AttackDescriptor } from './types';
+import { expandedDamageSkills, validRedirect } from './expandedHeroes';
+import { experimental, publicFriendly, publicEnemy } from './experimental';
 
 export const heroId = (p: Player) => canonicalHero(p.character);
+const HERO_PROMPTS=['GUANXING','GUICAI','DAMAGE_SKILL','FANJIAN','LORD_SKILL','ZHANG_LIAO_DRAW','SUPPLY_PLAN','HUANG_DRAW','GUO_JIA_ACCEPT','GUO_JIA_DISTRIBUTE','GUO_JIA_JUDGE','DA_QIAO_REDIRECT'];
 export const isRed = (c: Card) => c.suit === 'HEART' || c.suit === 'DIAMOND';
 export function canRespond(player: Player, card: Card, required: string): boolean {
   if (card.name === required || required === 'SLASH' && card.name === 'THUNDER_ATTACK') return true;
@@ -24,8 +27,9 @@ export function removeOwnedCard(room: GameRoom, player: Player, id: string, equi
   }
   return null;
 }
-function prompt(room: GameRoom, data: any, onResponse: (data: any) => void): void {
+export function prompt(room: GameRoom, data: any, onResponse: (data: any) => void): void {
   const pending:any = { ...data, timeoutAt: deadline(room) };
+  if(experimental(room))pending.promptId=`hero-${room._heroPromptSequence=(room._heroPromptSequence||0)+1}`;
   pending.resume=once((response:any)=>{if(room.pendingAction!==pending&&!response?.disconnect)return;onResponse(response);});
   room.pendingAction = pending;
   room._broadcastFn?.();
@@ -40,27 +44,41 @@ function prompt(room: GameRoom, data: any, onResponse: (data: any) => void): voi
     }
     if (data.type === 'LORD_SKILL') {
       const card = target.hand.find(c => canRespond(target,c,data.requestType));
-      const friendly = target.role === 'LOYALIST' || target.role === 'LORD';
+      const friendly = experimental(room) ? publicFriendly(room,target,room.players[data.sourcePlayerId]) : target.role === 'LOYALIST' || target.role === 'LORD';
       response = { accept: !!card && friendly, cardId: card?.id };
     }
     if (data.type === 'FANJIAN') response = { guess: ['SPADE','HEART','CLUB','DIAMOND'][Math.floor(Math.random()*4)] };
     if (data.type === 'DAMAGE_SKILL') response = { accept: true, slot: 'hand' };
-    resolveHeroResponse(room, target.id, response);
+    if (data.type === 'ZHANG_LIAO_DRAW') response={accept:true,targetPlayerIds:Object.values(room.players).filter(p=>p.isAlive&&p.id!==target.id&&p.hand.length&&publicEnemy(room,target,p)).slice(0,2).map(p=>p.id)};
+    if (data.type === 'SUPPLY_PLAN') response={accept:target.hp<=target.maxHp-1};
+    if (data.type === 'GUO_JIA_DISTRIBUTE') {
+      const ally=Object.values(room.players).find(p=>p.isAlive&&p.id!==target.id&&publicFriendly(room,target,p)&&p.hand.length<3);
+      response={allocations:data.cards.map((c:Card,i:number)=>({cardId:c.id,playerId:i===0&&ally?ally.id:target.id}))};
+    }
+    if (data.type === 'DA_QIAO_REDIRECT') {
+      const cost=target.hand.find(c=>!['PEACH','DODGE'].includes(c.name))||target.hand[0];
+      const victim=Object.values(room.players).find(p=>validRedirect(room,target,p,data.attackSourceId,cost?.id)&&publicEnemy(room,target,p));
+      response={accept:!!cost&&!!victim,cardId:cost?.id,targetPlayerId:victim?.id};
+    }
+    resolveHeroResponse(room, target.id, {...response,promptId:pending.promptId});
   }, 600);
 }
 export function resolveHeroResponse(room: GameRoom, playerId: string, data: any): boolean {
   const pending = room.pendingAction;
-  if (!pending || !['GUANXING','GUICAI','DAMAGE_SKILL','FANJIAN','LORD_SKILL'].includes(pending.type)) return false;
+  if (!pending || !HERO_PROMPTS.includes(pending.type)) return false;
   if (pending.targetPlayerId !== playerId) return false;
+  if(pending.promptId&&data?.promptId!==pending.promptId)return false;
   if(pending.timeoutAt && Date.now()>=pending.timeoutAt){expireHeroResponse(room);return false;}
   pending.resume(data || {});
+  room._broadcastFn?.();
   return true;
 }
 export function expireHeroResponse(room: GameRoom): boolean {
   const pending = room.pendingAction;
-  if (!pending || !['GUANXING','GUICAI','DAMAGE_SKILL','FANJIAN','LORD_SKILL'].includes(pending.type)) return false;
+  if (!pending || !HERO_PROMPTS.includes(pending.type)) return false;
   if (Date.now() < Number(pending.timeoutAt)) return false;
   pending.resume({ accept: false, timeout: true });
+  room._broadcastFn?.();
   return true;
 }
 export function prepareHeroTurn(room: GameRoom, player: Player, done: () => void): void {
@@ -99,7 +117,8 @@ export function judgeWithHeroes(room: GameRoom, target: Player, drawn: Card, rea
   };
   next();
 }
-export function queueDamageSkills(room: GameRoom, target: Player, sourceId: string | null, card: Card | null, attack?: AttackDescriptor): void {
+export function queueDamageSkills(room: GameRoom, target: Player, sourceId: string | null, card: Card | null, attack?: AttackDescriptor, damage=1): void {
+  expandedDamageSkills(room,target,damage);
   const id = heroId(target);
   if (!['CAO_CAO','SIMA_YI'].includes(id)) return;
   const materialIds = [...new Set(attack?.materialCardIds || (card ? [card.id] : []))];
@@ -180,7 +199,7 @@ export function startLordSkill(room:GameRoom,lord:Player,data:any):boolean {
   if(suspended && (suspended.type==='LORD_SKILL'||suspended.lordSkillAttempted))return false;
   if(required==='DODGE' && (!suspended || (suspended.targets?.[suspended.currentTargetIndex]||suspended.targetPlayerId)!==lord.id || !(suspended.type==='WAITING_FOR_DODGE'||suspended.type==='WAITING_FOR_AOE'&&suspended.aoeType==='ARROW_BARRAGE')))return false;
   if(required==='SLASH' && suspended && (!(suspended.type==='WAITING_FOR_SLASH_DUEL'||suspended.type==='WAITING_FOR_AOE'&&suspended.aoeType==='BARBARIAN_INVASION'||suspended.type==='WAITING_FOR_BORROW_SLASH') || (suspended.currentPlayerToSlash||suspended.targets?.[suspended.currentTargetIndex]||suspended.targetPlayerId)!==lord.id))return false;
-  if(!suspended){const target=room.players[data.targetPlayerId];if(required!=='SLASH'||room.currentPhase!=='PLAY'||room.turnOrder[room.currentTurnIndex]!==lord.id||!target?.isAlive||target.id===lord.id||calculateDistance(room,lord.id,target.id)>(lord.equipment.weapon?.range||1)||room.attacksPlayedInTurn>=1&&lord.equipment.weapon?.name!=='ZHUGE_CROSSBOW'||hasCharacter(target,'ZHUGE_LIANG')&&!target.hand.length)return false;}
+  if(!suspended){const target=room.players[data.targetPlayerId];if(required!=='SLASH'||room.currentPhase!=='PLAY'||room.turnOrder[room.currentTurnIndex]!==lord.id||!target?.isAlive||target.id===lord.id||calculateDistance(room,lord.id,target.id)>(lord.equipment.weapon?.range||1)||room.attacksPlayedInTurn>=1+(lord.extraAttacks||0)&&lord.equipment.weapon?.name!=='ZHUGE_CROSSBOW'||hasCharacter(target,'ZHUGE_LIANG')&&!target.hand.length)return false;}
   const faction=required==='DODGE'?'WEI':'SHU';
   const start=room.turnOrder.indexOf(lord.id);
   const helpers=[...room.turnOrder.slice(start+1),...room.turnOrder.slice(0,start)].map(id=>room.players[id]).filter(p=>p?.isAlive&&p.id!==lord.id&&HERO_BY_ID[heroId(p)]?.faction===faction);
@@ -209,7 +228,7 @@ export function startLordSkill(room:GameRoom,lord:Player,data:any):boolean {
 }
 export function botHeroAction(room:GameRoom,bot:Player):boolean {
   if(room.pendingAction||room.currentPhase!=='PLAY'||room.turnOrder[room.currentTurnIndex]!==bot.id)return false;
-  const id=heroId(bot), enemies=Object.values(room.players).filter(p=>p.isAlive&&p.id!==bot.id&&(bot.role==='REBEL'?p.role==='LORD'||p.role==='LOYALIST':bot.role==='LORD'||bot.role==='LOYALIST'?p.role==='REBEL'||p.role==='RENEGADE':true));
+  const id=heroId(bot), enemies=Object.values(room.players).filter(p=>p.isAlive&&p.id!==bot.id&&(experimental(room)?publicEnemy(room,bot,p):(bot.role==='REBEL'?p.role==='LORD'||p.role==='LOYALIST':bot.role==='LORD'||bot.role==='LOYALIST'?p.role==='REBEL'||p.role==='RENEGADE':true)));
   if(id==='SUN_QUAN'&&!bot.skillResignationUsed){const unwanted=bot.hand.filter(c=>c.type==='EQUIPMENT'&&!!bot.equipment[require('../shared/catalog').CARD_BY_ID[c.name]?.slot]||c.name==='WINE'&&bot.hand.filter(c=>c.name==='WINE').length>1);if(unwanted.length){for(const c of unwanted){const removed=removeOwnedCard(room,bot,c.id,false);if(removed)room.discardPile.push(removed);}bot.hand.push(...drawCards(room,unwanted.length));bot.skillResignationUsed=true;emitHeroSkill(room,bot.id,'ZHIHENG');room._broadcastFn?.();resumeAfterAttack(room);return true;}}
   if(id==='ZHOU_YU'&&!bot.skillZhouYuUsed&&bot.hand.length>1&&enemies.length)return startFanjian(room,bot,{cardId:bot.hand[bot.hand.length-1].id,targetPlayerId:enemies[0].id});
   if(id==='DIAO_CHAN'&&!bot.skillDiaoChanUsed&&bot.hand.length){const men=enemies.filter(p=>HERO_BY_ID[heroId(p)]?.gender==='MALE');if(men.length>=2)return startLijian(room,bot,{cardId:bot.hand[bot.hand.length-1].id,targetPlayerId:men[0].id,secondaryTargetId:men[1].id});}

@@ -1,0 +1,21 @@
+{
+  "asset": "public/art/heroes-experimental-atlas.png",
+  "tool": "built-in image_gen",
+  "created": "2026-10-15",
+  "source": "exec-00884196-f2f0-45ad-8db8-116094865d09.png",
+  "sha256": "d51a73c9cffae4414b783e1a0427b9a47e85369dd560080a9736e3957dbdfb8f",
+  "layout": {
+    "columns": 3,
+    "rows": 2,
+    "order": [
+      "ZHANG_LIAO",
+      "GUO_JIA",
+      "HUANG_YUEYING",
+      "GAN_NING",
+      "DA_QIAO",
+      "HUA_TUO"
+    ]
+  },
+  "inspection": "Visually inspected the generated 3-by-2 atlas; six distinct busts in the requested reading order. No official card artwork copied into the runtime asset.",
+  "prompt": "Use case: stylized-concept. Asset type: ONE game portrait sprite atlas. Generate a precise 3-column by 2-row contact sheet of SIX original Three Kingdoms hero bust portraits in detailed crisp 16-bit pixel art, ink navy backgrounds, restrained jade and gold lighting matching a dark voxel palace card game. Every tile identical dimensions, grid fills entire image edge to edge, no gutters or borders, each face centered and fully within its tile. Exact reading order top-left Zhang Liao (stern male Wei general blue steel helmet and blue armor), top-center Guo Jia (slender young male strategist blue robe holding folded fan), top-right Huang Yueying (female Shu inventor red-brown robes with small wooden mechanical device); bottom-left Gan Ning (rugged male Wu pirate general green bandana brass bells), bottom-center Da Qiao (elegant adult female Wu noblewoman jade robes holding silk fan), bottom-right Hua Tuo (elderly male physician long white beard muted golden brown robes with herbal pouch). Strong distinct silhouettes, historical Chinese attire, clean readable portrait faces. No text, no numbers, no logos, no watermarks, no UI, no extra people. Landscape 3:2 overall composition."
+}

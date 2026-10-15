@@ -21,6 +21,8 @@ exports.getSanitizedRoomState = getSanitizedRoomState;
 const catalog_1 = require("../shared/catalog");
 const runtime_1 = require("./runtime");
 const presentationEvents_1 = require("./presentationEvents");
+const expandedHeroes_1 = require("./expandedHeroes");
+const experimental_1 = require("./experimental");
 const allHeroes = catalog_1.HEROES.map(hero => ({
     ...hero,
     name: hero.english,
@@ -74,7 +76,9 @@ function drawCards(room, count) {
             room.deck = (0, catalog_1.shuffle)(room.discardPile);
             room.discardPile = [];
         }
-        cards.push(room.deck.pop());
+        const drawn = room.deck.pop();
+        delete drawn.effectName;
+        cards.push(drawn);
     }
     return cards;
 }
@@ -117,15 +121,16 @@ function startDraftPhase(room) {
     room.status = 'DRAFTING';
     room.draftDeadline = Date.now() + catalog_1.RULES.draftMs;
     Object.values(room.players).forEach((player) => {
+        const availableHeroes = (0, experimental_1.experimental)(room) ? allHeroes : allHeroes.slice(0, 13);
         let choices;
         if (player.role === 'LORD') {
             const lordIds = ['CAO_CAO', 'LIU_BEI', 'SUN_QUAN'];
-            const lords = allHeroes.filter(hero => lordIds.includes(hero.id));
-            const rest = (0, catalog_1.shuffle)(allHeroes.filter(hero => !lordIds.includes(hero.id)));
+            const lords = availableHeroes.filter(hero => lordIds.includes(hero.id));
+            const rest = (0, catalog_1.shuffle)(availableHeroes.filter(hero => !lordIds.includes(hero.id)));
             choices = [...lords, ...rest.slice(0, 2)];
         }
         else {
-            choices = (0, catalog_1.shuffle)(allHeroes).slice(0, 3);
+            choices = (0, catalog_1.shuffle)(availableHeroes).slice(0, 3);
         }
         player.characterChoices = choices.map(hero => ({ ...hero, pic: '/art/heroes-atlas.png' }));
         if (player.isBot && player.characterChoices.length) {
@@ -136,7 +141,10 @@ function startDraftPhase(room) {
 }
 // ─── Play Phase Start ─────────────────────────────────────────────────────────
 function startPlayPhase(room) {
+    if ((0, experimental_1.beginStrategies)(room))
+        return;
     room.status = 'PLAYING';
+    room.playStartedAt = Date.now();
     room.draftDeadline = null;
     room.deck = initDeck(room.deckSeed);
     room.discardPile = [];
@@ -189,6 +197,10 @@ function startPlayerTurn(room) {
     player.skillZhouYuUsed = false;
     player._botRendeUsed = false;
     player._botJijiangUsed = false;
+    player.extraAttacks = 0;
+    player.skillQingnangUsed = false;
+    if ((0, experimental_1.experimental)(room))
+        room.turnNumber = (room.turnNumber || 0) + 1;
     room.attacksPlayedInTurn = 0;
     const turnGeneration = (room._turnGeneration || 0) + 1;
     room._turnGeneration = turnGeneration;
@@ -225,16 +237,16 @@ function startPlayerTurn(room) {
         const resolveJudge = once((judgeCard) => {
             room.discardPile.push(judgeCard, card);
             let isSuccess = false;
-            let titleName = card.name;
-            if (card.name === 'LIGHTNING') {
+            let titleName = (card.effectName || card.name);
+            if ((card.effectName || card.name) === 'LIGHTNING') {
                 isSuccess = !(judgeCard.suit === 'SPADE' && judgeCard.rank >= 2 && judgeCard.rank <= 9);
                 titleName = 'อัสนีบาต (สายฟ้า)';
             }
-            else if (card.name === 'ACEDIA') {
+            else if ((card.effectName || card.name) === 'ACEDIA') {
                 isSuccess = judgeCard.suit === 'HEART';
                 titleName = 'สุขไม่คิดกลับ';
             }
-            else if (card.name === 'STARVATION') {
+            else if ((card.effectName || card.name) === 'STARVATION') {
                 isSuccess = judgeCard.suit === 'CLUB';
                 titleName = 'เสบียงขาด';
             }
@@ -242,41 +254,45 @@ function startPlayerTurn(room) {
                 title: titleName, card: judgeCard, isSuccess,
                 targetPlayerId: player.id, targetPlayerName: player.name,
             });
-            if (card.name === 'LIGHTNING') {
-                if (!isSuccess) {
-                    const continueAfterDamage = once(judgeNext);
-                    room._turnContinuation = continueAfterDamage;
-                    const { dealDamage } = require('./combatLogic');
-                    dealDamage(room, playerId, 3, card, null, 'THUNDER');
-                    if (room.pendingAction || !turnIsCurrent())
-                        return;
-                    room._turnContinuation = null;
-                    continueAfterDamage();
+            (0, expandedHeroes_1.claimJudgment)(room, player, judgeCard, () => {
+                if (!turnIsCurrent())
                     return;
+                if ((card.effectName || card.name) === 'LIGHTNING') {
+                    if (!isSuccess) {
+                        const continueAfterDamage = once(judgeNext);
+                        room._turnContinuation = continueAfterDamage;
+                        const { dealDamage } = require('./combatLogic');
+                        dealDamage(room, playerId, 3, card, null, 'THUNDER');
+                        if (room.pendingAction || !turnIsCurrent())
+                            return;
+                        room._turnContinuation = null;
+                        continueAfterDamage();
+                        return;
+                    }
+                    const myIdx = room.turnOrder.indexOf(playerId);
+                    for (let offset = 1; offset < room.turnOrder.length; offset++) {
+                        const next = room.players[room.turnOrder[(myIdx + offset) % room.turnOrder.length]];
+                        if (!next?.isAlive)
+                            continue;
+                        next.delayedKitZone = next.delayedKitZone || [];
+                        next.delayedKitZone.push(card);
+                        const discardedIndex = room.discardPile.indexOf(card);
+                        if (discardedIndex !== -1)
+                            room.discardPile.splice(discardedIndex, 1);
+                        break;
+                    }
                 }
-                const myIdx = room.turnOrder.indexOf(playerId);
-                for (let offset = 1; offset < room.turnOrder.length; offset++) {
-                    const next = room.players[room.turnOrder[(myIdx + offset) % room.turnOrder.length]];
-                    if (!next?.isAlive)
-                        continue;
-                    next.delayedKitZone = next.delayedKitZone || [];
-                    next.delayedKitZone.push(card);
-                    const discardedIndex = room.discardPile.indexOf(card);
-                    if (discardedIndex !== -1)
-                        room.discardPile.splice(discardedIndex, 1);
-                    break;
+                else if ((card.effectName || card.name) === 'ACEDIA' && !isSuccess) {
+                    skipPlayPhase = true;
                 }
-            }
-            else if (card.name === 'ACEDIA' && !isSuccess) {
-                skipPlayPhase = true;
-            }
-            else if (card.name === 'STARVATION' && !isSuccess) {
-                skipDrawPhase = true;
-            }
-            judgeNext();
+                else if ((card.effectName || card.name) === 'STARVATION' && !isSuccess) {
+                    skipDrawPhase = true;
+                }
+                judgeNext();
+            });
         });
         if (room._judgeCard)
-            room._judgeCard(player, drawnJudge, card, resolveJudge);
+            room._judgeCard(player, drawnJudge, { ...card, name: card.effectName || card.name }, resolveJudge);
         else
             resolveJudge(drawnJudge);
     };
@@ -329,6 +345,11 @@ function startPlayerTurn(room) {
         beginLuoshen();
 }
 function executeDrawPhase(room, player, skipDrawPhase = false, skipPlayPhase = false) {
+    if (room._drawWithHeroes && !skipDrawPhase) {
+        room.currentPhase = 'DRAW';
+        room._drawWithHeroes(player, () => executeDrawPhase(room, player, true, skipPlayPhase));
+        return;
+    }
     if (!skipDrawPhase) {
         room.currentPhase = 'DRAW';
         const drawCount = hasCharacter(player, 'ZHOU_YU') ? 3 : 2;
@@ -429,7 +450,7 @@ function sanitizedPendingAction(pending, targetPlayerId) {
             result.cardUsedId = pending.cardUsedId;
     }
     const owner = pending.targetPlayerId || pending.sourcePlayerId;
-    if (pending.type === 'GUANXING' && owner === targetPlayerId) {
+    if (['GUANXING', 'GUO_JIA_DISTRIBUTE'].includes(pending.type) && owner === targetPlayerId) {
         for (const key of ['cards', 'topCards', 'bottomCards']) {
             if (Array.isArray(pending[key]))
                 result[key] = pending[key].map(publicCard);
@@ -458,7 +479,7 @@ function getSanitizedRoomState(room, targetPlayerId) {
             hp: p.hp,
             maxHp: p.maxHp,
             equipment: p.equipment || { weapon: null, armor: null, offensiveHorse: null, defensiveHorse: null, treasure: null },
-            delayedKitZone: p.delayedKitZone || [],
+            delayedKitZone: (p.delayedKitZone || []).map(c => ({ ...publicCard(c), name: c.effectName || c.name })),
             isAlive: p.isAlive,
             wineActive: p.wineActive,
             isBot: p.isBot,
@@ -471,12 +492,24 @@ function getSanitizedRoomState(room, targetPlayerId) {
             isHost: room.hostSocketId === p.socketId,
             isDisconnected: p.isDisconnected || false,
             isChained: p.isChained || false,
+            strategy: room.strategiesRevealed ? p.strategy : null,
+            strategyUsed: !!p.strategyUsed,
+            strategyChoice: pId === targetPlayerId ? p.strategyChoice : null,
+            strategyReady: !!p.strategyChoice,
+            extraAttacks: p.extraAttacks || 0,
+            skillQingnangUsed: !!p.skillQingnangUsed,
         };
     });
     return {
         roomId: room.roomId,
         status: room.status,
         mode: room.mode,
+        ruleset: room.ruleset || 'STANDARD',
+        experimentSummary: (0, experimental_1.balanceSummary)(room),
+        strategyDeadline: room.strategyDeadline || null,
+        strategiesRevealed: !!room.strategiesRevealed,
+        turnNumber: room.turnNumber || 0,
+        spectatorChat: !room.players[targetPlayerId]?.isAlive ? room.spectatorChat || [] : [],
         currentTurnPlayerId: room.turnOrder[room.currentTurnIndex] || null,
         currentPhase: room.currentPhase,
         pendingAction: sanitizedPendingAction(room.pendingAction, targetPlayerId),
@@ -490,7 +523,7 @@ function getSanitizedRoomState(room, targetPlayerId) {
         deckCount: room.deck?.length || 0,
         discardCount: room.discardPile?.length || 0,
         draftDeadline: room.draftDeadline || null,
-        rulesVersion: catalog_1.RULES.version,
+        rulesVersion: (0, experimental_1.experimental)(room) ? 'experimental-1' : catalog_1.RULES.version,
         players: maskedPlayers,
         turnOrder: room.turnOrder,
         winnerRole: room.winnerRole || null,

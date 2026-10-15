@@ -19,6 +19,7 @@ const combatLogic_1 = require("./combatLogic");
 const botAI_1 = require("./botAI");
 const catalog_1 = require("../shared/catalog");
 const runtime_1 = require("./runtime");
+const expandedHeroes_1 = require("./expandedHeroes");
 const presentationEvents_1 = require("./presentationEvents");
 // Mutable actions move between responders. Capture both identity and stage so an
 // earlier callback cannot spend cards or resolve damage for a newer prompt.
@@ -437,10 +438,10 @@ function handleUseCard(room, socket, data) {
         return _err(socket, 'ไม่พบการ์ดใบนี้อยู่บนมือหรืออุปกรณ์ของคุณ');
     // A physical card can be acquired and used again with a different effect.
     delete cardUsed.effectName;
-    if (player.slashedThisTurn && cardUsed.type === 'EQUIPMENT' && !isEquipUsed)
+    if (!playAs && player.slashedThisTurn && cardUsed.type === 'EQUIPMENT' && !isEquipUsed)
         return _err(socket, 'คุณใช้ SLASH ไปแล้วในเทิร์นนี้ ไม่สามารถใช้การ์ดอุปกรณ์เพิ่มได้');
     let effectiveCardName = cardUsed.name;
-    if (playAs === 'SLASH' || isEquipUsed) {
+    if (playAs === 'SLASH' || isEquipUsed && !['SABOTAGE', 'ACEDIA'].includes(playAs)) {
         const isGuanYuSlash = (0, phaseLogic_1.hasCharacter)(player, 'GUAN_YU') && (cardUsed.suit === 'HEART' || cardUsed.suit === 'DIAMOND');
         const isZhaoYunSlash = (0, phaseLogic_1.hasCharacter)(player, 'ZHAO_YUN') && cardUsed.name === 'DODGE' && !isEquipUsed;
         if (isGuanYuSlash || isZhaoYunSlash)
@@ -451,14 +452,34 @@ function handleUseCard(room, socket, data) {
             return _err(socket, 'การ์ดไม่สามารถแปลงเป็น SLASH ได้');
     }
     // ── SLASH / THUNDER_ATTACK ──
-    if (effectiveCardName === 'SLASH' || cardUsed.name === 'THUNDER_ATTACK') {
+    if (playAs === 'SABOTAGE' || playAs === 'ACEDIA') {
+        const allowed = playAs === 'SABOTAGE' ? (0, phaseLogic_1.hasCharacter)(player, 'GAN_NING') && ['SPADE', 'CLUB'].includes(cardUsed.suit) : (0, phaseLogic_1.hasCharacter)(player, 'DA_QIAO') && cardUsed.suit === 'DIAMOND';
+        if (!allowed)
+            return _err(socket, 'ไพ่ใบนี้แปลงเป็นกลยุทธ์ที่เลือกไม่ได้');
+        effectiveCardName = playAs;
+    }
+    else if (playAs && playAs !== 'SLASH')
+        return _err(socket, 'ไพ่ใบนี้แปลงเป็นกลยุทธ์ที่เลือกไม่ได้');
+    const effectiveKind = catalog_1.CARD_BY_ID[effectiveCardName]?.kind || cardUsed.type;
+    const takePlayedCard = () => {
+        if (isEquipUsed && equipSlotUsed) {
+            player.equipment[equipSlotUsed] = null;
+            if (cardUsed.name === 'SILVER_LION_HELMET')
+                player.hp = Math.min(player.maxHp, player.hp + 1);
+            return cardUsed;
+        }
+        return player.hand.splice(cardIndex, 1)[0];
+    };
+    if (effectiveCardName !== cardUsed.name)
+        cardUsed.effectName = effectiveCardName;
+    if (effectiveCardName === 'SLASH' || effectiveCardName === 'THUNDER_ATTACK') {
         const attackTargets = Array.isArray(data.targetPlayerIds) ? data.targetPlayerIds : targetPlayerId ? [targetPlayerId] : [];
         const canSplit = !isEquipUsed && player.hand.length === 1 && player.equipment.weapon?.name === 'SKY_PIERCING_HALBERD';
         if (!attackTargets.length || attackTargets.length > (canSplit ? 3 : 1) || new Set(attackTargets).size !== attackTargets.length)
             return _err(socket, 'จำนวนเป้าหมายโจมตีไม่ถูกต้อง');
         const hasZhuge = equipSlotUsed !== 'weapon' && player.equipment?.weapon?.name === 'ZHUGE_CROSSBOW';
         const isZhangFei = (0, phaseLogic_1.hasCharacter)(player, 'ZHANG_FEI');
-        if (room.attacksPlayedInTurn >= 1 && !hasZhuge && !isZhangFei)
+        if (room.attacksPlayedInTurn >= 1 + (player.extraAttacks || 0) && !hasZhuge && !isZhangFei)
             return _err(socket, 'คุณใช้สิทธิ์ SLASH ครบแล้วในเทิร์นนี้');
         const weaponRange = equipSlotUsed === 'weapon' ? 1 : player.equipment?.weapon?.range || 1;
         for (const targetId of attackTargets) {
@@ -480,7 +501,7 @@ function handleUseCard(room, socket, data) {
                 player.hp = Math.min(player.maxHp, player.hp + 1);
         }
         else {
-            player.hand.splice(cardIndex, 1);
+            takePlayedCard();
             room.discardPile.push(cardUsed);
         }
         room.attacksPlayedInTurn += 1;
@@ -494,44 +515,44 @@ function handleUseCard(room, socket, data) {
         startAttackSequence(room, playerId, [...attackTargets], cardUsed, damage, dodgeNeeded, slashDamageType);
     }
     // ── PEACH ──
-    else if (cardUsed.name === 'PEACH') {
+    else if (effectiveCardName === 'PEACH') {
         const tid = targetPlayerId || playerId;
         const tp = room.players[tid];
         if (!tp?.isAlive || tp.hp >= tp.maxHp)
             return _err(socket, 'ไม่สามารถใช้ PEACH ได้');
-        player.hand.splice(cardIndex, 1);
+        takePlayedCard();
         room.discardPile.push(cardUsed);
         tp.hp += 1;
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { cardName: 'PEACH', targetId: tid });
         room._broadcastFn && room._broadcastFn();
     }
     // ── WINE ──
-    else if (cardUsed.name === 'WINE') {
-        player.hand.splice(cardIndex, 1);
+    else if (effectiveCardName === 'WINE') {
+        takePlayedCard();
         room.discardPile.push(cardUsed);
         player.wineActive = true;
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { cardName: 'WINE' });
         room._broadcastFn && room._broadcastFn();
     }
     // ── STEAL ──
-    else if (cardUsed.name === 'STEAL') {
+    else if (effectiveCardName === 'STEAL') {
         if (!targetPlayerId)
             return _err(socket, 'กรุณาระบุเป้าหมายที่จะขโมย');
         const tp = room.players[targetPlayerId];
         if (!tp?.isAlive)
             return _err(socket, 'เป้าหมายไม่มีผล');
-        if ((0, phaseLogic_1.calculateDistance)(room, playerId, targetPlayerId) > 1)
+        if (!(0, phaseLogic_1.hasCharacter)(player, 'HUANG_YUEYING') && (0, phaseLogic_1.calculateDistance)(room, playerId, targetPlayerId) > 1)
             return _err(socket, 'เป้าหมายอยู่ไกลเกินระยะค่ายกล STEAL');
         const tz = targetZone || 'HAND';
         if (!validTargetSelection(tp, tz, targetCardId))
             return _err(socket, 'การ์ดเป้าหมายในโซนที่เลือกไม่ถูกต้อง');
-        const sc = player.hand.splice(cardIndex, 1)[0];
+        const sc = takePlayedCard();
         room.discardPile.push(sc);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { cardName: 'STEAL', targetId: targetPlayerId });
         startNegateWindow(room, { type: 'STEAL', sourceId: playerId, targetId: targetPlayerId, targetZone: tz, targetCardId, cardUsed: sc });
     }
     // ── SABOTAGE ──
-    else if (cardUsed.name === 'SABOTAGE') {
+    else if (effectiveCardName === 'SABOTAGE') {
         if (!targetPlayerId)
             return _err(socket, 'กรุณาระบุเป้าหมายที่จะทำลาย');
         const tp = room.players[targetPlayerId];
@@ -540,16 +561,16 @@ function handleUseCard(room, socket, data) {
         const tz = targetZone || 'HAND';
         if (!validTargetSelection(tp, tz, targetCardId))
             return _err(socket, 'การ์ดเป้าหมายในโซนที่เลือกไม่ถูกต้อง');
-        const sc = player.hand.splice(cardIndex, 1)[0];
+        const sc = takePlayedCard();
         room.discardPile.push(sc);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { cardName: 'SABOTAGE', targetId: targetPlayerId });
         startNegateWindow(room, { type: 'SABOTAGE', sourceId: playerId, targetId: targetPlayerId, targetZone: tz, targetCardId, cardUsed: sc });
     }
     // ── WEAPONS ──
-    else if (['ZHUGE_CROSSBOW', 'BLUE_STEEL_SWORD', 'SIX_SWORDS_WU', 'KIRIN_BOW', 'FEATHERED_FAN', 'SERPENT_SPEAR', 'FROST_SWORD', 'TWO_BLADED_TRIDENT', 'ROCK_CLEAVING_AXE', 'GREEN_DRAGON_BLADE', 'SKY_PIERCING_HALBERD', 'YIN_YANG_SWORDS'].includes(cardUsed.name)) {
+    else if (['ZHUGE_CROSSBOW', 'BLUE_STEEL_SWORD', 'SIX_SWORDS_WU', 'KIRIN_BOW', 'FEATHERED_FAN', 'SERPENT_SPEAR', 'FROST_SWORD', 'TWO_BLADED_TRIDENT', 'ROCK_CLEAVING_AXE', 'GREEN_DRAGON_BLADE', 'SKY_PIERCING_HALBERD', 'YIN_YANG_SWORDS'].includes(effectiveCardName)) {
         const WEAPON_RANGE = { 'ZHUGE_CROSSBOW': 1, 'BLUE_STEEL_SWORD': 2, 'SIX_SWORDS_WU': 2, 'KIRIN_BOW': 5, 'FEATHERED_FAN': 4, 'SERPENT_SPEAR': 3, 'FROST_SWORD': 2, 'TWO_BLADED_TRIDENT': 3, 'ROCK_CLEAVING_AXE': 3, 'GREEN_DRAGON_BLADE': 3, 'SKY_PIERCING_HALBERD': 4, 'YIN_YANG_SWORDS': 2 };
-        const equipCard = player.hand.splice(cardIndex, 1)[0];
-        equipCard.range = WEAPON_RANGE[cardUsed.name] || 1;
+        const equipCard = takePlayedCard();
+        equipCard.range = WEAPON_RANGE[effectiveCardName] || 1;
         if (player.equipment.weapon)
             room.discardPile.push(player.equipment.weapon);
         player.equipment.weapon = equipCard;
@@ -557,8 +578,8 @@ function handleUseCard(room, socket, data) {
         room._broadcastFn && room._broadcastFn();
     }
     // ── ARMOR ──
-    else if (['NIO_SHIELD', 'EIGHT_TRIGRAMS_FORMATION', 'SILVER_LION_HELMET', 'RATTAN_ARMOR'].includes(cardUsed.name)) {
-        const equipCard = player.hand.splice(cardIndex, 1)[0];
+    else if (['NIO_SHIELD', 'EIGHT_TRIGRAMS_FORMATION', 'SILVER_LION_HELMET', 'RATTAN_ARMOR'].includes(effectiveCardName)) {
+        const equipCard = takePlayedCard();
         if (player.equipment.armor) {
             room.discardPile.push(player.equipment.armor);
             if (player.equipment.armor.name === 'SILVER_LION_HELMET')
@@ -569,8 +590,8 @@ function handleUseCard(room, socket, data) {
         room._broadcastFn && room._broadcastFn();
     }
     // ── WOODEN_CART ──
-    else if (cardUsed.name === 'WOODEN_CART') {
-        const equipCard = player.hand.splice(cardIndex, 1)[0];
+    else if (effectiveCardName === 'WOODEN_CART') {
+        const equipCard = takePlayedCard();
         if (player.equipment.treasure)
             room.discardPile.push(player.equipment.treasure);
         player.equipment.treasure = equipCard;
@@ -578,8 +599,8 @@ function handleUseCard(room, socket, data) {
         room._broadcastFn && room._broadcastFn();
     }
     // ── DEFENSIVE HORSE ──
-    else if (['LIGHTNING_HOOF', 'SHADOWRUNNER'].includes(cardUsed.name)) {
-        const equipCard = player.hand.splice(cardIndex, 1)[0];
+    else if (['LIGHTNING_HOOF', 'SHADOWRUNNER'].includes(effectiveCardName)) {
+        const equipCard = takePlayedCard();
         if (player.equipment.defensiveHorse)
             room.discardPile.push(player.equipment.defensiveHorse);
         player.equipment.defensiveHorse = equipCard;
@@ -587,8 +608,8 @@ function handleUseCard(room, socket, data) {
         room._broadcastFn && room._broadcastFn();
     }
     // ── OFFENSIVE HORSE ──
-    else if (['RED_HARE', 'FERGANA_STEED'].includes(cardUsed.name)) {
-        const equipCard = player.hand.splice(cardIndex, 1)[0];
+    else if (['RED_HARE', 'FERGANA_STEED'].includes(effectiveCardName)) {
+        const equipCard = takePlayedCard();
         if (player.equipment.offensiveHorse)
             room.discardPile.push(player.equipment.offensiveHorse);
         player.equipment.offensiveHorse = equipCard;
@@ -596,14 +617,14 @@ function handleUseCard(room, socket, data) {
         room._broadcastFn && room._broadcastFn();
     }
     // ── EX_NIHILO ──
-    else if (cardUsed.name === 'EX_NIHILO') {
-        const c = player.hand.splice(cardIndex, 1)[0];
+    else if (effectiveCardName === 'EX_NIHILO') {
+        const c = takePlayedCard();
         room.discardPile.push(c);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed);
         startNegateWindow(room, { type: 'EX_NIHILO', sourceId: playerId, cardUsed: c });
     }
     // ── DUEL ──
-    else if (cardUsed.name === 'DUEL') {
+    else if (effectiveCardName === 'DUEL') {
         if (!targetPlayerId)
             return _err(socket, 'กรุณาระบุเป้าหมายในการ DUEL');
         const tp = room.players[targetPlayerId];
@@ -611,13 +632,13 @@ function handleUseCard(room, socket, data) {
             return _err(socket, 'เป้าหมายไม่มีผล');
         if ((0, phaseLogic_1.hasCharacter)(tp, 'ZHUGE_LIANG') && tp.hand.length === 0)
             return _err(socket, 'ขงเบ้งเปิดใช้สกิล เมืองว่างเปล่า ไม่สามารถเป็นเป้าหมาย DUEL ได้');
-        const dc = player.hand.splice(cardIndex, 1)[0];
+        const dc = takePlayedCard();
         room.discardPile.push(dc);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { targetId: targetPlayerId });
         startNegateWindow(room, { type: 'DUEL', sourceId: playerId, targetId: targetPlayerId, cardUsed: dc });
     }
     // ── FIRE_ATTACK ──
-    else if (cardUsed.name === 'FIRE_ATTACK') {
+    else if (effectiveCardName === 'FIRE_ATTACK') {
         if (!targetPlayerId)
             return _err(socket, 'กรุณาระบุเป้าหมายสำหรับการโจมตีด้วยไฟ');
         const tp = room.players[targetPlayerId];
@@ -625,15 +646,15 @@ function handleUseCard(room, socket, data) {
             return _err(socket, 'เป้าหมายไม่มีผล');
         if (tp.hand.length === 0)
             return _err(socket, 'เป้าหมายไม่มีการ์ดบนมือ');
-        const fc = player.hand.splice(cardIndex, 1)[0];
+        const fc = takePlayedCard();
         room.discardPile.push(fc);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { targetId: targetPlayerId });
         startNegateWindow(room, { type: 'FIRE_ATTACK', sourceId: playerId, targetId: targetPlayerId, cardUsed: fc });
     }
     // ── IRON_CHAIN ──
-    else if (cardUsed.name === 'IRON_CHAIN') {
+    else if (effectiveCardName === 'IRON_CHAIN') {
         if (!targetPlayerId) {
-            const ic = player.hand.splice(cardIndex, 1)[0];
+            const ic = takePlayedCard();
             room.discardPile.push(ic);
             (0, phaseLogic_1.drawCards)(room, 1).forEach((c) => player.hand.push(c));
             (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed);
@@ -643,45 +664,45 @@ function handleUseCard(room, socket, data) {
         const tp = room.players[targetPlayerId];
         if (!tp?.isAlive)
             return _err(socket, 'เป้าหมายไม่มีผล');
-        const ic = player.hand.splice(cardIndex, 1)[0];
+        const ic = takePlayedCard();
         room.discardPile.push(ic);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { targetId: targetPlayerId, targetIds: [targetPlayerId, secondaryTargetId].filter(id => room.players[id]?.isAlive) });
         startNegateWindow(room, { type: 'IRON_CHAIN', sourceId: playerId, targetId: targetPlayerId, victimId: secondaryTargetId, cardUsed: ic });
     }
     // ── DELAYED CARDS ──
-    else if (cardUsed.type === 'DELAYED') {
+    else if (effectiveKind === 'DELAYED') {
         let tid = targetPlayerId;
-        if (cardUsed.name === 'LIGHTNING')
+        if (effectiveCardName === 'LIGHTNING')
             tid = playerId;
-        else if ((cardUsed.name === 'ACEDIA' || cardUsed.name === 'STARVATION') && tid === playerId)
-            return _err(socket, `ไม่สามารถใช้ ${cardUsed.name} ใส่ตัวเองได้`);
+        else if ((effectiveCardName === 'ACEDIA' || effectiveCardName === 'STARVATION') && tid === playerId)
+            return _err(socket, `ไม่สามารถใช้ ${effectiveCardName} ใส่ตัวเองได้`);
         if (!tid)
             return _err(socket, 'กรุณาเลือกเป้าหมาย');
         const tp = room.players[tid];
         if (!tp?.isAlive)
             return _err(socket, 'เป้าหมายไม่ถูกต้อง');
-        if (tp.delayedKitZone?.some((c) => c.name === cardUsed.name))
-            return _err(socket, `เป้าหมายมี ${cardUsed.name} อยู่แล้ว`);
-        const dc = player.hand.splice(cardIndex, 1)[0];
+        if (tp.delayedKitZone?.some((c) => (c.effectName || c.name) === effectiveCardName))
+            return _err(socket, `เป้าหมายมี ${effectiveCardName} อยู่แล้ว`);
+        const dc = takePlayedCard();
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { targetId: tid });
         startNegateWindow(room, { type: 'DELAYED', sourceId: playerId, targetId: tid, cardUsed: dc });
     }
     // ── PEACH_GARDEN ──
-    else if (cardUsed.name === 'PEACH_GARDEN') {
-        const pc = player.hand.splice(cardIndex, 1)[0];
+    else if (effectiveCardName === 'PEACH_GARDEN') {
+        const pc = takePlayedCard();
         room.discardPile.push(pc);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { targetIds: room.turnOrder.filter(id => room.players[id]?.isAlive && room.players[id].hp < room.players[id].maxHp) });
         startNegateWindow(room, { type: 'PEACH_GARDEN', sourceId: playerId, cardUsed: pc });
     }
     // ── BUMPER_HARVEST ──
-    else if (cardUsed.name === 'BUMPER_HARVEST') {
-        const bc = player.hand.splice(cardIndex, 1)[0];
+    else if (effectiveCardName === 'BUMPER_HARVEST') {
+        const bc = takePlayedCard();
         room.discardPile.push(bc);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { targetIds: room.turnOrder.filter(id => room.players[id]?.isAlive) });
         startNegateWindow(room, { type: 'BUMPER_HARVEST', sourceId: playerId, cardUsed: bc });
     }
     // ── BORROWED_SWORD ──
-    else if (cardUsed.name === 'BORROWED_SWORD') {
+    else if (effectiveCardName === 'BORROWED_SWORD') {
         if (!targetPlayerId || !secondaryTargetId)
             return _err(socket, 'กรุณาระบุเป้าหมายทั้งสองคนสำหรับการยืมดาบ');
         if (targetPlayerId === secondaryTargetId)
@@ -698,14 +719,14 @@ function handleUseCard(room, socket, data) {
         const dist = (0, phaseLogic_1.calculateDistance)(room, targetPlayerId, secondaryTargetId);
         if (dist > weaponRange)
             return _err(socket, `เป้าหมายที่สองอยู่นอกระยะอาวุธของผู้ถูกยืมดาบ (${dist} > ${weaponRange})`);
-        const bc = player.hand.splice(cardIndex, 1)[0];
+        const bc = takePlayedCard();
         room.discardPile.push(bc);
         (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { targetId: targetPlayerId, targetIds: [targetPlayerId, secondaryTargetId] });
         startNegateWindow(room, { type: 'BORROWED_SWORD', sourceId: playerId, targetId: targetPlayerId, victimId: secondaryTargetId, cardUsed: bc });
     }
     // ── AOE ──
-    else if (['BARBARIAN_INVASION', 'ARROW_BARRAGE'].includes(cardUsed.name)) {
-        const ac = player.hand.splice(cardIndex, 1)[0];
+    else if (['BARBARIAN_INVASION', 'ARROW_BARRAGE'].includes(effectiveCardName)) {
+        const ac = takePlayedCard();
         room.discardPile.push(ac);
         const myIdx = room.turnOrder.indexOf(playerId);
         const targets = [];
@@ -722,9 +743,9 @@ function handleUseCard(room, socket, data) {
         startNegateWindow(room, { type: 'AOE', sourceId: playerId, targets, cardUsed: ac });
     }
     // ── NEGATE ──
-    else if (cardUsed.name === 'NEGATE') {
+    else if (effectiveCardName === 'NEGATE') {
         if (room.pendingAction?.type === 'WAITING_FOR_NEGATE') {
-            player.hand.splice(cardIndex, 1);
+            takePlayedCard();
             room.discardPile.push(cardUsed);
             (0, presentationEvents_1.emitCardPlay)(room, playerId, cardUsed, { cardName: 'NEGATE', kind: 'RESPONSE', targetId: room.actionChain?.[room.actionChain.length - 1]?.sourceId });
             room.actionChain = room.actionChain || [];
@@ -802,25 +823,27 @@ function handleResolvePending(room, socket, data) {
             room.discardPile.push(finalJudge);
             const isRed = finalJudge.suit === 'HEART' || finalJudge.suit === 'DIAMOND';
             room._emitAll?.('judgement_result', { title: 'Eight Trigrams', card: finalJudge, isSuccess: isRed, targetPlayerId: targetPlayer.id, targetPlayerName: targetPlayer.name });
-            if (isRed && pending.type === 'WAITING_FOR_AOE') {
-                pending.currentTargetIndex++;
-                continueAOE(room, pending);
-                return;
-            }
-            if (isRed) {
-                pending.eightTrigramsUsed = false;
-                pending.dodgeNeeded = (pending.dodgeNeeded || 1) - 1;
-                if (pending.dodgeNeeded <= 0) {
-                    finishPendingAction(room);
-                    room._broadcastFn?.();
+            (0, expandedHeroes_1.claimJudgment)(room, targetPlayer, finalJudge, () => {
+                if (isRed && pending.type === 'WAITING_FOR_AOE') {
+                    pending.currentTargetIndex++;
+                    continueAOE(room, pending);
                     return;
                 }
-            }
-            pending.timeoutAt = (0, runtime_1.deadline)(room);
-            scheduleResponse(room, () => resolvePendingAction(room), catalog_1.RULES.reactionMs);
-            if (targetPlayer.isBot)
-                scheduleResponse(room, () => pending.type === 'WAITING_FOR_AOE' ? (0, botAI_1.handleBotAOE)(room) : (0, botAI_1.handleBotDodge)(room, targetPlayer.id, damage), 600);
-            room._broadcastFn?.();
+                if (isRed) {
+                    pending.eightTrigramsUsed = false;
+                    pending.dodgeNeeded = (pending.dodgeNeeded || 1) - 1;
+                    if (pending.dodgeNeeded <= 0) {
+                        finishPendingAction(room);
+                        room._broadcastFn?.();
+                        return;
+                    }
+                }
+                pending.timeoutAt = (0, runtime_1.deadline)(room);
+                scheduleResponse(room, () => resolvePendingAction(room), catalog_1.RULES.reactionMs);
+                if (targetPlayer.isBot)
+                    scheduleResponse(room, () => pending.type === 'WAITING_FOR_AOE' ? (0, botAI_1.handleBotAOE)(room) : (0, botAI_1.handleBotDodge)(room, targetPlayer.id, damage), 600);
+                room._broadcastFn?.();
+            });
         };
         if (room._judgeCard)
             room._judgeCard(targetPlayer, judgeCard, { name: 'EIGHT_TRIGRAMS_FORMATION' }, resolveJudgment);

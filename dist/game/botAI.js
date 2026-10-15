@@ -19,10 +19,14 @@ const catalog_1 = require("../shared/catalog");
 const runtime_1 = require("./runtime");
 const presentationEvents_1 = require("./presentationEvents");
 const cardLogic_1 = require("./cardLogic");
+const experimental_1 = require("./experimental");
+const expandedHeroes_1 = require("./expandedHeroes");
 // ─── Bot wants to attack helper ───────────────────────────────────────────────
 function botWantsToAttack(bot, target, room) {
     if (bot.id === target.id || !target.isAlive)
         return false;
+    if ((0, experimental_1.experimental)(room))
+        return (0, experimental_1.publicEnemy)(room, bot, target);
     if (bot.role === 'LORD' || bot.role === 'LOYALIST')
         return target.role === 'REBEL' || target.role === 'RENEGADE';
     if (bot.role === 'REBEL')
@@ -50,6 +54,10 @@ function runBotTurn(room, botId) {
     }
     if (room._botHeroAction?.(bot))
         return;
+    if ((0, experimental_1.experimentalBotTurn)(room, bot) || (0, expandedHeroes_1.expandedBotAction)(room, bot)) {
+        (0, combatLogic_1.resumeAfterAttack)(room);
+        return;
+    }
     let actionTaken = false;
     // 0. Huang Gai Ku Rou if HP >= 3
     if (!actionTaken && (0, phaseLogic_1.hasCharacter)(bot, 'HUANG_GAI') && bot.hp >= 3) {
@@ -142,7 +150,7 @@ function runBotTurn(room, botId) {
             return;
         }
         for (const name of ['ACEDIA', 'STARVATION', 'SABOTAGE', 'STEAL', 'DUEL']) {
-            const card = bot.hand.find(c => c.name === name);
+            const card = bot.hand.find(c => c.name === name) || bot.hand.find(c => name === 'SABOTAGE' && (0, phaseLogic_1.hasCharacter)(bot, 'GAN_NING') && ['SPADE', 'CLUB'].includes(c.suit) || name === 'ACEDIA' && (0, phaseLogic_1.hasCharacter)(bot, 'DA_QIAO') && c.suit === 'DIAMOND');
             if (!card)
                 continue;
             for (const pid of room.turnOrder) {
@@ -151,14 +159,14 @@ function runBotTurn(room, botId) {
                     continue;
                 if (['ACEDIA', 'STARVATION'].includes(name) && target.delayedKitZone?.some(c => c.name === name))
                     continue;
-                if (name === 'STEAL' && (0, phaseLogic_1.calculateDistance)(room, botId, pid) > 1)
+                if (name === 'STEAL' && !(0, phaseLogic_1.hasCharacter)(bot, 'HUANG_YUEYING') && (0, phaseLogic_1.calculateDistance)(room, botId, pid) > 1)
                     continue;
                 if (name === 'DUEL' && (0, phaseLogic_1.hasCharacter)(target, 'ZHUGE_LIANG') && !target.hand.length)
                     continue;
                 const targetZone = target.hand.length ? 'HAND' : target.equipment.weapon ? 'WEAPON' : target.equipment.armor ? 'ARMOR' : target.equipment.defensiveHorse ? 'DEF_HORSE' : target.equipment.offensiveHorse ? 'OFF_HORSE' : target.equipment.treasure ? 'TREASURE' : target.delayedKitZone?.length ? 'DELAYED' : null;
                 if (['STEAL', 'SABOTAGE'].includes(name) && !targetZone)
                     continue;
-                (0, cardLogic_1.handleUseCard)(room, null, { playerId: botId, cardId: card.id, targetPlayerId: pid, targetZone });
+                (0, cardLogic_1.handleUseCard)(room, null, { playerId: botId, cardId: card.id, targetPlayerId: pid, targetZone, playAs: card.name !== name ? name : undefined });
                 if (room.pendingAction)
                     return;
             }
@@ -197,7 +205,7 @@ function runBotTurn(room, botId) {
                 const target = room.players[pid];
                 return target && botWantsToAttack(bot, target, room) && (0, cardLogic_1.attackDistance)(room, botId, pid, equipSlot) <= weaponRange && !((0, phaseLogic_1.hasCharacter)(target, 'ZHUGE_LIANG') && !target.hand.length);
             }).slice(0, maxTargets);
-            if (targets.length && (room.attacksPlayedInTurn === 0 || hasZhuge || isZhangFei)) {
+            if (targets.length && (room.attacksPlayedInTurn < 1 + (bot.extraAttacks || 0) || hasZhuge || isZhangFei)) {
                 (0, cardLogic_1.handleUseCard)(room, null, { playerId: botId, cardId: slashCard.id, targetPlayerId: targets[0], targetPlayerIds: targets, playAs: ['SLASH', 'THUNDER_ATTACK'].includes(slashCard.name) ? undefined : 'SLASH' });
                 return;
             }

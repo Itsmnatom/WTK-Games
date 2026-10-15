@@ -7,6 +7,8 @@
 import { CARDS, HEROES, HERO_BY_ID, canonicalHero, RULES, shuffle, seededRandom } from '../shared/catalog';
 import { schedule } from './runtime';
 import { emitHeroSkill } from './presentationEvents';
+import { claimJudgment } from './expandedHeroes';
+import { experimental, beginStrategies, balanceSummary } from './experimental';
 import type { Card, Suit, GameRoom, Player, HeroChoice, PendingAction } from './types';
 
 const allHeroes: HeroChoice[] = HEROES.map(hero => ({
@@ -61,7 +63,7 @@ function drawCards(room: GameRoom, count: number): Card[] {
       room.deck = shuffle(room.discardPile);
       room.discardPile = [];
     }
-    cards.push(room.deck.pop()!);
+    const drawn=room.deck.pop()!;delete drawn.effectName;cards.push(drawn);
   }
   return cards;
 }
@@ -109,14 +111,15 @@ function startDraftPhase(room: GameRoom): void {
   room.status = 'DRAFTING' as any;
   room.draftDeadline = Date.now() + RULES.draftMs;
   Object.values(room.players).forEach((player: Player) => {
+    const availableHeroes = experimental(room) ? allHeroes : allHeroes.slice(0,13);
     let choices: HeroChoice[];
     if (player.role === 'LORD') {
       const lordIds = ['CAO_CAO', 'LIU_BEI', 'SUN_QUAN'];
-      const lords = allHeroes.filter(hero => lordIds.includes(hero.id));
-      const rest = shuffle(allHeroes.filter(hero => !lordIds.includes(hero.id)));
+      const lords = availableHeroes.filter(hero => lordIds.includes(hero.id));
+      const rest = shuffle(availableHeroes.filter(hero => !lordIds.includes(hero.id)));
       choices = [...lords, ...rest.slice(0, 2)];
     } else {
-      choices = shuffle(allHeroes).slice(0, 3);
+      choices = shuffle(availableHeroes).slice(0, 3);
     }
     player.characterChoices = choices.map(hero => ({ ...hero, pic: '/art/heroes-atlas.png' }));
     if (player.isBot && player.characterChoices.length) {
@@ -128,7 +131,9 @@ function startDraftPhase(room: GameRoom): void {
 
 // ─── Play Phase Start ─────────────────────────────────────────────────────────
 function startPlayPhase(room: GameRoom): void {
+  if (beginStrategies(room)) return;
   room.status = 'PLAYING' as any;
+  room.playStartedAt=Date.now();
   room.draftDeadline = null;
   room.deck = initDeck(room.deckSeed);
   room.discardPile = [];
@@ -179,6 +184,9 @@ function startPlayerTurn(room: GameRoom): void {
   player.skillZhouYuUsed = false;
   player._botRendeUsed = false;
   player._botJijiangUsed = false;
+  player.extraAttacks = 0;
+  player.skillQingnangUsed = false;
+  if(experimental(room))room.turnNumber=(room.turnNumber||0)+1;
   room.attacksPlayedInTurn = 0;
 
   const turnGeneration = (room._turnGeneration || 0) + 1;
@@ -217,14 +225,14 @@ function startPlayerTurn(room: GameRoom): void {
     const resolveJudge = once((judgeCard: Card): void => {
       room.discardPile.push(judgeCard, card);
       let isSuccess = false;
-      let titleName = card.name;
-      if (card.name === 'LIGHTNING') {
+      let titleName = (card.effectName || card.name);
+      if ((card.effectName || card.name) === 'LIGHTNING') {
         isSuccess = !(judgeCard.suit === 'SPADE' && judgeCard.rank >= 2 && judgeCard.rank <= 9);
         titleName = 'อัสนีบาต (สายฟ้า)';
-      } else if (card.name === 'ACEDIA') {
+      } else if ((card.effectName || card.name) === 'ACEDIA') {
         isSuccess = judgeCard.suit === 'HEART';
         titleName = 'สุขไม่คิดกลับ';
-      } else if (card.name === 'STARVATION') {
+      } else if ((card.effectName || card.name) === 'STARVATION') {
         isSuccess = judgeCard.suit === 'CLUB';
         titleName = 'เสบียงขาด';
       }
@@ -233,7 +241,9 @@ function startPlayerTurn(room: GameRoom): void {
         targetPlayerId: player.id, targetPlayerName: player.name,
       });
 
-      if (card.name === 'LIGHTNING') {
+      claimJudgment(room,player,judgeCard,()=>{
+      if(!turnIsCurrent())return;
+      if ((card.effectName || card.name) === 'LIGHTNING') {
         if (!isSuccess) {
           const continueAfterDamage = once(judgeNext);
           room._turnContinuation = continueAfterDamage;
@@ -254,14 +264,15 @@ function startPlayerTurn(room: GameRoom): void {
           if (discardedIndex !== -1) room.discardPile.splice(discardedIndex, 1);
           break;
         }
-      } else if (card.name === 'ACEDIA' && !isSuccess) {
+      } else if ((card.effectName || card.name) === 'ACEDIA' && !isSuccess) {
         skipPlayPhase = true;
-      } else if (card.name === 'STARVATION' && !isSuccess) {
+      } else if ((card.effectName || card.name) === 'STARVATION' && !isSuccess) {
         skipDrawPhase = true;
       }
       judgeNext();
+      });
     });
-    if (room._judgeCard) room._judgeCard(player, drawnJudge, card, resolveJudge);
+    if (room._judgeCard) room._judgeCard(player, drawnJudge, {...card,name:card.effectName||card.name}, resolveJudge);
     else resolveJudge(drawnJudge);
   };
 
@@ -307,6 +318,11 @@ function startPlayerTurn(room: GameRoom): void {
 }
 
 function executeDrawPhase(room: GameRoom, player: Player, skipDrawPhase: boolean = false, skipPlayPhase: boolean = false): void {
+  if (room._drawWithHeroes && !skipDrawPhase) {
+    room.currentPhase='DRAW';
+    room._drawWithHeroes(player, () => executeDrawPhase(room,player,true,skipPlayPhase));
+    return;
+  }
   if (!skipDrawPhase) {
     room.currentPhase = 'DRAW' as any;
     const drawCount = hasCharacter(player, 'ZHOU_YU') ? 3 : 2;
@@ -397,7 +413,7 @@ function sanitizedPendingAction(pending: PendingAction | null, targetPlayerId: s
     if (typeof pending.cardUsedId === 'string' || pending.cardUsedId === null) result.cardUsedId = pending.cardUsedId;
   }
   const owner = pending.targetPlayerId || pending.sourcePlayerId;
-  if (pending.type === 'GUANXING' && owner === targetPlayerId) {
+  if (['GUANXING','GUO_JIA_DISTRIBUTE'].includes(pending.type) && owner === targetPlayerId) {
     for (const key of ['cards', 'topCards', 'bottomCards']) {
       if (Array.isArray(pending[key])) result[key] = pending[key].map(publicCard);
     }
@@ -424,7 +440,7 @@ function getSanitizedRoomState(room: GameRoom, targetPlayerId: string): any {
       hp: p.hp,
       maxHp: p.maxHp,
       equipment: p.equipment || { weapon: null, armor: null, offensiveHorse: null, defensiveHorse: null, treasure: null },
-      delayedKitZone: p.delayedKitZone || [],
+      delayedKitZone: (p.delayedKitZone || []).map(c=>({...publicCard(c),name:c.effectName||c.name})),
       isAlive: p.isAlive,
       wineActive: p.wineActive,
       isBot: p.isBot,
@@ -437,12 +453,24 @@ function getSanitizedRoomState(room: GameRoom, targetPlayerId: string): any {
       isHost: room.hostSocketId === p.socketId,
       isDisconnected: p.isDisconnected || false,
       isChained: p.isChained || false,
+      strategy: room.strategiesRevealed ? p.strategy : null,
+      strategyUsed: !!p.strategyUsed,
+      strategyChoice: pId===targetPlayerId ? p.strategyChoice : null,
+      strategyReady: !!p.strategyChoice,
+      extraAttacks: p.extraAttacks || 0,
+      skillQingnangUsed: !!p.skillQingnangUsed,
     };
   });
   return {
     roomId: room.roomId,
     status: room.status,
     mode: room.mode,
+    ruleset: room.ruleset || 'STANDARD',
+    experimentSummary: balanceSummary(room),
+    strategyDeadline: room.strategyDeadline || null,
+    strategiesRevealed: !!room.strategiesRevealed,
+    turnNumber: room.turnNumber || 0,
+    spectatorChat: !room.players[targetPlayerId]?.isAlive ? room.spectatorChat || [] : [],
     currentTurnPlayerId: room.turnOrder[room.currentTurnIndex] || null,
     currentPhase: room.currentPhase,
     pendingAction: sanitizedPendingAction(room.pendingAction, targetPlayerId),
@@ -456,7 +484,7 @@ function getSanitizedRoomState(room: GameRoom, targetPlayerId: string): any {
     deckCount: room.deck?.length || 0,
     discardCount: room.discardPile?.length || 0,
     draftDeadline: room.draftDeadline || null,
-    rulesVersion: RULES.version,
+    rulesVersion: experimental(room) ? 'experimental-1' : RULES.version,
     players: maskedPlayers,
     turnOrder: room.turnOrder,
     winnerRole: room.winnerRole || null,

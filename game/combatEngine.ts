@@ -2,8 +2,10 @@ import { hasCharacter, drawCards, endPlayerTurn } from './phaseLogic';
 import { schedule, deadline } from './runtime';
 import { emitCardPlay } from './presentationEvents';
 import type { GameRoom, Player, Card, DamageType, AttackDescriptor } from './types';
+import { experimental, publicFriendly } from './experimental';
 
 export function checkGameOver(room: GameRoom): boolean {
+  if(room.status==='ENDED')return true;
   const players=Object.values(room.players),lord=players.find(p=>p.role==='LORD');
   if(!lord)return false;
   const alive=players.filter(p=>p.isAlive);
@@ -11,6 +13,7 @@ export function checkGameOver(room: GameRoom): boolean {
   else if(!alive.some(p=>p.role==='REBEL'||p.role==='RENEGADE')){room.status='ENDED';room.winnerRole='LORD';}
   else return false;
   room.winnerText=room.winnerRole==='LORD'?'เจ้าเมืองและผู้ภักดีปราบกบฏสำเร็จ':room.winnerRole==='RENEGADE'?'คนทรยศเป็นผู้รอดชีวิตคนสุดท้าย':'ฝ่ายกบฏโค่นเจ้าเมืองสำเร็จ';
+  room.endedAt=Date.now();
   room.pendingAction=null;room._actionContinuation=null;room._turnContinuation=null;room._postDamageQueue=[];
   return true;
 }
@@ -41,6 +44,7 @@ export function dealDamage(room:GameRoom,targetId:string,damage:number,card:Card
   for(const victim of victims){
     const dealt=victim===first?initial:adjustedDamage(victim,initial,card,attacker,type,attack);if(dealt<=0)continue;
     victim.hp-=dealt;
+    if(experimental(room)){victim.experimentDamageTaken=(victim.experimentDamageTaken||0)+dealt;if(attacker)attacker.experimentDamageDealt=(attacker.experimentDamageDealt||0)+dealt;}
     room._emitAll?.('damage_log',{targetId:victim.id,attackerId,damage:dealt,cardName:attack?.name||card?.name||null,hp:victim.hp,maxHp:victim.maxHp,damageType:type});
     room.chat?.push({sender:'System',text: `${victim.name} เสีย ${dealt} HP`,time:new Date().toLocaleTimeString('th-TH')});
     if(room._afterDamage)room._afterDamage(victim,attackerId,card,dealt,attack);
@@ -75,8 +79,8 @@ export function checkDyingAskerBot(room:GameRoom):void {
   if(asker.isBot)schedule(room,()=>{
     if(room.pendingAction!==pending||pending.currentAskerIdx!==expectedIndex)return;
     const target=room.players[pending.targetPlayerId!];
-    const friendly=askerId===target.id||['LORD','LOYALIST'].includes(asker.role)&&target.role==='LORD'||asker.role==='REBEL'&&target.role==='REBEL';
-    const index=asker.hand.findIndex(c=>c.name==='PEACH'||askerId===target.id&&c.name==='WINE');
+    const friendly=experimental(room)?publicFriendly(room,asker,target):askerId===target.id||['LORD','LOYALIST'].includes(asker.role)&&target.role==='LORD'||asker.role==='REBEL'&&target.role==='REBEL';
+    const index=asker.hand.findIndex(c=>canRescue(room,asker,target,c));
     if(!friendly||index<0){advanceDyingAsker(room);return;}
     rescueDying(room,askerId,asker.hand[index].id);
   },700);
@@ -85,10 +89,12 @@ export function checkDyingAskerBot(room:GameRoom):void {
 export function rescueDying(room:GameRoom,askerId:string,cardId?:string):boolean {
   const p=room.pendingAction;if(p?.type!=='DYING'||room.turnOrder[p.currentAskerIdx]!==askerId)return false;
   const asker=room.players[askerId],target=room.players[p.targetPlayerId!];
-  const index=asker.hand.findIndex(c=>(!cardId||c.id===cardId)&&(c.name==='PEACH'||askerId===target.id&&c.name==='WINE'));if(index<0)return false;
+  if(!asker?.isAlive||!target?.isAlive)return false;
+  const index=asker.hand.findIndex(c=>(!cardId||c.id===cardId)&&canRescue(room,asker,target,c));if(index<0)return false;
   const card=asker.hand.splice(index,1)[0];room.discardPile.push(card);
-  emitCardPlay(room, askerId, card, { kind: 'RESPONSE', targetId: target.id });
-  const {healAmount}=require('./heroLogic');target.hp=Math.min(target.maxHp,target.hp+healAmount(target,asker,card));p.peachNeeded=1-target.hp;
+  const effective=card.name==='WINE'?card:{...card,name:'PEACH'};
+  emitCardPlay(room, askerId, card, { cardName:effective.name,kind: 'RESPONSE', targetId: target.id,skillId:card.name!==effective.name?'JIJIU':undefined });
+  const {healAmount}=require('./heroLogic');target.hp=Math.min(target.maxHp,target.hp+healAmount(target,asker,effective));p.peachNeeded=1-target.hp;
   if(target.hp>=1){room.pendingAction=null;room._broadcastFn?.();resumeAfterAttack(room);}
   else {p.timeoutAt=deadline(room);room._broadcastFn?.();checkDyingAskerBot(room);}
   return true;
@@ -133,4 +139,7 @@ export function getCardById(room:GameRoom,id:string|null|undefined):Card|null {
   if(!id)return null;
   for(const p of Object.values(room.players)){const c=p.hand?.find(c=>c.id===id);if(c)return c;}
   return room.discardPile.find(c=>c.id===id)||null;
+}
+export function canRescue(room:GameRoom,asker:Player,target:Player,card:Card):boolean {
+  return card.name==='PEACH'||asker.id===target.id&&card.name==='WINE'||hasCharacter(asker,'HUA_TUO')&&room.turnOrder[room.currentTurnIndex]!==asker.id&&['HEART','DIAMOND'].includes(card.suit);
 }

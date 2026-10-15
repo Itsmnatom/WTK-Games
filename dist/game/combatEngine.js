@@ -9,10 +9,14 @@ exports.killPlayer = killPlayer;
 exports.advanceDyingAsker = advanceDyingAsker;
 exports.resumeAfterAttack = resumeAfterAttack;
 exports.getCardById = getCardById;
+exports.canRescue = canRescue;
 const phaseLogic_1 = require("./phaseLogic");
 const runtime_1 = require("./runtime");
 const presentationEvents_1 = require("./presentationEvents");
+const experimental_1 = require("./experimental");
 function checkGameOver(room) {
+    if (room.status === 'ENDED')
+        return true;
     const players = Object.values(room.players), lord = players.find(p => p.role === 'LORD');
     if (!lord)
         return false;
@@ -28,6 +32,7 @@ function checkGameOver(room) {
     else
         return false;
     room.winnerText = room.winnerRole === 'LORD' ? 'เจ้าเมืองและผู้ภักดีปราบกบฏสำเร็จ' : room.winnerRole === 'RENEGADE' ? 'คนทรยศเป็นผู้รอดชีวิตคนสุดท้าย' : 'ฝ่ายกบฏโค่นเจ้าเมืองสำเร็จ';
+    room.endedAt = Date.now();
     room.pendingAction = null;
     room._actionContinuation = null;
     room._turnContinuation = null;
@@ -74,6 +79,11 @@ function dealDamage(room, targetId, damage, card, attackerId, type = 'NORMAL', a
         if (dealt <= 0)
             continue;
         victim.hp -= dealt;
+        if ((0, experimental_1.experimental)(room)) {
+            victim.experimentDamageTaken = (victim.experimentDamageTaken || 0) + dealt;
+            if (attacker)
+                attacker.experimentDamageDealt = (attacker.experimentDamageDealt || 0) + dealt;
+        }
         room._emitAll?.('damage_log', { targetId: victim.id, attackerId, damage: dealt, cardName: attack?.name || card?.name || null, hp: victim.hp, maxHp: victim.maxHp, damageType: type });
         room.chat?.push({ sender: 'System', text: `${victim.name} เสีย ${dealt} HP`, time: new Date().toLocaleTimeString('th-TH') });
         if (room._afterDamage)
@@ -144,8 +154,8 @@ function checkDyingAskerBot(room) {
             if (room.pendingAction !== pending || pending.currentAskerIdx !== expectedIndex)
                 return;
             const target = room.players[pending.targetPlayerId];
-            const friendly = askerId === target.id || ['LORD', 'LOYALIST'].includes(asker.role) && target.role === 'LORD' || asker.role === 'REBEL' && target.role === 'REBEL';
-            const index = asker.hand.findIndex(c => c.name === 'PEACH' || askerId === target.id && c.name === 'WINE');
+            const friendly = (0, experimental_1.experimental)(room) ? (0, experimental_1.publicFriendly)(room, asker, target) : askerId === target.id || ['LORD', 'LOYALIST'].includes(asker.role) && target.role === 'LORD' || asker.role === 'REBEL' && target.role === 'REBEL';
+            const index = asker.hand.findIndex(c => canRescue(room, asker, target, c));
             if (!friendly || index < 0) {
                 advanceDyingAsker(room);
                 return;
@@ -161,14 +171,17 @@ function rescueDying(room, askerId, cardId) {
     if (p?.type !== 'DYING' || room.turnOrder[p.currentAskerIdx] !== askerId)
         return false;
     const asker = room.players[askerId], target = room.players[p.targetPlayerId];
-    const index = asker.hand.findIndex(c => (!cardId || c.id === cardId) && (c.name === 'PEACH' || askerId === target.id && c.name === 'WINE'));
+    if (!asker?.isAlive || !target?.isAlive)
+        return false;
+    const index = asker.hand.findIndex(c => (!cardId || c.id === cardId) && canRescue(room, asker, target, c));
     if (index < 0)
         return false;
     const card = asker.hand.splice(index, 1)[0];
     room.discardPile.push(card);
-    (0, presentationEvents_1.emitCardPlay)(room, askerId, card, { kind: 'RESPONSE', targetId: target.id });
+    const effective = card.name === 'WINE' ? card : { ...card, name: 'PEACH' };
+    (0, presentationEvents_1.emitCardPlay)(room, askerId, card, { cardName: effective.name, kind: 'RESPONSE', targetId: target.id, skillId: card.name !== effective.name ? 'JIJIU' : undefined });
     const { healAmount } = require('./heroLogic');
-    target.hp = Math.min(target.maxHp, target.hp + healAmount(target, asker, card));
+    target.hp = Math.min(target.maxHp, target.hp + healAmount(target, asker, effective));
     p.peachNeeded = 1 - target.hp;
     if (target.hp >= 1) {
         room.pendingAction = null;
@@ -304,5 +317,8 @@ function getCardById(room, id) {
             return c;
     }
     return room.discardPile.find(c => c.id === id) || null;
+}
+function canRescue(room, asker, target, card) {
+    return card.name === 'PEACH' || asker.id === target.id && card.name === 'WINE' || (0, phaseLogic_1.hasCharacter)(asker, 'HUA_TUO') && room.turnOrder[room.currentTurnIndex] !== asker.id && ['HEART', 'DIAMOND'].includes(card.suit);
 }
 //# sourceMappingURL=combatEngine.js.map

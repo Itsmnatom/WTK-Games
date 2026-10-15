@@ -24,7 +24,7 @@ export interface Equipment {
     [key: string]: Card | string | null | undefined;
 }
 export type Role = 'LORD' | 'LOYALIST' | 'REBEL' | 'RENEGADE' | 'UNKNOWN';
-export type GameStatus = 'LOBBY' | 'DRAFTING' | 'PLAYING' | 'ENDED';
+export type GameStatus = 'LOBBY' | 'DRAFTING' | 'STRATEGY' | 'PLAYING' | 'ENDED';
 export type Phase = 'START' | 'JUDGEMENT' | 'PREPARATION' | 'DRAW' | 'PLAY' | 'DISCARD';
 export type DamageType = 'NORMAL' | 'FIRE' | 'THUNDER';
 /** Effective virtual attack; physical payments remain ordinary owned/discarded cards. */
