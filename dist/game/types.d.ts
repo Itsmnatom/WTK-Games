@@ -27,6 +27,12 @@ export type Role = 'LORD' | 'LOYALIST' | 'REBEL' | 'RENEGADE' | 'UNKNOWN';
 export type GameStatus = 'LOBBY' | 'DRAFTING' | 'PLAYING' | 'ENDED';
 export type Phase = 'START' | 'JUDGEMENT' | 'PREPARATION' | 'DRAW' | 'PLAY' | 'DISCARD';
 export type DamageType = 'NORMAL' | 'FIRE' | 'THUNDER';
+/** Effective virtual attack; physical payments remain ordinary owned/discarded cards. */
+export interface AttackDescriptor {
+    readonly name: 'SLASH' | 'THUNDER_ATTACK';
+    readonly color: 'RED' | 'BLACK' | 'COLORLESS';
+    readonly materialCardIds: readonly string[];
+}
 export interface HeroChoice {
     id: string;
     name: string;
@@ -68,6 +74,7 @@ export interface PendingAction {
     targetPlayerId?: string;
     cardUsedId?: string | null;
     timeoutAt?: number;
+    attack?: AttackDescriptor;
     [key: string]: any;
 }
 export interface ChatMessage {

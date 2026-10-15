@@ -4,113 +4,53 @@
  * Deck management, turn phases, draw/play/discard phase controllers
  */
 
-import fs from 'fs';
-import path from 'path';
-import type { Card, Suit, CardType, GameRoom, Player, HeroChoice } from './types';
+import { CARDS, HEROES, HERO_BY_ID, canonicalHero, RULES, shuffle, seededRandom } from '../shared/catalog';
+import { schedule } from './runtime';
+import { emitHeroSkill } from './presentationEvents';
+import type { Card, Suit, GameRoom, Player, HeroChoice, PendingAction } from './types';
 
-let allHeroes: any[] = [];
-try {
-  let heroesPath = path.join(process.cwd(), 'public', 'heroes.json');
-  if (!fs.existsSync(heroesPath)) {
-    heroesPath = path.join(__dirname, '..', 'public', 'heroes.json');
-  }
-  const data = fs.readFileSync(heroesPath, 'utf8');
-  allHeroes = JSON.parse(data);
-} catch (e: any) {
-  console.log('[phaseLogic] Could not load heroes.json:', e.message);
-  allHeroes = [];
-}
+const allHeroes: HeroChoice[] = HEROES.map(hero => ({
+  ...hero,
+  name: hero.english,
+  title: hero.id,
+  sub: hero.name,
+  kingdom: hero.faction,
+  skills: hero.skills.split(' | '),
+}));
 
 // ─── Utility helpers ──────────────────────────────────────────────────────────
 function hasCharacter(player: Player | null | undefined, charName: string): boolean {
   if (!player || !player.character) return false;
-  let charStr = '';
-  if (typeof player.character === 'string') {
-    charStr = player.character;
-  } else if (typeof player.character === 'object') {
-    charStr = (player.character as any).id || (player.character as any).name || (player.character as any).title || '';
-  } else {
-    charStr = String(player.character);
-  }
-  if (!charStr) return false;
-  return charStr.toUpperCase().includes(charName.toUpperCase());
+  const character = canonicalHero(player.character);
+  const requested = canonicalHero(charName);
+  return !!character && !!requested && character === requested;
 }
 
 // ─── Deck Logic ───────────────────────────────────────────────────────────────
-function initDeck(): Card[] {
+function initDeck(seed?: number): Card[] {
+  const random = seed === undefined ? Math.random : seededRandom(seed);
   const suits: Suit[] = ['SPADE', 'HEART', 'DIAMOND', 'CLUB'];
   const deck: Card[] = [];
   let idCounter = 1;
 
-  const push = (name: string, suit: Suit, rank: number, type: CardType, count: number = 1, extra: Record<string, any> = {}): void => {
-    for (let i = 0; i < count; i++) {
-      deck.push({ id: `c_${idCounter++}`, name, suit, rank: rank || Math.floor(Math.random() * 13) + 1, type, ...extra });
+  for (const definition of CARDS) {
+    for (let i = 0; i < definition.count; i++) {
+      // Preserve meaningful colors for defense, healing and elemental attacks.
+      let suit = suits[i % suits.length];
+      if (definition.id === 'DODGE' || definition.id === 'PEACH') suit = i % 2 ? 'DIAMOND' : 'HEART';
+      if (definition.id === 'THUNDER_ATTACK') suit = i % 2 ? 'CLUB' : 'SPADE';
+      const card: Card = {
+        id: `c_${idCounter++}`,
+        name: definition.id,
+        suit,
+        rank: Math.floor(random() * 13) + 1,
+        type: definition.kind,
+      };
+      if (definition.range !== undefined) card.range = definition.range;
+      deck.push(card);
     }
-  };
-
-  // BASIC cards
-  for (let i = 0; i < 20; i++) {
-    const suit: Suit = i < 5 ? 'SPADE' : i < 10 ? 'CLUB' : i < 15 ? 'HEART' : 'DIAMOND';
-    push('SLASH', suit, 0, 'BASIC');
   }
-  push('SLASH', 'SPADE', 0, 'BASIC');  // extra
-  for (let i = 0; i < 10; i++) push('DODGE', i < 5 ? 'HEART' : 'DIAMOND', 0, 'BASIC');
-  for (let i = 0; i < 12; i++) push('PEACH', i < 6 ? 'HEART' : 'DIAMOND', 0, 'BASIC');
-  for (let i = 0; i < 10; i++) push('WINE', suits[i % 4], 0, 'BASIC');
-  for (let i = 0; i < 8;  i++) push('THUNDER_ATTACK', i < 4 ? 'SPADE' : 'CLUB', 0, 'BASIC');
-
-  // KIT cards
-  for (let i = 0; i < 10; i++) push('STEAL', i % 2 === 0 ? 'SPADE' : 'CLUB', 0, 'KIT');
-  for (let i = 0; i < 12; i++) push('SABOTAGE', i % 2 === 0 ? 'SPADE' : 'CLUB', 0, 'KIT');
-  for (let i = 0; i < 10; i++) push('EX_NIHILO', 'HEART', 0, 'KIT');
-  for (let i = 0; i < 10; i++) push('DUEL', i % 2 === 0 ? 'SPADE' : 'CLUB', 0, 'KIT');
-  for (let i = 0; i < 10; i++) push('BARBARIAN_INVASION', 'SPADE', 0, 'KIT');
-  for (let i = 0; i < 10; i++) push('ARROW_BARRAGE', 'HEART', 0, 'KIT');
-  for (let i = 0; i < 10; i++) push('PEACH_GARDEN', 'HEART', 1, 'KIT');
-  for (let i = 0; i < 6;  i++) push('IRON_CHAIN', i % 2 === 0 ? 'SPADE' : 'CLUB', 0, 'KIT');
-  for (let i = 0; i < 5;  i++) push('FIRE_ATTACK', 'HEART', 0, 'KIT');
-  for (let i = 0; i < 7;  i++) push('NEGATE', i % 2 === 0 ? 'SPADE' : 'CLUB', 0, 'KIT');
-  for (let i = 0; i < 3;  i++) push('BUMPER_HARVEST', 'HEART', 0, 'KIT');
-  for (let i = 0; i < 2;  i++) push('BORROWED_SWORD', 'CLUB', 0, 'KIT');
-
-  // DELAYED cards
-  push('LIGHTNING', 'SPADE', 1, 'DELAYED');
-  push('LIGHTNING', 'HEART', 12, 'DELAYED');
-  push('LIGHTNING', 'CLUB', 10, 'DELAYED');
-  push('LIGHTNING', 'DIAMOND', 11, 'DELAYED');
-  for (let i = 0; i < 10; i++) push('ACEDIA', 'SPADE', 6, 'DELAYED');
-  for (let i = 0; i < 10; i++) push('STARVATION', 'CLUB', 10, 'DELAYED');
-
-  // EQUIPMENT — Weapons
-  for (let i = 0; i < 5; i++) { push('ZHUGE_CROSSBOW', 'DIAMOND', 1, 'EQUIPMENT', 1, { range: 1 }); push('ZHUGE_CROSSBOW', 'SPADE', 1, 'EQUIPMENT', 1, { range: 1 }); }
-  for (let i = 0; i < 5; i++) push('BLUE_STEEL_SWORD', 'SPADE', 6, 'EQUIPMENT', 1, { range: 2 });
-  for (let i = 0; i < 3; i++) push('SIX_SWORDS_WU', 'SPADE', 7, 'EQUIPMENT', 1, { range: 2 });
-  for (let i = 0; i < 3; i++) push('KIRIN_BOW', 'HEART', 5, 'EQUIPMENT', 1, { range: 5 });
-  for (let i = 0; i < 3; i++) push('FEATHERED_FAN', 'DIAMOND', 8, 'EQUIPMENT', 1, { range: 4 });
-  for (let i = 0; i < 3; i++) push('SERPENT_SPEAR', 'SPADE', 3, 'EQUIPMENT', 1, { range: 3 });
-  for (let i = 0; i < 3; i++) push('FROST_SWORD', 'SPADE', 2, 'EQUIPMENT', 1, { range: 2 });
-  for (let i = 0; i < 3; i++) push('TWO_BLADED_TRIDENT', 'CLUB', 3, 'EQUIPMENT', 1, { range: 3 });
-  for (let i = 0; i < 3; i++) push('ROCK_CLEAVING_AXE', 'DIAMOND', 4, 'EQUIPMENT', 1, { range: 3 });
-  for (let i = 0; i < 3; i++) push('GREEN_DRAGON_BLADE', 'HEART', 5, 'EQUIPMENT', 1, { range: 3 });
-  for (let i = 0; i < 3; i++) push('SKY_PIERCING_HALBERD', 'SPADE', 4, 'EQUIPMENT', 1, { range: 4 });
-  for (let i = 0; i < 3; i++) push('YIN_YANG_SWORDS', 'SPADE', 2, 'EQUIPMENT', 1, { range: 2 });
-
-  // EQUIPMENT — Armor
-  for (let i = 0; i < 5; i++) push('NIO_SHIELD', 'SPADE', 8, 'EQUIPMENT');
-  for (let i = 0; i < 5; i++) push('EIGHT_TRIGRAMS_FORMATION', 'CLUB', 4, 'EQUIPMENT');
-  for (let i = 0; i < 5; i++) push('SILVER_LION_HELMET', 'DIAMOND', 11, 'EQUIPMENT');
-  for (let i = 0; i < 5; i++) push('RATTAN_ARMOR', 'CLUB', 2, 'EQUIPMENT');
-
-  // EQUIPMENT — Horses
-  for (let i = 0; i < 7; i++) push('LIGHTNING_HOOF', 'HEART', 13, 'EQUIPMENT');
-  for (let i = 0; i < 7; i++) push('RED_HARE', 'HEART', 5, 'EQUIPMENT');
-  for (let i = 0; i < 5; i++) push('FERGANA_STEED', 'CLUB', 4, 'EQUIPMENT');
-  for (let i = 0; i < 5; i++) push('SHADOWRUNNER', 'DIAMOND', 3, 'EQUIPMENT');
-
-  // EQUIPMENT — Treasure
-  for (let i = 0; i < 2; i++) push('WOODEN_CART', 'DIAMOND', 0, 'EQUIPMENT');
-
-  return deck.sort(() => 0.5 - Math.random());
+  return shuffle(deck, random);
 }
 
 function drawCards(room: GameRoom, count: number): Card[] {
@@ -118,7 +58,7 @@ function drawCards(room: GameRoom, count: number): Card[] {
   for (let i = 0; i < count; i++) {
     if (room.deck.length === 0) {
       if (room.discardPile.length === 0) break;
-      room.deck = [...room.discardPile].sort(() => 0.5 - Math.random());
+      room.deck = shuffle(room.discardPile);
       room.discardPile = [];
     }
     cards.push(room.deck.pop()!);
@@ -159,42 +99,28 @@ function assignRoles(room: GameRoom): void {
 
 // ─── Character HP Setup ───────────────────────────────────────────────────────
 function setupCharacterHp(player: Player, playerCount: number = 4): void {
-  const charId = typeof player.character === 'string' ? player.character : ((player.character as any)?.id || (player.character as any)?.name || '');
-  const n = (charId || '').toUpperCase();
-  const isLow = n.includes('ZHEN_JI') || n.includes('LADY_ZHEN') || n.includes('DIAO_CHAN') ||
-                n.includes('ZHUGE_LIANG') || n.includes('XIAO_QIAO') || n.includes('DA_QIAO') ||
-                n.includes('CAI_WENJI');
-  let baseHp = isLow ? 3 : 4;
-  if (player.role === 'LORD' && playerCount >= 6) {
-    player.maxHp = baseHp + 1;
-    player.hp = baseHp + 1;
-  } else {
-    player.maxHp = baseHp;
-    player.hp = baseHp;
-  }
+  const baseHp = HERO_BY_ID[canonicalHero(player.character)]?.hp ?? 4;
+  player.maxHp = baseHp + (player.role === 'LORD' && playerCount >= 6 ? 1 : 0);
+  player.hp = player.maxHp;
 }
 
 // ─── Draft Phase ──────────────────────────────────────────────────────────────
 function startDraftPhase(room: GameRoom): void {
   room.status = 'DRAFTING' as any;
+  room.draftDeadline = Date.now() + RULES.draftMs;
   Object.values(room.players).forEach((player: Player) => {
-    let choices: any[] = [];
+    let choices: HeroChoice[];
     if (player.role === 'LORD') {
-      const lords = allHeroes.filter((h: any) => ['Cao Cao', 'Liu Bei', 'Sun Quan'].includes(h.title || h.name));
-      const rest = allHeroes.filter((h: any) => !['Cao Cao', 'Liu Bei', 'Sun Quan'].includes(h.title || h.name)).sort(() => 0.5 - Math.random());
+      const lordIds = ['CAO_CAO', 'LIU_BEI', 'SUN_QUAN'];
+      const lords = allHeroes.filter(hero => lordIds.includes(hero.id));
+      const rest = shuffle(allHeroes.filter(hero => !lordIds.includes(hero.id)));
       choices = [...lords, ...rest.slice(0, 2)];
     } else {
-      choices = [...allHeroes].sort(() => 0.5 - Math.random()).slice(0, 3);
+      choices = shuffle(allHeroes).slice(0, 3);
     }
-    player.characterChoices = choices.map((h: any) => ({
-      id: (h.title || h.name).toUpperCase().replace(/[^A-Z0-9]/g, '_'),
-      name: h.title || h.name,
-      sub: h.sub || '',
-      pic: h.pic || '',
-      kingdom: h.kingdom
-    }));
-    if (player.isBot) {
-      player.character = player.characterChoices![0].id;
+    player.characterChoices = choices.map(hero => ({ ...hero, pic: '/art/heroes-atlas.png' }));
+    if (player.isBot && player.characterChoices.length) {
+      player.character = player.characterChoices[0].id;
       setupCharacterHp(player, room.turnOrder.length);
     }
   });
@@ -203,7 +129,8 @@ function startDraftPhase(room: GameRoom): void {
 // ─── Play Phase Start ─────────────────────────────────────────────────────────
 function startPlayPhase(room: GameRoom): void {
   room.status = 'PLAYING' as any;
-  room.deck = initDeck();
+  room.draftDeadline = null;
+  room.deck = initDeck(room.deckSeed);
   room.discardPile = [];
   Object.values(room.players).forEach((player: Player) => {
     player.hand = drawCards(room, 4);
@@ -239,7 +166,7 @@ function startPlayerTurn(room: GameRoom): void {
 
   if (!player || !player.isAlive) {
     room.currentTurnIndex = (room.currentTurnIndex + 1) % room.turnOrder.length;
-    setTimeout(() => startPlayerTurn(room), 0);
+    schedule(room, () => startPlayerTurn(room), 0);
     return;
   }
 
@@ -250,23 +177,45 @@ function startPlayerTurn(room: GameRoom): void {
   player.liuBeiHealedThisTurn = false;
   player.skillDiaoChanUsed = false;
   player.skillZhouYuUsed = false;
+  player._botRendeUsed = false;
+  player._botJijiangUsed = false;
   room.attacksPlayedInTurn = 0;
+
+  const turnGeneration = (room._turnGeneration || 0) + 1;
+  room._turnGeneration = turnGeneration;
+  room._turnContinuation = null;
+  const turnIsCurrent = () => room.status === 'PLAYING' && room._turnGeneration === turnGeneration &&
+    room.turnOrder[room.currentTurnIndex] === playerId && player.isAlive;
+  const once = <T extends any[]>(callback: (...args: T) => void): ((...args: T) => void) => {
+    let completed = false;
+    return (...args: T) => {
+      if (completed || !turnIsCurrent()) return;
+      completed = true;
+      callback(...args);
+    };
+  };
 
   let skipPlayPhase = false;
   let skipDrawPhase = false;
 
-  // ── JUDGEMENT PHASE ──
-  if (player.delayedKitZone && player.delayedKitZone.length > 0) {
+  const judgeNext = (): void => {
+    if (!turnIsCurrent()) return;
+    if (!player.delayedKitZone?.length) {
+      executeDrawPhase(room, player, skipDrawPhase, skipPlayPhase);
+      return;
+    }
     room.currentPhase = 'JUDGEMENT' as any;
-    room._broadcastFn && room._broadcastFn();
-
-    while (player.delayedKitZone.length > 0) {
-      const card = player.delayedKitZone.pop()!;
-      const judgeCard = drawCards(room, 1)[0];
-      if (!judgeCard) break;
-      room.discardPile.push(judgeCard);
+    room._broadcastFn?.();
+    const card = player.delayedKitZone.pop()!;
+    const drawnJudge = drawCards(room, 1)[0];
+    if (!drawnJudge) {
       room.discardPile.push(card);
+      judgeNext();
+      return;
+    }
 
+    const resolveJudge = once((judgeCard: Card): void => {
+      room.discardPile.push(judgeCard, card);
       let isSuccess = false;
       let titleName = card.name;
       if (card.name === 'LIGHTNING') {
@@ -279,61 +228,82 @@ function startPlayerTurn(room: GameRoom): void {
         isSuccess = judgeCard.suit === 'CLUB';
         titleName = 'เสบียงขาด';
       }
-
-      room._emitAll && room._emitAll('judgement_result', {
+      room._emitAll?.('judgement_result', {
         title: titleName, card: judgeCard, isSuccess,
-        targetPlayerId: player.id, targetPlayerName: player.name
+        targetPlayerId: player.id, targetPlayerName: player.name,
       });
 
       if (card.name === 'LIGHTNING') {
         if (!isSuccess) {
-          // Strike: 3 THUNDER damage
+          const continueAfterDamage = once(judgeNext);
+          room._turnContinuation = continueAfterDamage;
           const { dealDamage } = require('./combatLogic');
           dealDamage(room, playerId, 3, card, null, 'THUNDER');
-          if (room.pendingAction?.type === 'DYING') return;
-        } else {
-          // Pass to next alive player
-          const myIdx = room.turnOrder.indexOf(playerId);
-          let nextId = room.turnOrder[(myIdx + 1) % room.turnOrder.length];
-          let tries = 0;
-          while (!room.players[nextId]?.isAlive && tries < room.turnOrder.length) {
-            nextId = room.turnOrder[(room.turnOrder.indexOf(nextId) + 1) % room.turnOrder.length];
-            tries++;
-          }
-          if (room.players[nextId]?.isAlive) {
-            room.players[nextId].delayedKitZone = room.players[nextId].delayedKitZone || [];
-            room.players[nextId].delayedKitZone.push(card);
-            room.discardPile.pop();
-          }
+          if (room.pendingAction || !turnIsCurrent()) return;
+          room._turnContinuation = null;
+          continueAfterDamage();
+          return;
         }
-      } else if (card.name === 'ACEDIA') {
-        if (!isSuccess) skipPlayPhase = true;
-      } else if (card.name === 'STARVATION') {
-        if (!isSuccess) skipDrawPhase = true;
+        const myIdx = room.turnOrder.indexOf(playerId);
+        for (let offset = 1; offset < room.turnOrder.length; offset++) {
+          const next = room.players[room.turnOrder[(myIdx + offset) % room.turnOrder.length]];
+          if (!next?.isAlive) continue;
+          next.delayedKitZone = next.delayedKitZone || [];
+          next.delayedKitZone.push(card);
+          const discardedIndex = room.discardPile.indexOf(card);
+          if (discardedIndex !== -1) room.discardPile.splice(discardedIndex, 1);
+          break;
+        }
+      } else if (card.name === 'ACEDIA' && !isSuccess) {
+        skipPlayPhase = true;
+      } else if (card.name === 'STARVATION' && !isSuccess) {
+        skipDrawPhase = true;
       }
-    }
-  }
+      judgeNext();
+    });
+    if (room._judgeCard) room._judgeCard(player, drawnJudge, card, resolveJudge);
+    else resolveJudge(drawnJudge);
+  };
 
-  // Zhen Ji / Lady Zhen skill: Luo River
-  if (hasCharacter(player, 'ZHEN_JI') || hasCharacter(player, 'LADY_ZHEN')) {
-    if (player.isBot) {
-      let isBlack = true;
-      while (isBlack) {
-        const drawn = drawCards(room, 1);
-        if (!drawn.length) break;
-        const c = drawn[0];
-        if (c.suit === 'SPADE' || c.suit === 'CLUB') { player.hand.push(c); }
-        else { room.discardPile.push(c); isBlack = false; }
-      }
-      executeDrawPhase(room, player, skipDrawPhase, skipPlayPhase);
-    } else {
-      room.currentPhase = 'PREPARATION' as any;
-      room.pendingAction = { type: 'LUO_RIVER', targetPlayerId: playerId, skipDrawPhase, skipPlayPhase };
-      room._broadcastFn && room._broadcastFn();
+  const beginLuoshen = once((): void => {
+    if (!hasCharacter(player, 'ZHEN_JI')) {
+      judgeNext();
+      return;
     }
-  } else {
-    executeDrawPhase(room, player, skipDrawPhase, skipPlayPhase);
-  }
+    room.currentPhase = 'PREPARATION' as any;
+    if (player.isBot) {
+      emitHeroSkill(room, player.id, 'LUOSHEN');
+      const drawLuoshen = (): void => {
+        if (!turnIsCurrent()) return;
+        const drawnJudge = drawCards(room, 1)[0];
+        if (!drawnJudge) { judgeNext(); return; }
+        const resolveLuoshen = once((finalJudge: Card): void => {
+          room._emitAll?.('judgement_result', { title: 'Luoshen', card: finalJudge, isSuccess: finalJudge.suit === 'SPADE' || finalJudge.suit === 'CLUB', targetPlayerId: player.id, targetPlayerName: player.name });
+          if (finalJudge.suit === 'SPADE' || finalJudge.suit === 'CLUB') {
+            player.hand.push(finalJudge);
+            drawLuoshen();
+          } else {
+            room.discardPile.push(finalJudge);
+            judgeNext();
+          }
+        });
+        if (room._judgeCard) room._judgeCard(player, drawnJudge, { name: 'LUO_RIVER' }, resolveLuoshen);
+        else resolveLuoshen(drawnJudge);
+      };
+      drawLuoshen();
+      return;
+    }
+    room.pendingAction = {
+      type: 'LUO_RIVER', targetPlayerId: playerId,
+      timeoutAt: Date.now() + RULES.reactionMs,
+      resume: once(judgeNext),
+    };
+    room._broadcastFn?.();
+  });
+
+  room.currentPhase = 'PREPARATION' as any;
+  if (room._prepareTurn) room._prepareTurn(player, beginLuoshen);
+  else beginLuoshen();
 }
 
 function executeDrawPhase(room: GameRoom, player: Player, skipDrawPhase: boolean = false, skipPlayPhase: boolean = false): void {
@@ -341,6 +311,7 @@ function executeDrawPhase(room: GameRoom, player: Player, skipDrawPhase: boolean
     room.currentPhase = 'DRAW' as any;
     const drawCount = hasCharacter(player, 'ZHOU_YU') ? 3 : 2;
     player.hand.push(...drawCards(room, drawCount));
+    if (hasCharacter(player, 'ZHOU_YU')) emitHeroSkill(room, player.id, 'YINGZI');
   }
 
   if (!skipPlayPhase) {
@@ -349,7 +320,7 @@ function executeDrawPhase(room: GameRoom, player: Player, skipDrawPhase: boolean
     player.wineActive = false;
     room._broadcastFn && room._broadcastFn();
     if (player.isBot) {
-      setTimeout(() => {
+      schedule(room, () => {
         const { runBotTurn } = require('./botAI');
         runBotTurn(room, player.id);
       }, 1500);
@@ -373,7 +344,7 @@ function checkDiscardRequirement(room: GameRoom): void {
   } else {
     room._broadcastFn && room._broadcastFn();
     if (player.isBot) {
-      setTimeout(() => {
+      schedule(room, () => {
         const numToDiscard = player.hand.length - maxHand;
         const discarded = player.hand.splice(0, numToDiscard);
         room.discardPile.push(...discarded);
@@ -384,14 +355,62 @@ function checkDiscardRequirement(room: GameRoom): void {
 }
 
 function endPlayerTurn(room: GameRoom): void {
+  room._turnContinuation = null;
+  room._turnGeneration = (room._turnGeneration || 0) + 1;
   const playerId = room.turnOrder[room.currentTurnIndex];
   const player = room.players[playerId];
+  if(player?.isAlive && hasCharacter(player,'DIAO_CHAN') && ['PLAY','DISCARD'].includes(room.currentPhase)) { player.hand.push(...drawCards(room,1)); emitHeroSkill(room, player.id, 'BIYUE'); }
   if (player) player.wineActive = false;
   room.currentTurnIndex = (room.currentTurnIndex + 1) % room.turnOrder.length;
   startPlayerTurn(room);
 }
 
 // ─── Sanitized State for client ───────────────────────────────────────────────
+function publicCard(card: Card): Card {
+  const result: Card = { id: card.id, name: card.name, suit: card.suit, rank: card.rank, type: card.type };
+  if (card.range !== undefined) result.range = card.range;
+  return result;
+}
+
+function sanitizedPendingAction(pending: PendingAction | null, targetPlayerId: string): any {
+  if (!pending) return null;
+  // An explicit allowlist prevents suspended continuations and private state from leaking.
+  const publicFields = [
+    'type', 'sourcePlayerId', 'targetPlayerId', 'timeoutAt', 'promptId', 'requestId',
+    'damage', 'damageType', 'originalDamage', 'originalAttackerId', 'dodgeNeeded', 'slashNeeded',
+    'currentPlayerToSlash', 'currentTargetIndex', 'aoeType', 'eightTrigramsUsed',
+    'currentPickerId', 'victimId', 'peachNeeded', 'currentAskerIdx', 'attackerId',
+    'requiredSuit', 'requiredColor', 'skill', 'skillName', 'requestType', 'requiredCard',
+    'judgeTargetId', 'reason', 'originalTargetId',
+  ];
+  const result: Record<string, any> = {};
+  for (const key of publicFields) {
+    const value = pending[key];
+    if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) result[key] = value;
+  }
+  if (Array.isArray(pending.targets)) result.targets = pending.targets.filter((id: any) => typeof id === 'string');
+  for (const key of ['revealedCard', 'judgeCard', 'judgmentCard']) {
+    if (pending[key]) result[key] = publicCard(pending[key]);
+  }
+  const isFanjian = pending.type === 'FANJIAN';
+  if (!isFanjian || pending.sourcePlayerId === targetPlayerId) {
+    if (typeof pending.cardUsedId === 'string' || pending.cardUsedId === null) result.cardUsedId = pending.cardUsedId;
+  }
+  const owner = pending.targetPlayerId || pending.sourcePlayerId;
+  if (pending.type === 'GUANXING' && owner === targetPlayerId) {
+    for (const key of ['cards', 'topCards', 'bottomCards']) {
+      if (Array.isArray(pending[key])) result[key] = pending[key].map(publicCard);
+    }
+  }
+  if (isFanjian && pending.sourcePlayerId === targetPlayerId) {
+    for (const key of ['heldCard', 'card']) {
+      if (pending[key]) result[key] = publicCard(pending[key]);
+    }
+  }
+  if (pending.type === 'DAMAGE_SKILL' && pending.card) result.card = publicCard(pending.card);
+  return result;
+}
+
 function getSanitizedRoomState(room: GameRoom, targetPlayerId: string): any {
   const maskedPlayers: Record<string, any> = {};
   Object.keys(room.players).forEach((pId: string) => {
@@ -415,7 +434,7 @@ function getSanitizedRoomState(room: GameRoom, targetPlayerId: string): any {
       skillResignationUsed: p.skillResignationUsed || false,
       skillDiaoChanUsed: p.skillDiaoChanUsed || false,
       skillZhouYuUsed: p.skillZhouYuUsed || false,
-      isHost: (room.hostSocketId === p.socketId || p.id === 'p1'),
+      isHost: room.hostSocketId === p.socketId,
       isDisconnected: p.isDisconnected || false,
       isChained: p.isChained || false,
     };
@@ -426,7 +445,18 @@ function getSanitizedRoomState(room: GameRoom, targetPlayerId: string): any {
     mode: room.mode,
     currentTurnPlayerId: room.turnOrder[room.currentTurnIndex] || null,
     currentPhase: room.currentPhase,
-    pendingAction: room.pendingAction,
+    pendingAction: sanitizedPendingAction(room.pendingAction, targetPlayerId),
+    actionChain: (room.actionChain || []).map(action => ({
+      type: action.type,
+      sourceId: action.sourceId,
+      targetId: action.targetId,
+      cardUsed: action.cardUsed ? publicCard(action.cardUsed) : null,
+    })),
+    negatePassedPlayers: [...(room.negatePassedPlayers || [])],
+    deckCount: room.deck?.length || 0,
+    discardCount: room.discardPile?.length || 0,
+    draftDeadline: room.draftDeadline || null,
+    rulesVersion: RULES.version,
     players: maskedPlayers,
     turnOrder: room.turnOrder,
     winnerRole: room.winnerRole || null,
