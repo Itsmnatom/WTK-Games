@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
-import { CARD_BY_ID, HERO_BY_ID, FACTIONS, canonicalHero } from '../../shared/catalog';
+import { CARD_BY_ID, HEROES, HERO_BY_ID, FACTIONS, canonicalHero } from '../../shared/catalog';
+import { courtyardTextures } from './scene-textures';
 import type { RoomSnapshot } from '../../shared/protocol';
 
 export interface SceneLayout {
@@ -8,7 +9,7 @@ export interface SceneLayout {
   table: { left: number; top: number; width: number; height: number };
   center: { x: number; y: number };
 }
-type Effect = { group: THREE.Group; timeline: gsap.core.Timeline };
+type Effect = { group: THREE.Group; timeline: gsap.core.Timeline; cleanup?:()=>void };
 
 /** Presentation only: public snapshots and events never mutate game state. */
 export class CourtyardScene {
@@ -20,6 +21,9 @@ export class CourtyardScene {
   private scenery = new THREE.Group();
   private table = new THREE.Group();
   private players = new Map<string, THREE.Group>();
+  private heroEffects = new Map<string,Effect>();
+  private heroAtlas: THREE.Texture | null = null;
+  private surfaces = courtyardTextures();
   private cube = new THREE.BoxGeometry(1, 1, 1);
   private materials = new Map<string, THREE.MeshStandardMaterial>();
   private effects = new Set<Effect>();
@@ -68,6 +72,7 @@ export class CourtyardScene {
     this.qualityChangedAt = performance.now();
     this.resize = new ResizeObserver(() => this.fit());
     this.scene.add(this.world); this.world.add(this.scenery, this.table);
+    for(const texture of Object.values(this.surfaces))this.textures.add(texture);
     try {
       this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'low-power' });
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -77,15 +82,15 @@ export class CourtyardScene {
       this.renderer.domElement.setAttribute('aria-hidden', 'true');
       this.renderer.domElement.style.pointerEvents = 'none';
       this.host.append(this.renderer.domElement);
-      this.scene.add(new THREE.HemisphereLight('#a6c5d1', '#10191e', 1.8));
-      const moon = new THREE.DirectionalLight('#d6e4f2', 1.6);
+      this.scene.add(new THREE.HemisphereLight('#95b2cd', '#171d27', 1.15));
+      const moon = new THREE.DirectionalLight('#a8c9eb', 1.8);
       this.moon = moon;
       moon.position.set(-8, 17, 8); moon.castShadow = !this.mobile;
       moon.shadow.mapSize.set(1024, 1024);
       moon.shadow.camera.left = moon.shadow.camera.bottom = -17;
       moon.shadow.camera.right = moon.shadow.camera.top = 17;
       this.scene.add(moon);
-      const lantern = new THREE.PointLight('#ffc16a', 38, 26, 1.8);
+      const lantern = new THREE.PointLight('#ffbf75', 54, 26, 1.8);
       lantern.position.set(0, 5, -3); this.scene.add(lantern);
       this.build(); this.resize.observe(host);
       document.addEventListener('visibilitychange', this.onVisibility);
@@ -173,6 +178,11 @@ export class CourtyardScene {
       this.textures.add(texture); done(texture); this.draw();
     }, undefined, () => {});
   }
+  private surface(parent:THREE.Group,width:number,height:number,texture:THREE.Texture,x:number,y:number,z:number,unlit=false,opacity=1):THREE.Mesh {
+    const material=unlit?new THREE.MeshBasicMaterial({map:texture,transparent:true,opacity,depthWrite:false,toneMapped:false}):new THREE.MeshStandardMaterial({map:texture,roughness:.94,metalness:0,transparent:opacity<1,opacity});
+    const mesh=new THREE.Mesh(this.cachedGeometry(`surface:${width}:${height}`,()=>new THREE.PlaneGeometry(width,height)),material);
+    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);mesh.receiveShadow=!unlit;parent.add(mesh);return mesh;
+  }
   private build(): void {
     this.block(0, -.3, 0, 25, .5, 23, '#14272b', this.scenery);
     const tiles = new THREE.InstancedMesh(this.cube, this.mat('#263c40'), 168);
@@ -196,16 +206,30 @@ export class CourtyardScene {
       this.block(x, 1.95, z, .65, .75, .65, '#dea457', this.scenery).material = this.mat('#edb865', true);
       this.block(x, 2.36, z, .85, .12, .85, '#513d2e', this.scenery);
       this.block(x, 1.52, z, .85, .12, .85, '#513d2e', this.scenery);
+      this.surface(this.scenery,4.4,4.4,this.surfaces.glow,x,.04,z,true,.65);
     }
     for (const x of [-5.3, 5.3]) for (const z of [-2.8, 2.8]) {
       this.block(x, .91, z, .65, .38, .65, '#4d3129', this.table);
       this.block(x, .74, z, .87, .12, .87, '#a97943', this.table);
     }
     this.block(0, 1.17, 0, 13.2, .46, 7.8, '#62432e', this.table);
-    this.block(0, 1.41, 0, 13.35, .08, 7.95, '#c28e47', this.table);
-    this.block(0, 1.47, 0, 13.05, .06, 7.65, '#936a39', this.table);
-    this.block(0, 1.52, 0, 12.4, .05, 7, '#1f5146', this.table);
-    this.block(0, 1.553, 0, 12.03, .02, 6.62, '#32695a', this.table);
+    this.block(0, 1.41, 0, 13.35, .08, 7.95, '#ad854a', this.table);
+    this.block(0, 1.47, 0, 13.05, .06, 7.65, '#59412f', this.table);
+    this.surface(this.table,12.95,7.55,this.surfaces.wood,0,1.512,0);
+    this.block(0,1.533,0,9.6,.025,5.85,'#756647',this.table);
+    this.surface(this.table,9.5,5.75,this.surfaces.map,0,1.551,0);
+    this.surface(this.table,1.5,1.6,this.surfaces.contact,-1.1,1.575,-.25,true,.7);
+    for(const x of [-4.85,4.85])this.block(x,1.58,0,.10,.10,5.9,'#86643c',this.table);
+    // Static map weights, bronze brackets and supply markers stay cheap to render.
+    for(const x of [-5.9,5.9])for(const z of [-3.25,3.25]){
+      this.block(x,1.57,z,.55,.08,.20,'#b99858',this.table);
+      this.block(x,1.58,z,.20,.08,.55,'#b99858',this.table);
+    }
+    for(const [x,z,color] of [[-3.6,-1.25,'#86453c'],[3.4,1.5,'#4a6c63'],[2.8,-1.6,'#4d627d']] as [number,number,string][]){
+      this.block(x,1.63,z,.25,.12,.25,color,this.table);
+      this.block(x,1.83,z,.035,.43,.035,'#97774c',this.table);
+      this.block(x+.11,1.94,z,.23,.18,.025,color,this.table);
+    }
     for (const x of [-6.43, 6.43]) for (const z of [-3.65, 3.65]) this.block(x, 1.57, z, .4, .07, .4, '#e6be75', this.table);
     for (const z of [-3.79, 3.79]) for (let x = -5.8; x <= 5.8; x += .65) this.block(x, 1.58, z, .24, .06, .11, '#cda362', this.table);
     for (let i = 0; i < 7; i++) this.block(-1.1, 1.61 + i * .028, -.25, .75, .028, 1.06, i === 6 ? '#9b713d' : '#decdaa', this.table);
@@ -215,37 +239,70 @@ export class CourtyardScene {
       face.rotation.x = -Math.PI / 2; face.position.set(-1.1, 1.81, -.25); this.table.add(face);
     });
     this.loadTexture('/art/cards-atlas.png', texture => { this.cardAtlas = texture; });
+    this.loadTexture('/art/heroes-standing-atlas.png',texture=>{
+      this.heroAtlas=texture;
+      for(const group of this.players.values()){
+        const sprite=group.userData.sprite as THREE.Mesh<THREE.PlaneGeometry,THREE.MeshBasicMaterial>;
+        sprite.material.map=texture;sprite.material.color.set(this.state?.players[group.userData.playerId]?.isAlive===false?'#718087':'#ffffff');sprite.material.needsUpdate=true;sprite.visible=true;
+      }
+    });
     this.batchBlocks(this.scenery); this.batchBlocks(this.table); this.shadowChanged();
     if (this.showcase) for (let i = 0; i < 6; i++) {
-      const token = this.createToken('show-' + i, ['#b6373a', '#365aa4', '#327353', '#be893c'][i % 4]);
+      const token = this.createToken('show-' + i, ['#b6373a', '#365aa4', '#327353', '#be893c'][i % 4],HEROES[i].id);
       const angle = i / 6 * Math.PI * 2; token.position.set(Math.sin(angle) * 7.6, 0, Math.cos(angle) * 5.1);
+      (token.userData.billboard as THREE.Group).quaternion.copy(this.camera.quaternion);
     }
   }
-  private createToken(id: string, color: string): THREE.Group {
+  private heroGeometry(heroId:string):THREE.PlaneGeometry {
+    const index=HERO_BY_ID[canonicalHero(heroId)]?.art||0;
+    return this.cachedGeometry(`hero:${index}`,()=>{
+      // Guo Jia's atlas cell contains the edge of Zhang Liao's cloak on its left.
+      // Trim the sampled region and its geometry together to preserve sprite proportions.
+      const inset=.008,left=canonicalHero(heroId)==='GUO_JIA'?.14:inset,right=1-inset;
+      const plane=new THREE.PlaneGeometry(1.7*(right-left)/(1-2*inset),2.05),uv=plane.getAttribute('uv'),col=index%4,row=Math.floor(index/4);
+      plane.translate(1.7*(left-inset)/(2*(1-2*inset)),0,0);
+      for(let i=0;i<uv.count;i++)uv.setXY(i,(col+left+uv.getX(i)*(right-left))/4,1-(row+1-inset-uv.getY(i)*(1-2*inset))/5);
+      return plane;
+    }) as THREE.PlaneGeometry;
+  }
+  private createToken(id: string, color: string,heroId='CAO_CAO'): THREE.Group {
     const group = new THREE.Group();
-    this.block(0, .23, 0, .82, .13, .75, '#30332d', group);
-    this.block(0, .65, 0, .46, .8, .4, color, group);
-    this.block(0, 1.17, 0, .4, .4, .38, '#dfae81', group);
-    this.block(0, 1.42, 0, .5, .12, .43, '#172931', group);
-    this.block(-.32, .74, 0, .17, .57, .25, color, group);
-    this.block(.32, .74, 0, .17, .57, .25, color, group);
-    this.block(.39, .84, -.15, .07, 1.03, .07, '#d8c38c', group);
+    const contact=this.surface(group,1.65,1.4,this.surfaces.contact,0,.035,0,true,.9);
+    this.block(0,.15,0,1.03,.18,.83,'#242e32',group);
+    this.block(0,.255,0,.97,.035,.77,'#a48750',group);
+    this.block(0,.295,0,.87,.055,.67,'#3b4545',group);
+    const aura=this.fxMesh(this.cachedGeometry('hero-aura',()=>new THREE.RingGeometry(.51,.55,16)),color,.8);
+    aura.rotation.x=-Math.PI/2;aura.position.y=.34;aura.visible=false;group.add(aura);
+    const billboard=new THREE.Group(),pose=new THREE.Group();billboard.position.y=1.30;billboard.quaternion.copy(this.camera.quaternion);billboard.add(pose);group.add(billboard);
+    const sprite=new THREE.Mesh(this.heroGeometry(heroId),new THREE.MeshBasicMaterial({map:this.heroAtlas,transparent:true,alphaTest:.25,depthWrite:false,side:THREE.DoubleSide,color:this.heroAtlas?'#ffffff':color}));
+    sprite.renderOrder=2;pose.add(sprite);
+    sprite.visible=!!this.heroAtlas;
+    group.userData={playerId:id,heroId,pose,sprite,billboard,aura,ownedMaterials:[contact.material,aura.material,sprite.material]};
     this.world.add(group); this.players.set(id, group); return group;
   }
   update(state: RoomSnapshot, myId?: string): void {
+    const previous=this.state,oldTurn=previous?.currentTurnPlayerId;
     this.state = state; if (myId) this.viewer = myId;
     const key = JSON.stringify([this.viewer, state.currentTurnPlayerId, state.turnOrder.map(id => [id, canonicalHero(state.players[id]?.character), state.players[id]?.isAlive])]);
     if (key === this.stateKey) return; this.stateKey = key;
-    for (const [id, group] of this.players) if (!state.turnOrder.includes(id) || !state.players[id]) { this.world.remove(group); this.players.delete(id); }
+    for (const [id, group] of this.players) if (!state.turnOrder.includes(id) || !state.players[id]) {
+      const poseEffect=this.heroEffects.get(id);if(poseEffect)this.release(poseEffect);
+      for(const material of group.userData.ownedMaterials||[])material.dispose();
+      this.world.remove(group); this.players.delete(id);
+    }
     for (const id of state.turnOrder) {
       const player = state.players[id]; if (!player) continue;
       const hero = HERO_BY_ID[canonicalHero(player.character)], color = hero ? FACTIONS[hero.faction].color : '#6b7671';
-      let token = this.players.get(id); if (!token) token = this.createToken(id, color);
-      for (const child of token.children) { const mesh = child as THREE.Mesh; if (mesh.scale.y === .8 || mesh.scale.y === .57) mesh.material = this.mat(color); }
-      token.visible = player.isAlive;
+      let token = this.players.get(id); if (!token) token = this.createToken(id, color,hero?.id);
+      if(token.userData.heroId!==hero?.id){token.userData.heroId=hero?.id;(token.userData.sprite as THREE.Mesh).geometry=this.heroGeometry(hero?.id||'CAO_CAO');}
+      (token.userData.sprite as THREE.Mesh<THREE.PlaneGeometry,THREE.MeshBasicMaterial>).material.color.set(player.isAlive?'#ffffff':'#718087');
+      (token.userData.aura as THREE.Mesh).visible=player.isAlive&&state.currentTurnPlayerId===id;
+      if(!this.heroEffects.has(id))this.restHero(id);
       token.scale.setScalar(this.tokenScale(id));
     }
     this.fit(); this.shadowChanged(); this.draw();
+    for(const id of state.turnOrder)if(previous?.players[id]?.isAlive&&!state.players[id]?.isAlive)this.animateHero(id,'DEATH');
+    if(oldTurn!==state.currentTurnPlayerId&&state.status==='PLAYING')this.animateHero(state.currentTurnPlayerId,'READY');
   }
   layout(): SceneLayout { return this.geometry; }
   setViewPlayerId(id: string): void { if (id === this.viewer) return; this.viewer = id; this.fit(); }
@@ -301,15 +358,71 @@ export class CourtyardScene {
     this.geometry.seats = this.seatLayout(w, h);
     if (this.state) for (const [id, anchor] of Object.entries(this.geometry.seats)) {
       const token = this.players.get(id); if (!token) continue;
-      token.scale.setScalar(this.tokenScale(id)); token.position.copy(this.atScreen(anchor.x, anchor.y + (short ? .02 : .035), .15)); token.rotation.y = Math.atan2(-token.position.x, -token.position.z);
+      // Miniature bases rest on the tabletop; HUD anchors remain independently readable.
+      const side=anchor.x<.145||anchor.x>.855;
+      const x=side?(anchor.x<.5?-5.55:5.55):id===this.viewer?0:(anchor.x-.5)*10.5;
+      const z=side?THREE.MathUtils.clamp((anchor.y-.5)/(short ? .32 : .21)*2.2,-2.4,2.4):id===this.viewer?3.15:-2.95;
+      token.scale.setScalar(this.tokenScale(id));token.position.set(x,1.59,z);token.rotation.y=0;
+      (token.userData.billboard as THREE.Group).quaternion.copy(this.camera.quaternion);
     }
+    if(this.showcase)for(const token of this.players.values())(token.userData.billboard as THREE.Group).quaternion.copy(this.camera.quaternion);
     const key = JSON.stringify([w, h, this.geometry]);
     if (key !== this.layoutKey) { this.layoutKey = key; this.host.dataset.tableBounds = JSON.stringify(this.geometry.table); this.onLayout?.(this.geometry); }
     this.shadowChanged(); this.draw();
   }
   private origin(id?: string): THREE.Vector3 {
+    const token=id?this.players.get(id):null;if(token)return token.position.clone().add(new THREE.Vector3(0,1.2*token.scale.y,0));
     const anchor = id ? this.geometry.seats[id] : null;
     return anchor ? this.atScreen(anchor.x, anchor.y, 1.8) : this.atScreen(.5, .5, 1.8);
+  }
+  private restHero(id:string):void {
+    const token=this.players.get(id);if(!token)return;
+    const pose=token.userData.pose as THREE.Group,dead=this.state?.players[id]?.isAlive===false;
+    pose.position.set(0,dead?-.65:0,0);pose.rotation.set(0,0,dead?-1.35:0);pose.scale.setScalar(dead ? .82 : 1);
+  }
+  private animateHero(id:string,action:'READY'|'ATTACK'|'HURT'|'DEATH',targetId?:string):void {
+    const token=this.players.get(id);if(!token)return;
+    const prior=this.heroEffects.get(id);if(prior)this.release(prior);
+    if(this.reduced){this.restHero(id);return;}
+    const duration=action==='DEATH' ? .85 : .6,effect=this.effect(duration);if(!effect)return;
+    const pose=token.userData.pose as THREE.Group;pose.position.set(0,0,0);pose.rotation.set(0,0,0);pose.scale.setScalar(1);
+    this.heroEffects.set(id,effect);
+    effect.cleanup=()=>{if(this.heroEffects.get(id)===effect){this.heroEffects.delete(id);this.restHero(id);}};
+    if(action==='DEATH'){
+      effect.timeline.to(pose.rotation,{z:-1.35,duration:.6,ease:'power2.in'},0);
+      effect.timeline.to(pose.position,{y:-.65,duration:.6,ease:'power2.in'},0);
+      effect.timeline.to(pose.scale,{x:.82,y:.82,z:.82,duration:.6},0);
+    }else if(action==='HURT'){
+      effect.timeline.to(pose.position,{x:-.16,duration:.06},0).to(pose.position,{x:.13,duration:.07}).to(pose.position,{x:-.07,duration:.08}).to(pose.position,{x:0,duration:.14});
+      effect.timeline.to(pose.rotation,{z:.1,duration:.1},0).to(pose.rotation,{z:0,duration:.2},.18);
+    }else if(action==='ATTACK'){
+      const direction=(this.geometry.seats[targetId||'']?.x||.5)>=(this.geometry.seats[id]?.x||.5)?1:-1;
+      effect.timeline.to(pose.position,{x:direction*.28,y:.09,duration:.15,ease:'power2.in'},0).to(pose.position,{x:0,y:0,duration:.28,ease:'power2.out'},.22);
+      effect.timeline.to(pose.rotation,{z:-direction*.09,duration:.15},0).to(pose.rotation,{z:0,duration:.25},.22);
+    }else{
+      effect.timeline.to(pose.position,{y:.11,duration:.2,ease:'power2.out'},0).to(pose.position,{y:0,duration:.3},.23);
+    }
+  }
+  private heroSignature(playerId:string,targets:string[]):void {
+    const hero=HERO_BY_ID[canonicalHero(this.state?.players[playerId]?.character)],source=this.origin(playerId),color=hero?FACTIONS[hero.faction].color:'#d8b775';
+    const effect=this.effect(1.05);if(!effect)return;
+    this.flash(source,color,2.2);
+    const halo=this.fxMesh(this.cachedGeometry('signature-seal',()=>new THREE.RingGeometry(.94,1.02,8)),color,.9);
+    halo.position.copy(source);halo.quaternion.copy(this.camera.quaternion);effect.group.add(halo);
+    effect.timeline.fromTo(halo.scale,{x:.55,y:.55,z:.55},{x:1.6,y:1.6,z:1.6,duration:.65,ease:'power2.out'},0);
+    effect.timeline.to(halo.rotation,{z:halo.rotation.z+.5,duration:.7},0);effect.timeline.to(halo.material,{opacity:0,duration:.3},.6);
+    const scholar=['ZHUGE_LIANG','SIMA_YI','GUO_JIA','HUANG_YUEYING'].includes(hero?.id||'');
+    const count=this.qualityTier===2?4:scholar?8:6;
+    for(let i=0;i<count;i++){
+      const angle=i/count*Math.PI*2,piece=this.fxMesh(this.boxGeometry(.08,scholar ? .08 : .22,.035),i%2?'#f2d7a2':color,.9);
+      piece.position.copy(source);piece.quaternion.copy(this.camera.quaternion);effect.group.add(piece);
+      effect.timeline.to(piece.position,{x:source.x+Math.cos(angle)*1.35,y:source.y+Math.sin(angle)*1.2,z:source.z,duration:.6,ease:'power2.out'},0);
+      effect.timeline.to(piece.material,{opacity:0,duration:.3},.55);
+    }
+    if(['HUA_TUO','LIU_BEI'].includes(hero?.id||''))this.ring(source,'#9bd6b0',1.1);
+    else if(['GUAN_YU','ZHANG_FEI','ZHAO_YUN','LV_BU','ZHANG_LIAO'].includes(hero?.id||''))this.slash(source,color,1.45);
+    else if(['ZHOU_YU','HUANG_GAI','GAN_NING'].includes(hero?.id||''))this.sparks(source,'#f5ae68',9,1.3,.65);
+    for(const target of targets)if(target!==playerId)this.trail(source,this.origin(target),color,.8,.42);
   }
   private effect(duration: number): Effect | null {
     if (!this.renderer || this.disposed || document.hidden) return null;
@@ -320,6 +433,7 @@ export class CourtyardScene {
   }
   private release(effect: Effect): void {
     if (!this.effects.delete(effect)) return;
+    effect.cleanup?.();
     effect.timeline.kill(); this.world.remove(effect.group);
     effect.group.traverse(object => {
       const mesh = object as THREE.Mesh; if (mesh.geometry && !this.sharedGeometries.has(mesh.geometry)) mesh.geometry.dispose();
@@ -336,6 +450,14 @@ export class CourtyardScene {
     const ring = this.fxMesh(this.cachedGeometry(`ring:${size}`, () => new THREE.RingGeometry(size * .82, size, 8)), color, .85); ring.rotation.x = -Math.PI / 2; ring.position.copy(point); effect.group.add(ring);
     if (!reduced) effect.timeline.fromTo(ring.scale, { x: .5, y: .5, z: .5 }, { x: 1.8, y: 1.8, z: 1.8, duration: .65, ease: 'power2.out' }, 0);
     effect.timeline.to(ring.material, { opacity: 0, duration: .25 }, reduced ? .3 : .6);
+  }
+  private flash(point:THREE.Vector3,color:string,size=1):void {
+    const effect=this.effect(.42);if(!effect)return;
+    const material=new THREE.MeshBasicMaterial({map:this.surfaces.glow,color,transparent:true,opacity:.7,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false});
+    const mesh=new THREE.Mesh(this.cachedGeometry('flash-plane',()=>new THREE.PlaneGeometry(2,2)),material);
+    mesh.position.copy(point);mesh.quaternion.copy(this.camera.quaternion);mesh.scale.setScalar(size);effect.group.add(mesh);
+    effect.timeline.fromTo(mesh.scale,{x:size*.6,y:size*.6,z:size*.6},{x:size,y:size,z:size,duration:.2},0);
+    effect.timeline.to(material,{opacity:0,duration:.3},.08);
   }
   private sparks(point: THREE.Vector3, color: string, count = 12, spread = 1, duration = .65): void {
     const effect = this.effect(duration + .05); if (!effect) return;
@@ -357,10 +479,13 @@ export class CourtyardScene {
     effect.timeline.to(progress, { value: 1, duration, ease: 'power2.in', onUpdate: () => { geometry.setDrawRange(0, Math.max(2, Math.ceil(progress.value * 25))); head.position.copy(curve.getPoint(progress.value)); } }, 0);
     effect.timeline.to(material, { opacity: 0, duration: .3 }, duration); effect.timeline.to(head.scale, { x: 0, y: 0, z: 0, duration: .18 }, duration);
   }
-  private slash(point: THREE.Vector3): void {
+  private slash(point: THREE.Vector3,color='#f2e4bb',scale=1): void {
     const effect = this.effect(.48); if (!effect) return;
-    const arc = this.fxMesh(this.cachedGeometry('slash', () => new THREE.RingGeometry(.48, .67, 9, 1, .15, Math.PI * 1.45)), '#f2e4bb'); arc.position.copy(point); arc.quaternion.copy(this.camera.quaternion); effect.group.add(arc);
+    const arc = this.fxMesh(this.cachedGeometry('slash', () => new THREE.RingGeometry(.48, .67, 9, 1, .15, Math.PI * 1.45)), color); arc.position.copy(point); arc.quaternion.copy(this.camera.quaternion);arc.scale.setScalar(scale); effect.group.add(arc);
     effect.timeline.fromTo(arc.rotation, { z: -.65 }, { z: .55, duration: .22, ease: 'power3.out' }, 0); effect.timeline.to(arc.material, { opacity: 0, duration: .2 }, .23);
+    const echo=this.fxMesh(this.cachedGeometry('slash-echo',()=>new THREE.RingGeometry(.67,.73,12,1,.1,Math.PI*1.15)),color,.45);
+    echo.position.copy(point);echo.quaternion.copy(this.camera.quaternion);echo.scale.setScalar(scale);effect.group.add(echo);
+    effect.timeline.to(echo.rotation,{z:echo.rotation.z+.55,duration:.32},0);effect.timeline.to(echo.material,{opacity:0,duration:.28},.1);
   }
   private thunder(point: THREE.Vector3): void {
     const effect = this.effect(.6); if (!effect) return;
@@ -372,7 +497,7 @@ export class CourtyardScene {
       const bolt = this.fxMesh(geometry, color); bolt.position.copy(point);
       effect.group.add(bolt); effect.timeline.to(bolt.material, { opacity: 0, duration: .3 }, .13);
     }
-    this.sparks(point, '#b6f3ff', 13, .95, .5); this.ring(point, '#88cbd5', .7);
+    this.flash(point,'#85d9ff',1.2);this.sparks(point, '#b6f3ff', 13, .95, .5); this.ring(point, '#88cbd5', .7);
   }
   private fire(point: THREE.Vector3): void {
     const effect = this.effect(.8); if (!effect) return;
@@ -386,7 +511,7 @@ export class CourtyardScene {
       effect.timeline.to(flame.position, { y: point.y + .8, duration: .55 }, 0);
       effect.timeline.to(flame.material, { opacity: 0, duration: .35 }, .3);
     }
-    this.sparks(point, '#ffbb64', 13, 1.05, .65); this.ring(point, '#ed8559', .85);
+    this.flash(point,'#ff9960',1.2);this.sparks(point, '#ffbb64', 13, 1.05, .65); this.ring(point, '#ed8559', .85);
   }
   private damageLabel(point: THREE.Vector3, damage: number, targetId?: string): void {
     if (!Number.isFinite(damage) || damage <= 0) return;
@@ -418,6 +543,8 @@ export class CourtyardScene {
   private flyingCard(data: any): void {
     const source = this.origin(data.playerId), center = this.atScreen(this.geometry.center.x, this.geometry.center.y, 1.85), effect = this.effect(1.05); if (!effect) return;
     const group = new THREE.Group(); group.position.copy(source); effect.group.add(group);
+    const landingShadow=this.surface(effect.group,1.15,1.5,this.surfaces.contact,center.x,1.57,center.z,true,0);
+    effect.timeline.to(landingShadow.material,{opacity:.65,duration:.18},.35);effect.timeline.to(landingShadow.material,{opacity:0,duration:.25},.75);
     const body = this.fxMesh(this.boxGeometry(.72, .035, 1.02), '#efdfb4'); group.add(body);
     let texture = this.cardBack, geometry = this.cachedGeometry('card-back', () => new THREE.PlaneGeometry(.7, 1)); const definition = data.card && CARD_BY_ID[data.card.name];
     if (definition && this.cardAtlas) {
@@ -440,21 +567,31 @@ export class CourtyardScene {
     const name = String(data.cardName || data.skillId || '');
     const defensivePlay = type === 'card_played' && (name === 'DODGE' || name === 'NEGATE');
     const targetId = defensivePlay ? data.playerId : data.targetId || data.targetPlayerId || data.playerId, target = this.origin(targetId);
+    if(type==='damage_log')this.animateHero(targetId,'HURT');
+    else if(type==='death')this.animateHero(targetId,'DEATH');
+    else if(type==='card_played')this.animateHero(data.playerId,['SLASH','THUNDER_ATTACK','DUEL','FIRE_ATTACK'].includes(name)||data.kind==='SKILL'?'ATTACK':'READY',data.targetId||data.targetIds?.[0]);
     if (this.reduced) { this.ring(target, type === 'damage_log' ? '#e59471' : ['PEACH', 'PEACH_GARDEN'].includes(name) ? '#9cdbc1' : '#e6c282', .65, true); if(type === 'damage_log')this.damageLabel(target, Number(data.damage), targetId); return; }
     if (type === 'damage_log') {
       if (data.damageType === 'THUNDER') this.thunder(target);
       else if (data.damageType === 'FIRE') this.fire(target);
-      else { this.slash(target); this.sparks(target, '#d7b176', 12, .7, .4); } this.damageLabel(target, Number(data.damage), targetId); return;
+      else { this.slash(target);this.flash(target,'#ffe0a5',.65); this.sparks(target, '#d7b176', 8, .7, .4); }
+      if(Number(data.hp)<=0){this.ring(target,'#d6a35c',1.2);this.flash(target,'#f2bf73',1.65);}
+      this.damageLabel(target, Number(data.damage), targetId); return;
     }
     if (type === 'judgement_result') { this.shield(target, data.isSuccess ? '#abd9b4' : '#d29b76'); return; }
-    if (['death', 'dying', 'victory', 'acquire', 'turn', 'prompt'].includes(type)) { this.ring(target, type === 'victory' ? '#f5d391' : type === 'acquire' ? '#a4cbbc' : '#dd8e74', type === 'victory' ? 1.25 : .75); if (['death', 'dying', 'victory'].includes(type)) this.sparks(target, type === 'victory' ? '#ecc983' : '#c79471', 12, .8, .6); return; }
+    if (['death', 'dying', 'victory', 'acquire', 'turn', 'prompt'].includes(type)) {
+      this.ring(target, type === 'victory' ? '#f5d391' : type === 'acquire' ? '#a4cbbc' : '#dd8e74', type === 'victory' ? 1.65 : .75);
+      if (['death', 'dying', 'victory'].includes(type)) this.sparks(target, type === 'victory' ? '#ecc983' : '#c79471', 12, type==='victory'?2.2:.8, .6);
+      if(type==='victory'){this.flash(target,'#ffe6a0',2.5);this.ring(target,'#a2c4b3',1.1);}
+      return;
+    }
     if (type !== 'card_played') return;
     if (data.kind !== 'SKILL') this.flyingCard(data);
     const source = this.origin(data.playerId), targetIds: string[] = data.targetIds?.length ? data.targetIds : data.targetId ? [data.targetId] : [], targets = targetIds.length ? targetIds.map(id => this.origin(id)) : [source];
     if (name === 'NEGATE') { this.ring(source, '#b39dda', 1); this.shield(source, '#c6b1e5'); return; }
     if (name === 'DODGE' || data.kind === 'RESPONSE' && !['SLASH', 'THUNDER_ATTACK', 'PEACH', 'WINE'].includes(name)) { this.shield(source); return; }
     if (['PEACH', 'PEACH_GARDEN', 'WINE'].includes(name)) { for (const point of targets) this.ring(point, '#a5daba', .8); return; }
-    if (data.kind === 'SKILL') { this.ring(source, '#e6c282', .9); for (const point of targets) this.trail(source, point, '#d6b778', .45, .48); return; }
+    if (data.kind === 'SKILL') { this.heroSignature(data.playerId,targetIds);return; }
     const fire = name === 'FIRE_ATTACK', thunder = name === 'THUNDER_ATTACK' || name === 'LIGHTNING', color = fire ? '#ffb15f' : thunder ? '#89d7e5' : name === 'SLASH' ? '#e4d3ab' : '#adb8df';
     for (const point of targets) if (point.distanceTo(source) > .1) this.trail(source, point, color, fire ? 1.4 : .65);
     if (fire) this.sparks(source, '#df9e61', 9, .65, .5); else if (thunder) this.ring(source, '#86bdce', .6); else if (CARD_BY_ID[name]?.kind === 'EQUIPMENT') this.shield(source, '#d3ba83'); else if (name !== 'SLASH') this.ring(source, '#b9bbd6', .65);
@@ -487,6 +624,6 @@ export class CourtyardScene {
     geometries.add(this.cube); for (const geometry of this.sharedGeometries) geometries.add(geometry); for (const material of this.materials.values()) materials.add(material);
     for (const geometry of geometries) geometry.dispose(); for (const material of materials) material.dispose(); for (const texture of this.textures) texture.dispose();
     for (const object of this.scene.children) if (object instanceof THREE.Light && 'shadow' in object) (object as THREE.DirectionalLight).shadow?.dispose();
-    this.renderer?.dispose(); this.renderer?.domElement.remove(); this.players.clear(); this.materials.clear(); this.textures.clear(); this.sharedGeometries.clear(); this.effectGeometry.clear(); this.damageTextures.clear(); this.onLayout = undefined;
+    this.renderer?.dispose(); this.renderer?.domElement.remove(); this.players.clear();this.heroEffects.clear(); this.materials.clear(); this.textures.clear(); this.sharedGeometries.clear(); this.effectGeometry.clear(); this.damageTextures.clear(); this.onLayout = undefined;
   }
 }

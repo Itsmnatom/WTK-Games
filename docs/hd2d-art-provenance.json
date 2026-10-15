@@ -1,0 +1,49 @@
+{
+  "asset": "public/art/heroes-standing-atlas.png",
+  "tool": "built-in image_gen",
+  "created": "2026-10-15",
+  "source": "exec-a8579930-e7cd-4c63-bb55-26f14cda8051.png",
+  "sha256": "1d6f4f957213db127ef0b485a559b0622117a55d6a3a5423f80c72227b848577",
+  "dimensions": [
+    1122,
+    1402
+  ],
+  "alpha": true,
+  "layout": {
+    "columns": 4,
+    "rows": 5,
+    "order": [
+      "CAO_CAO",
+      "LIU_BEI",
+      "SUN_QUAN",
+      "GUAN_YU",
+      "ZHANG_FEI",
+      "ZHAO_YUN",
+      "ZHEN_JI",
+      "LV_BU",
+      "DIAO_CHAN",
+      "SIMA_YI",
+      "ZHUGE_LIANG",
+      "ZHOU_YU",
+      "HUANG_GAI",
+      "ZHANG_LIAO",
+      "GUO_JIA",
+      "HUANG_YUEYING",
+      "GAN_NING",
+      "DA_QIAO",
+      "HUA_TUO",
+      "EMPTY"
+    ]
+  },
+  "inspection": "Visually inspected nineteen distinct full-body figures in catalog order and an empty final cell. PNG alpha was read without modifying the image. Some fine edge pixels remain; alpha testing is used for crisp runtime cutouts. Generation requested transparent gutters; exact padding should not be assumed from the prompt alone.",
+  "prompts": [
+    {
+      "stage": "initial generation",
+      "text": "Use case: stylized-concept. Production game asset: ONE precisely aligned transparent sprite atlas, exactly FOUR columns by FIVE rows, TWENTY equal SQUARE tiles, no gutters, no borders. Nineteen original full-body Three Kingdoms adult hero pixel sprites, last bottom-right tile completely empty transparent. All stand in readable three-quarter front view, same scale, feet aligned near tile bottom with generous transparent margin, entire weapon/body fully inside its tile. Detailed crisp 16-bit HD-2D pixel art, visible square pixels, rich ink navy/jade/cinnabar/antique gold palette, warm rim light, strong individual silhouettes, no realistic painting, no text or numbers or watermark or pedestal or background. Exact reading order: row1 Cao Cao male blue armored warlord beard crimson cloak; Liu Bei male red noble swordsman long ears; Sun Quan male green imperial swordsman; Guan Yu male red-faced long-bearded warrior green robe holding guandao. Row2 Zhang Fei male burly black beard red armor spear; Zhao Yun male silver-armored white-blue lancer; Zhen Ji female blue flowing silk elegant dancer; Lu Bu male gold-black armor red plumes halberd. Row3 Diao Chan female purple-red dancer; Sima Yi male dark blue hooded strategist; Zhuge Liang male jade white scholar feather fan; Zhou Yu male green-white elegant commander sword. Row4 Huang Gai male older scarred green armored warrior; Zhang Liao male blue steel helmet lancer; Guo Jia male young blue-robed scholar folded fan; Huang Yueying female red-brown inventor carrying small wooden mechanism. Row5 Gan Ning male green bandana pirate warrior brass bells; Da Qiao female jade-robed noblewoman silk fan; Hua Tuo male elderly white-bearded physician ochre robes herb staff; EMPTY transparent tile. Strict 4x5 regular tile grid, each hero centered, no overlapping neighboring tiles. Transparent background true alpha."
+    },
+    {
+      "stage": "tile separation revision",
+      "text": "Edit this sprite atlas for correct production slicing. Keep exactly the SAME nineteen character identities, the SAME reading order and crisp pixel-art style, and true transparent alpha. REQUIRED exact uniform 4 columns by 5 rows of SQUARE tiles, 20 slots, last bottom-right slot empty. Recompose and REDUCE EACH complete character so the entire body, every weapon, ribbons, cloak and hair are entirely INSIDE its own cell with at least 12% transparent padding on all FOUR sides. No sprite or weapon may overlap any neighboring tile. Equal full-body scale and baseline per tile, clear transparent gutters within tiles. Especially shorten/reposition Zhao Yun's diagonal spear inside his own row2 col2 tile, and Lu Bu's plumes and Guan Yu's blade must stay inside their cells. Remove stray green chroma halos around Zhen Ji and Da Qiao. No text, borders, new characters, backgrounds, shadows or frames. Do not crop any heads or feet. Preserve the original atlas ordering exactly."
+    }
+  ]
+}

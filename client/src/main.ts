@@ -128,7 +128,7 @@ function renderPlayedCards():void {
   if(!recentPlays.length){setMarkup(container,'<div class="table-seal" aria-hidden="true">三</div><p class="table-empty">สนามการศึก</p>');return;}
   const newest=recentPlays[0],actor=state?.players[newest.playerId];
   const targetNames=newest.targetIds.map(id=>state?.players[id]?.name).filter(Boolean);
-  setMarkup(container,`<div class="played-cards">${recentPlays.slice(0,4).reverse().map((play,index,array)=>{
+  setMarkup(container,`<div class="played-cards">${recentPlays.slice(0,2).reverse().map((play,index,array)=>{
     const latest=index===array.length-1,player=state?.players[play.playerId],extra=`data-play="${esc(play.key)}"`;
     const face=play.kind==='SKILL'||play.skillId?`<button type="button" class="skill-play" data-action="public-play" ${extra} aria-label="ดูสกิล ${esc(skillNames[play.skillId||'']||play.cardName)}">${portrait(player?.character||'')}<span>${esc(skillNames[play.skillId||'']||'สกิลขุนพล')}</span></button>`:publicCardMarkup(play.cardName,play.card,extra);
     return `<div class="played-entry ${latest?'newest':'previous'}" style="--play-order:${index}">${face}</div>`;
