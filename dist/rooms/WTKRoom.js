@@ -46,7 +46,7 @@ class WTKRoom extends colyseus_1.Room {
             roomId: this.roomId,
             status: 'LOBBY',
             mode: options.mode || 'ONLINE',
-            ruleset: options.ruleset === 'EXPERIMENTAL' ? 'EXPERIMENTAL' : 'STANDARD',
+            ruleset: 'EXPERIMENTAL',
             spectatorChat: [], turnNumber: 0,
             hostSocketId: null,
             turnOrder: [],

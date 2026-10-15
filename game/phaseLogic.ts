@@ -111,7 +111,7 @@ function startDraftPhase(room: GameRoom): void {
   room.status = 'DRAFTING' as any;
   room.draftDeadline = Date.now() + RULES.draftMs;
   Object.values(room.players).forEach((player: Player) => {
-    const availableHeroes = experimental(room) ? allHeroes : allHeroes.slice(0,13);
+    const availableHeroes = allHeroes;
     let choices: HeroChoice[];
     if (player.role === 'LORD') {
       const lordIds = ['CAO_CAO', 'LIU_BEI', 'SUN_QUAN'];
@@ -465,7 +465,7 @@ function getSanitizedRoomState(room: GameRoom, targetPlayerId: string): any {
     roomId: room.roomId,
     status: room.status,
     mode: room.mode,
-    ruleset: room.ruleset || 'STANDARD',
+    ruleset: room.ruleset || 'EXPERIMENTAL',
     experimentSummary: balanceSummary(room),
     strategyDeadline: room.strategyDeadline || null,
     strategiesRevealed: !!room.strategiesRevealed,

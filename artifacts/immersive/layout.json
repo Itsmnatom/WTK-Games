@@ -1,0 +1,3958 @@
+[
+  {
+    "config": {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900,
+      "seats": 6
+    },
+    "mode": "play",
+    "count": 4,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "documentWidth": 1440,
+      "stage": {
+        "x": 0,
+        "y": 64,
+        "width": 1440,
+        "height": 660
+      },
+      "hand": {
+        "x": 0,
+        "y": 724,
+        "width": 1440,
+        "height": 176
+      },
+      "actions": {
+        "x": 1112,
+        "y": 728,
+        "width": 310,
+        "height": 164
+      },
+      "navigation": {
+        "x": 18,
+        "y": 12,
+        "width": 1404,
+        "height": 46
+      },
+      "handScrollWidth": 1076,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 95.59375,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p2",
+          "x": 95.59375,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p3",
+          "x": 650,
+          "y": 218.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p4",
+          "x": 1204.390625,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p5",
+          "x": 1204.390625,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "catalog",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 84,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 49,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 54,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 11.4249267578125,
+        "bottom": 2.9884033203125
+      },
+      {
+        "top": 10.39544677734375,
+        "bottom": 7.6802978515625
+      },
+      {
+        "top": 10.39544677734375,
+        "bottom": 7.6802978515625
+      },
+      {
+        "top": 11.4249267578125,
+        "bottom": 2.9884033203125
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900,
+      "seats": 6
+    },
+    "mode": "play",
+    "count": 8,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "documentWidth": 1440,
+      "stage": {
+        "x": 0,
+        "y": 64,
+        "width": 1440,
+        "height": 660
+      },
+      "hand": {
+        "x": 0,
+        "y": 724,
+        "width": 1440,
+        "height": 176
+      },
+      "actions": {
+        "x": 1112,
+        "y": 728,
+        "width": 310,
+        "height": 164
+      },
+      "navigation": {
+        "x": 18,
+        "y": 12,
+        "width": 1404,
+        "height": 46
+      },
+      "handScrollWidth": 1076,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 95.59375,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p2",
+          "x": 95.59375,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p3",
+          "x": 650,
+          "y": 218.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p4",
+          "x": 1204.390625,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p5",
+          "x": 1204.390625,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "catalog",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 84,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 49,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 54,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 11.4249267578125,
+        "bottom": 2.9884033203125
+      },
+      {
+        "top": 10.94464111328125,
+        "bottom": 5.007568359375
+      },
+      {
+        "top": 10.52301025390625,
+        "bottom": 7.01422119140625
+      },
+      {
+        "top": 10.1597900390625,
+        "bottom": 9.008056640625
+      },
+      {
+        "top": 10.1597900390625,
+        "bottom": 9.008056640625
+      },
+      {
+        "top": 10.52301025390625,
+        "bottom": 7.01422119140625
+      },
+      {
+        "top": 10.94464111328125,
+        "bottom": 5.007568359375
+      },
+      {
+        "top": 11.4249267578125,
+        "bottom": 2.9884033203125
+      }
+    ],
+    "interaction": {
+      "skillReused": true,
+      "selectedFits": true,
+      "inspectorOpen": true
+    },
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900,
+      "seats": 6
+    },
+    "mode": "play",
+    "count": 14,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "documentWidth": 1440,
+      "stage": {
+        "x": 0,
+        "y": 64,
+        "width": 1440,
+        "height": 660
+      },
+      "hand": {
+        "x": 0,
+        "y": 724,
+        "width": 1440,
+        "height": 176
+      },
+      "actions": {
+        "x": 1112,
+        "y": 728,
+        "width": 310,
+        "height": 164
+      },
+      "navigation": {
+        "x": 18,
+        "y": 12,
+        "width": 1404,
+        "height": 46
+      },
+      "handScrollWidth": 1076,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 95.59375,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p2",
+          "x": 95.59375,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p3",
+          "x": 650,
+          "y": 218.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p4",
+          "x": 1204.390625,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p5",
+          "x": 1204.390625,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "catalog",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 84,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 49,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 54,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 6,
+        "bottom": 14
+      },
+      {
+        "top": 11.15899658203125,
+        "bottom": 4.0771484375
+      },
+      {
+        "top": 10.91009521484375,
+        "bottom": 5.162353515625
+      },
+      {
+        "top": 10.67822265625,
+        "bottom": 6.24395751953125
+      },
+      {
+        "top": 10.46331787109375,
+        "bottom": 7.32177734375
+      },
+      {
+        "top": 10.265380859375,
+        "bottom": 8.39593505859375
+      },
+      {
+        "top": 10.084228515625,
+        "bottom": 9.46624755859375
+      },
+      {
+        "top": 10.084228515625,
+        "bottom": 9.46624755859375
+      },
+      {
+        "top": 10.265380859375,
+        "bottom": 8.39593505859375
+      },
+      {
+        "top": 10.46331787109375,
+        "bottom": 7.32177734375
+      },
+      {
+        "top": 10.67822265625,
+        "bottom": 6.24395751953125
+      },
+      {
+        "top": 10.91009521484375,
+        "bottom": 5.162353515625
+      },
+      {
+        "top": 11.15899658203125,
+        "bottom": 4.0771484375
+      },
+      {
+        "top": 11.4249267578125,
+        "bottom": 2.9884033203125
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900,
+      "seats": 6
+    },
+    "mode": "waiting",
+    "count": 4,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "documentWidth": 1440,
+      "stage": {
+        "x": 0,
+        "y": 64,
+        "width": 1440,
+        "height": 660
+      },
+      "hand": {
+        "x": 0,
+        "y": 724,
+        "width": 1440,
+        "height": 176
+      },
+      "actions": {
+        "x": 1112,
+        "y": 829.109375,
+        "width": 310,
+        "height": 62.890625
+      },
+      "navigation": {
+        "x": 18,
+        "y": 12,
+        "width": 1404,
+        "height": 46
+      },
+      "handScrollWidth": 1076,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 95.59375,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p2",
+          "x": 95.59375,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p3",
+          "x": 650,
+          "y": 218.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p4",
+          "x": 1204.390625,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p5",
+          "x": 1204.390625,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "catalog",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 6,
+        "bottom": 14
+      },
+      {
+        "top": 10.39544677734375,
+        "bottom": 7.6802978515625
+      },
+      {
+        "top": 10.39544677734375,
+        "bottom": 7.6802978515625
+      },
+      {
+        "top": 11.4249267578125,
+        "bottom": 2.9884033203125
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900,
+      "seats": 6
+    },
+    "mode": "reaction",
+    "count": 8,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "documentWidth": 1440,
+      "stage": {
+        "x": 0,
+        "y": 64,
+        "width": 1440,
+        "height": 660
+      },
+      "hand": {
+        "x": 0,
+        "y": 724,
+        "width": 1440,
+        "height": 176
+      },
+      "actions": {
+        "x": 1112,
+        "y": 728,
+        "width": 310,
+        "height": 164
+      },
+      "navigation": {
+        "x": 18,
+        "y": 12,
+        "width": 1404,
+        "height": 46
+      },
+      "handScrollWidth": 1076,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 95.59375,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p2",
+          "x": 95.59375,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p3",
+          "x": 650,
+          "y": 218.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p4",
+          "x": 1204.390625,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p5",
+          "x": 1204.390625,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "catalog",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "respond",
+          "visible": true,
+          "width": 58,
+          "height": 44
+        },
+        {
+          "action": "pass",
+          "visible": true,
+          "width": 64,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 11.4249267578125,
+        "bottom": 2.9884033203125
+      },
+      {
+        "top": 10.94464111328125,
+        "bottom": 5.007568359375
+      },
+      {
+        "top": 10.52301025390625,
+        "bottom": 7.01422119140625
+      },
+      {
+        "top": 10.1597900390625,
+        "bottom": 9.008056640625
+      },
+      {
+        "top": 10.1597900390625,
+        "bottom": 9.008056640625
+      },
+      {
+        "top": 10.52301025390625,
+        "bottom": 7.01422119140625
+      },
+      {
+        "top": 10.94464111328125,
+        "bottom": 5.007568359375
+      },
+      {
+        "top": 11.4249267578125,
+        "bottom": 2.9884033203125
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900,
+      "seats": 6
+    },
+    "mode": "guanxing",
+    "count": 1,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "documentWidth": 1440,
+      "stage": {
+        "x": 0,
+        "y": 64,
+        "width": 1440,
+        "height": 530
+      },
+      "hand": {
+        "x": 0,
+        "y": 594,
+        "width": 1440,
+        "height": 306
+      },
+      "actions": {
+        "x": 382.5,
+        "y": 598,
+        "width": 1039.5,
+        "height": 294
+      },
+      "navigation": {
+        "x": 18,
+        "y": 12,
+        "width": 1404,
+        "height": 46
+      },
+      "handScrollWidth": 347,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 95.59375,
+          "y": 404,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p2",
+          "x": 95.59375,
+          "y": 213.1875,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p3",
+          "x": 650,
+          "y": 206.6875,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p4",
+          "x": 1204.390625,
+          "y": 213.1875,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p5",
+          "x": 1204.390625,
+          "y": 404,
+          "width": 140,
+          "height": 62
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "catalog",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "guan-confirm",
+          "visible": true,
+          "width": 69,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 140,
+        "bottom": 10
+      }
+    ],
+    "interaction": null,
+    "workspace": {
+      "expanded": true,
+      "cardCount": 5,
+      "verticalFit": true,
+      "confirmVisible": true,
+      "moveToBottom": true
+    }
+  },
+  {
+    "config": {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900,
+      "seats": 6
+    },
+    "mode": "waiting",
+    "count": 1,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        1440,
+        900
+      ],
+      "documentWidth": 1440,
+      "stage": {
+        "x": 0,
+        "y": 64,
+        "width": 1440,
+        "height": 660
+      },
+      "hand": {
+        "x": 0,
+        "y": 724,
+        "width": 1440,
+        "height": 176
+      },
+      "actions": {
+        "x": 1112,
+        "y": 829.109375,
+        "width": 310,
+        "height": 62.890625
+      },
+      "navigation": {
+        "x": 18,
+        "y": 12,
+        "width": 1404,
+        "height": 46
+      },
+      "handScrollWidth": 1076,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 95.59375,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p2",
+          "x": 95.59375,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p3",
+          "x": 650,
+          "y": 218.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p4",
+          "x": 1204.390625,
+          "y": 257.390625,
+          "width": 140,
+          "height": 62
+        },
+        {
+          "id": "p5",
+          "x": 1204.390625,
+          "y": 495,
+          "width": 140,
+          "height": 62
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "catalog",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 10,
+        "bottom": 10
+      }
+    ],
+    "interaction": null,
+    "workspace": {
+      "collapsed": true
+    }
+  },
+  {
+    "config": {
+      "id": "portrait",
+      "width": 390,
+      "height": 844,
+      "seats": 10
+    },
+    "mode": "play",
+    "count": 4,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        390,
+        844
+      ],
+      "documentWidth": 390,
+      "stage": {
+        "x": 0,
+        "y": 92,
+        "width": 390,
+        "height": 462
+      },
+      "hand": {
+        "x": 0,
+        "y": 605,
+        "width": 390,
+        "height": 239
+      },
+      "actions": {
+        "x": 8,
+        "y": 605,
+        "width": 374,
+        "height": 60
+      },
+      "navigation": {
+        "x": 8,
+        "y": 6,
+        "width": 374,
+        "height": 44
+      },
+      "handScrollWidth": 374,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 5.1875,
+          "y": 397.125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p2",
+          "x": 5.1875,
+          "y": 300.109375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p3",
+          "x": 5.1875,
+          "y": 203.09375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p4",
+          "x": 16.890625,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p5",
+          "x": 149.5,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p6",
+          "x": 282.09375,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p7",
+          "x": 293.796875,
+          "y": 203.09375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p8",
+          "x": 293.796875,
+          "y": 300.109375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p9",
+          "x": 293.796875,
+          "y": 397.125,
+          "width": 91,
+          "height": 55
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 77,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 42,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 47,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 18.6817626953125,
+        "bottom": 3.27252197265625
+      },
+      {
+        "top": 17.486083984375,
+        "bottom": 7.77392578125
+      },
+      {
+        "top": 17.486083984375,
+        "bottom": 7.77392578125
+      },
+      {
+        "top": 18.6817626953125,
+        "bottom": 3.27252197265625
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "portrait",
+      "width": 390,
+      "height": 844,
+      "seats": 10
+    },
+    "mode": "play",
+    "count": 8,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        390,
+        844
+      ],
+      "documentWidth": 390,
+      "stage": {
+        "x": 0,
+        "y": 92,
+        "width": 390,
+        "height": 462
+      },
+      "hand": {
+        "x": 0,
+        "y": 605,
+        "width": 390,
+        "height": 239
+      },
+      "actions": {
+        "x": 8,
+        "y": 605,
+        "width": 374,
+        "height": 60
+      },
+      "navigation": {
+        "x": 8,
+        "y": 6,
+        "width": 374,
+        "height": 44
+      },
+      "handScrollWidth": 450,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 5.1875,
+          "y": 397.125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p2",
+          "x": 5.1875,
+          "y": 300.109375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p3",
+          "x": 5.1875,
+          "y": 203.09375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p4",
+          "x": 16.890625,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p5",
+          "x": 149.5,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p6",
+          "x": 282.09375,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p7",
+          "x": 293.796875,
+          "y": 203.09375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p8",
+          "x": 293.796875,
+          "y": 300.109375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p9",
+          "x": 293.796875,
+          "y": 397.125,
+          "width": 91,
+          "height": 55
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 77,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 42,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 47,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 18.6817626953125,
+        "bottom": 3.27252197265625
+      },
+      {
+        "top": 18.1326904296875,
+        "bottom": 5.20953369140625
+      },
+      {
+        "top": 17.63861083984375,
+        "bottom": 7.13482666015625
+      },
+      {
+        "top": 17.19921875,
+        "bottom": 9.04803466796875
+      },
+      {
+        "top": 17.19921875,
+        "bottom": 9.04803466796875
+      },
+      {
+        "top": 17.63861083984375,
+        "bottom": 7.13482666015625
+      },
+      {
+        "top": 18.1326904296875,
+        "bottom": 5.20953369140625
+      },
+      {
+        "top": 18.6817626953125,
+        "bottom": 3.27252197265625
+      }
+    ],
+    "interaction": {
+      "skillReused": true,
+      "selectedFits": true,
+      "inspectorOpen": true
+    },
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "portrait",
+      "width": 390,
+      "height": 844,
+      "seats": 10
+    },
+    "mode": "play",
+    "count": 14,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        390,
+        844
+      ],
+      "documentWidth": 390,
+      "stage": {
+        "x": 0,
+        "y": 92,
+        "width": 390,
+        "height": 462
+      },
+      "hand": {
+        "x": 0,
+        "y": 605,
+        "width": 390,
+        "height": 239
+      },
+      "actions": {
+        "x": 8,
+        "y": 605,
+        "width": 374,
+        "height": 60
+      },
+      "navigation": {
+        "x": 8,
+        "y": 6,
+        "width": 374,
+        "height": 44
+      },
+      "handScrollWidth": 738,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 5.1875,
+          "y": 397.125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p2",
+          "x": 5.1875,
+          "y": 300.109375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p3",
+          "x": 5.1875,
+          "y": 203.09375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p4",
+          "x": 16.890625,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p5",
+          "x": 149.5,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p6",
+          "x": 282.09375,
+          "y": 99.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p7",
+          "x": 293.796875,
+          "y": 203.09375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p8",
+          "x": 293.796875,
+          "y": 300.109375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p9",
+          "x": 293.796875,
+          "y": 397.125,
+          "width": 91,
+          "height": 55
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 77,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 42,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 47,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 13,
+        "bottom": 14
+      },
+      {
+        "top": 18.3792724609375,
+        "bottom": 4.3170166015625
+      },
+      {
+        "top": 18.09271240234375,
+        "bottom": 5.35809326171875
+      },
+      {
+        "top": 17.8221435546875,
+        "bottom": 6.395751953125
+      },
+      {
+        "top": 17.56744384765625,
+        "bottom": 7.429931640625
+      },
+      {
+        "top": 17.32861328125,
+        "bottom": 8.46063232421875
+      },
+      {
+        "top": 17.1055908203125,
+        "bottom": 9.48779296875
+      },
+      {
+        "top": 17.1055908203125,
+        "bottom": 9.48779296875
+      },
+      {
+        "top": 17.32861328125,
+        "bottom": 8.46063232421875
+      },
+      {
+        "top": 17.56744384765625,
+        "bottom": 7.429931640625
+      },
+      {
+        "top": 17.8221435546875,
+        "bottom": 6.395751953125
+      },
+      {
+        "top": 18.09271240234375,
+        "bottom": 5.35809326171875
+      },
+      {
+        "top": 18.3792724609375,
+        "bottom": 4.3170166015625
+      },
+      {
+        "top": 18.6817626953125,
+        "bottom": 3.27252197265625
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "portrait",
+      "width": 390,
+      "height": 844,
+      "seats": 10
+    },
+    "mode": "waiting",
+    "count": 4,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        390,
+        844
+      ],
+      "documentWidth": 390,
+      "stage": {
+        "x": 0,
+        "y": 92,
+        "width": 390,
+        "height": 478
+      },
+      "hand": {
+        "x": 0,
+        "y": 621,
+        "width": 390,
+        "height": 223
+      },
+      "actions": {
+        "x": 8,
+        "y": 621,
+        "width": 374,
+        "height": 44
+      },
+      "navigation": {
+        "x": 8,
+        "y": 6,
+        "width": 374,
+        "height": 44
+      },
+      "handScrollWidth": 374,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 5.1875,
+          "y": 408.65625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p2",
+          "x": 5.1875,
+          "y": 308.265625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p3",
+          "x": 5.1875,
+          "y": 207.890625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p4",
+          "x": 16.890625,
+          "y": 100.34375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p5",
+          "x": 149.5,
+          "y": 100.34375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p6",
+          "x": 282.09375,
+          "y": 100.34375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p7",
+          "x": 293.796875,
+          "y": 207.890625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p8",
+          "x": 293.796875,
+          "y": 308.265625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p9",
+          "x": 293.796875,
+          "y": 408.65625,
+          "width": 91,
+          "height": 55
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 13,
+        "bottom": 14
+      },
+      {
+        "top": 17.486083984375,
+        "bottom": 7.77392578125
+      },
+      {
+        "top": 17.486083984375,
+        "bottom": 7.77392578125
+      },
+      {
+        "top": 18.6817626953125,
+        "bottom": 3.27252197265625
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "portrait",
+      "width": 390,
+      "height": 844,
+      "seats": 10
+    },
+    "mode": "reaction",
+    "count": 8,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        390,
+        844
+      ],
+      "documentWidth": 390,
+      "stage": {
+        "x": 0,
+        "y": 92,
+        "width": 390,
+        "height": 426.125
+      },
+      "hand": {
+        "x": 0,
+        "y": 569.125,
+        "width": 390,
+        "height": 274.875
+      },
+      "actions": {
+        "x": 8,
+        "y": 569.125,
+        "width": 374,
+        "height": 95.875
+      },
+      "navigation": {
+        "x": 8,
+        "y": 6,
+        "width": 374,
+        "height": 44
+      },
+      "handScrollWidth": 450,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 5.1875,
+          "y": 371.296875,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p2",
+          "x": 5.1875,
+          "y": 281.8125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p3",
+          "x": 5.1875,
+          "y": 192.328125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p4",
+          "x": 16.890625,
+          "y": 96.453125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p5",
+          "x": 149.5,
+          "y": 96.453125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p6",
+          "x": 282.09375,
+          "y": 96.453125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p7",
+          "x": 293.796875,
+          "y": 192.328125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p8",
+          "x": 293.796875,
+          "y": 281.8125,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p9",
+          "x": 293.796875,
+          "y": 371.296875,
+          "width": 91,
+          "height": 55
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "respond",
+          "visible": true,
+          "width": 50,
+          "height": 44
+        },
+        {
+          "action": "pass",
+          "visible": true,
+          "width": 55,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 18.6817626953125,
+        "bottom": 3.27252197265625
+      },
+      {
+        "top": 18.1326904296875,
+        "bottom": 5.20953369140625
+      },
+      {
+        "top": 17.63861083984375,
+        "bottom": 7.13482666015625
+      },
+      {
+        "top": 17.19921875,
+        "bottom": 9.04803466796875
+      },
+      {
+        "top": 17.19921875,
+        "bottom": 9.04803466796875
+      },
+      {
+        "top": 17.63861083984375,
+        "bottom": 7.13482666015625
+      },
+      {
+        "top": 18.1326904296875,
+        "bottom": 5.20953369140625
+      },
+      {
+        "top": 18.6817626953125,
+        "bottom": 3.27252197265625
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "portrait",
+      "width": 390,
+      "height": 844,
+      "seats": 10
+    },
+    "mode": "guanxing",
+    "count": 1,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        390,
+        844
+      ],
+      "documentWidth": 390,
+      "stage": {
+        "x": 0,
+        "y": 92,
+        "width": 390,
+        "height": 209.125
+      },
+      "hand": {
+        "x": 0,
+        "y": 352.125,
+        "width": 390,
+        "height": 491.875
+      },
+      "actions": {
+        "x": 8,
+        "y": 352.125,
+        "width": 374,
+        "height": 312.875
+      },
+      "navigation": {
+        "x": 8,
+        "y": 6,
+        "width": 374,
+        "height": 44
+      },
+      "handScrollWidth": 374,
+      "seats": [
+        {
+          "id": "p1",
+          "x": -8.453125,
+          "y": 235.96875,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p2",
+          "x": -8.453125,
+          "y": 169.0625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p3",
+          "x": -8.453125,
+          "y": 102.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p4",
+          "x": 79.296875,
+          "y": 89.5,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p5",
+          "x": 149.5,
+          "y": 89.5,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p6",
+          "x": 219.6875,
+          "y": 89.5,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p7",
+          "x": 307.4375,
+          "y": 102.140625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p8",
+          "x": 307.4375,
+          "y": 169.0625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p9",
+          "x": 307.4375,
+          "y": 235.96875,
+          "width": 91,
+          "height": 55
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "guan-confirm",
+          "visible": true,
+          "width": 60,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 92,
+          "height": 126
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 17,
+        "bottom": 10
+      }
+    ],
+    "interaction": null,
+    "workspace": {
+      "expanded": true,
+      "cardCount": 5,
+      "verticalFit": true,
+      "confirmVisible": true,
+      "moveToBottom": true
+    }
+  },
+  {
+    "config": {
+      "id": "portrait",
+      "width": 390,
+      "height": 844,
+      "seats": 10
+    },
+    "mode": "waiting",
+    "count": 1,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        390,
+        844
+      ],
+      "documentWidth": 390,
+      "stage": {
+        "x": 0,
+        "y": 92,
+        "width": 390,
+        "height": 478
+      },
+      "hand": {
+        "x": 0,
+        "y": 621,
+        "width": 390,
+        "height": 223
+      },
+      "actions": {
+        "x": 8,
+        "y": 621,
+        "width": 374,
+        "height": 44
+      },
+      "navigation": {
+        "x": 8,
+        "y": 6,
+        "width": 374,
+        "height": 44
+      },
+      "handScrollWidth": 374,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 5.1875,
+          "y": 408.65625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p2",
+          "x": 5.1875,
+          "y": 308.265625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p3",
+          "x": 5.1875,
+          "y": 207.890625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p4",
+          "x": 16.890625,
+          "y": 100.34375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p5",
+          "x": 149.5,
+          "y": 100.34375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p6",
+          "x": 282.09375,
+          "y": 100.34375,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p7",
+          "x": 293.796875,
+          "y": 207.890625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p8",
+          "x": 293.796875,
+          "y": 308.265625,
+          "width": 91,
+          "height": 55
+        },
+        {
+          "id": "p9",
+          "x": 293.796875,
+          "y": 408.65625,
+          "width": 91,
+          "height": 55
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 17,
+        "bottom": 10
+      }
+    ],
+    "interaction": null,
+    "workspace": {
+      "collapsed": true
+    }
+  },
+  {
+    "config": {
+      "id": "landscape",
+      "width": 844,
+      "height": 390,
+      "seats": 10
+    },
+    "mode": "play",
+    "count": 4,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        844,
+        390
+      ],
+      "documentWidth": 844,
+      "stage": {
+        "x": 0,
+        "y": 48,
+        "width": 844,
+        "height": 228
+      },
+      "hand": {
+        "x": 0,
+        "y": 276,
+        "width": 844,
+        "height": 114
+      },
+      "actions": {
+        "x": 554,
+        "y": 276,
+        "width": 280,
+        "height": 110
+      },
+      "navigation": {
+        "x": 10,
+        "y": 3,
+        "width": 824,
+        "height": 44
+      },
+      "handScrollWidth": 534,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 35.171875,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p2",
+          "x": 35.171875,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p3",
+          "x": 35.171875,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p4",
+          "x": 225.078125,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p5",
+          "x": 377,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p6",
+          "x": 528.90625,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p7",
+          "x": 718.8125,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p8",
+          "x": 718.8125,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p9",
+          "x": 718.8125,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 75,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 40,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 45,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 18.482025146484375,
+        "bottom": 4.2890625
+      },
+      {
+        "top": 18.1256103515625,
+        "bottom": 6.770843505859375
+      },
+      {
+        "top": 18.1256103515625,
+        "bottom": 6.770843505859375
+      },
+      {
+        "top": 18.482025146484375,
+        "bottom": 4.2890625
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "landscape",
+      "width": 844,
+      "height": 390,
+      "seats": 10
+    },
+    "mode": "play",
+    "count": 8,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        844,
+        390
+      ],
+      "documentWidth": 844,
+      "stage": {
+        "x": 0,
+        "y": 48,
+        "width": 844,
+        "height": 228
+      },
+      "hand": {
+        "x": 0,
+        "y": 276,
+        "width": 844,
+        "height": 114
+      },
+      "actions": {
+        "x": 554,
+        "y": 276,
+        "width": 280,
+        "height": 110
+      },
+      "navigation": {
+        "x": 10,
+        "y": 3,
+        "width": 824,
+        "height": 44
+      },
+      "handScrollWidth": 534,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 35.171875,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p2",
+          "x": 35.171875,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p3",
+          "x": 35.171875,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p4",
+          "x": 225.078125,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p5",
+          "x": 377,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p6",
+          "x": 528.90625,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p7",
+          "x": 718.8125,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p8",
+          "x": 718.8125,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p9",
+          "x": 718.8125,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 75,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 40,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 45,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 18.482025146484375,
+        "bottom": 4.2890625
+      },
+      {
+        "top": 18.312042236328125,
+        "bottom": 5.3564453125
+      },
+      {
+        "top": 18.16790771484375,
+        "bottom": 6.418212890625
+      },
+      {
+        "top": 18.049560546875,
+        "bottom": 7.47418212890625
+      },
+      {
+        "top": 18.049560546875,
+        "bottom": 7.47418212890625
+      },
+      {
+        "top": 18.16790771484375,
+        "bottom": 6.418212890625
+      },
+      {
+        "top": 18.312042236328125,
+        "bottom": 5.3564453125
+      },
+      {
+        "top": 18.482025146484375,
+        "bottom": 4.2890625
+      }
+    ],
+    "interaction": {
+      "skillReused": true,
+      "selectedFits": true,
+      "inspectorOpen": true
+    },
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "landscape",
+      "width": 844,
+      "height": 390,
+      "seats": 10
+    },
+    "mode": "play",
+    "count": 14,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        844,
+        390
+      ],
+      "documentWidth": 844,
+      "stage": {
+        "x": 0,
+        "y": 48,
+        "width": 844,
+        "height": 228
+      },
+      "hand": {
+        "x": 0,
+        "y": 276,
+        "width": 844,
+        "height": 114
+      },
+      "actions": {
+        "x": 554,
+        "y": 276,
+        "width": 280,
+        "height": 110
+      },
+      "navigation": {
+        "x": 10,
+        "y": 3,
+        "width": 824,
+        "height": 44
+      },
+      "handScrollWidth": 726,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 35.171875,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p2",
+          "x": 35.171875,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p3",
+          "x": 35.171875,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p4",
+          "x": 225.078125,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p5",
+          "x": 377,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p6",
+          "x": 528.90625,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p7",
+          "x": 718.8125,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p8",
+          "x": 718.8125,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p9",
+          "x": 718.8125,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "submit",
+          "visible": true,
+          "width": 75,
+          "height": 44
+        },
+        {
+          "action": "cancel",
+          "visible": true,
+          "width": 40,
+          "height": 44
+        },
+        {
+          "action": "end",
+          "visible": true,
+          "width": 45,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 12,
+        "bottom": 14
+      },
+      {
+        "top": 18.387298583984375,
+        "bottom": 4.864501953125
+      },
+      {
+        "top": 18.300048828125,
+        "bottom": 5.438323974609375
+      },
+      {
+        "top": 18.220306396484375,
+        "bottom": 6.010498046875
+      },
+      {
+        "top": 18.148040771484375,
+        "bottom": 6.581024169921875
+      },
+      {
+        "top": 18.083251953125,
+        "bottom": 7.14990234375
+      },
+      {
+        "top": 18.02587890625,
+        "bottom": 7.717041015625
+      },
+      {
+        "top": 18.02587890625,
+        "bottom": 7.717041015625
+      },
+      {
+        "top": 18.083251953125,
+        "bottom": 7.14990234375
+      },
+      {
+        "top": 18.148040771484375,
+        "bottom": 6.581024169921875
+      },
+      {
+        "top": 18.220306396484375,
+        "bottom": 6.010498046875
+      },
+      {
+        "top": 18.300048828125,
+        "bottom": 5.438323974609375
+      },
+      {
+        "top": 18.387298583984375,
+        "bottom": 4.864501953125
+      },
+      {
+        "top": 18.482025146484375,
+        "bottom": 4.2890625
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "landscape",
+      "width": 844,
+      "height": 390,
+      "seats": 10
+    },
+    "mode": "waiting",
+    "count": 4,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        844,
+        390
+      ],
+      "documentWidth": 844,
+      "stage": {
+        "x": 0,
+        "y": 48,
+        "width": 844,
+        "height": 228
+      },
+      "hand": {
+        "x": 0,
+        "y": 276,
+        "width": 844,
+        "height": 114
+      },
+      "actions": {
+        "x": 554,
+        "y": 342,
+        "width": 280,
+        "height": 44
+      },
+      "navigation": {
+        "x": 10,
+        "y": 3,
+        "width": 824,
+        "height": 44
+      },
+      "handScrollWidth": 534,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 35.171875,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p2",
+          "x": 35.171875,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p3",
+          "x": 35.171875,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p4",
+          "x": 225.078125,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p5",
+          "x": 377,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p6",
+          "x": 528.90625,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p7",
+          "x": 718.8125,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p8",
+          "x": 718.8125,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p9",
+          "x": 718.8125,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 12,
+        "bottom": 14
+      },
+      {
+        "top": 18.1256103515625,
+        "bottom": 6.770843505859375
+      },
+      {
+        "top": 18.1256103515625,
+        "bottom": 6.770843505859375
+      },
+      {
+        "top": 18.482025146484375,
+        "bottom": 4.2890625
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "landscape",
+      "width": 844,
+      "height": 390,
+      "seats": 10
+    },
+    "mode": "reaction",
+    "count": 8,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        844,
+        390
+      ],
+      "documentWidth": 844,
+      "stage": {
+        "x": 0,
+        "y": 48,
+        "width": 844,
+        "height": 228
+      },
+      "hand": {
+        "x": 0,
+        "y": 276,
+        "width": 844,
+        "height": 114
+      },
+      "actions": {
+        "x": 554,
+        "y": 276,
+        "width": 280,
+        "height": 110
+      },
+      "navigation": {
+        "x": 10,
+        "y": 3,
+        "width": 824,
+        "height": 44
+      },
+      "handScrollWidth": 534,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 35.171875,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p2",
+          "x": 35.171875,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p3",
+          "x": 35.171875,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p4",
+          "x": 225.078125,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p5",
+          "x": 377,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p6",
+          "x": 528.90625,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p7",
+          "x": 718.8125,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p8",
+          "x": 718.8125,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p9",
+          "x": 718.8125,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "respond",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "pass",
+          "visible": true,
+          "width": 53,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 18.482025146484375,
+        "bottom": 4.2890625
+      },
+      {
+        "top": 18.312042236328125,
+        "bottom": 5.3564453125
+      },
+      {
+        "top": 18.16790771484375,
+        "bottom": 6.418212890625
+      },
+      {
+        "top": 18.049560546875,
+        "bottom": 7.47418212890625
+      },
+      {
+        "top": 18.049560546875,
+        "bottom": 7.47418212890625
+      },
+      {
+        "top": 18.16790771484375,
+        "bottom": 6.418212890625
+      },
+      {
+        "top": 18.312042236328125,
+        "bottom": 5.3564453125
+      },
+      {
+        "top": 18.482025146484375,
+        "bottom": 4.2890625
+      }
+    ],
+    "interaction": null,
+    "workspace": null
+  },
+  {
+    "config": {
+      "id": "landscape",
+      "width": 844,
+      "height": 390,
+      "seats": 10
+    },
+    "mode": "guanxing",
+    "count": 1,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        844,
+        390
+      ],
+      "documentWidth": 844,
+      "stage": {
+        "x": 0,
+        "y": 48,
+        "width": 844,
+        "height": 122
+      },
+      "hand": {
+        "x": 0,
+        "y": 170,
+        "width": 844,
+        "height": 220
+      },
+      "actions": {
+        "x": 182.796875,
+        "y": 170,
+        "width": 651.203125,
+        "height": 216
+      },
+      "navigation": {
+        "x": 10,
+        "y": 3,
+        "width": 824,
+        "height": 44
+      },
+      "handScrollWidth": 163,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 35.171875,
+          "y": 125.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p2",
+          "x": 35.171875,
+          "y": 86,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p3",
+          "x": 35.171875,
+          "y": 46.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p4",
+          "x": 225.078125,
+          "y": 46.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p5",
+          "x": 377,
+          "y": 46.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p6",
+          "x": 528.90625,
+          "y": 46.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p7",
+          "x": 718.8125,
+          "y": 46.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p8",
+          "x": 718.8125,
+          "y": 86,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p9",
+          "x": 718.8125,
+          "y": 125.03125,
+          "width": 90,
+          "height": 46
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "guan-confirm",
+          "visible": true,
+          "width": 58,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 64,
+          "height": 88
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 64,
+          "height": 88
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 64,
+          "height": 88
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 64,
+          "height": 88
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-select",
+          "visible": true,
+          "width": 64,
+          "height": 88
+        },
+        {
+          "action": "guan-up",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        },
+        {
+          "action": "guan-bottom",
+          "visible": true,
+          "width": 48,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 124,
+        "bottom": 8
+      }
+    ],
+    "interaction": null,
+    "workspace": {
+      "expanded": true,
+      "cardCount": 5,
+      "verticalFit": true,
+      "confirmVisible": true,
+      "moveToBottom": true
+    }
+  },
+  {
+    "config": {
+      "id": "landscape",
+      "width": 844,
+      "height": 390,
+      "seats": 10
+    },
+    "mode": "waiting",
+    "count": 1,
+    "errors": [],
+    "layout": {
+      "viewport": [
+        844,
+        390
+      ],
+      "documentWidth": 844,
+      "stage": {
+        "x": 0,
+        "y": 48,
+        "width": 844,
+        "height": 228
+      },
+      "hand": {
+        "x": 0,
+        "y": 276,
+        "width": 844,
+        "height": 114
+      },
+      "actions": {
+        "x": 554,
+        "y": 342,
+        "width": 280,
+        "height": 44
+      },
+      "navigation": {
+        "x": 10,
+        "y": 3,
+        "width": 824,
+        "height": 44
+      },
+      "handScrollWidth": 534,
+      "seats": [
+        {
+          "id": "p1",
+          "x": 35.171875,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p2",
+          "x": 35.171875,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p3",
+          "x": 35.171875,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p4",
+          "x": 225.078125,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p5",
+          "x": 377,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p6",
+          "x": 528.90625,
+          "y": 50,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p7",
+          "x": 718.8125,
+          "y": 66.03125,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p8",
+          "x": 718.8125,
+          "y": 139,
+          "width": 90,
+          "height": 46
+        },
+        {
+          "id": "p9",
+          "x": 718.8125,
+          "y": 211.953125,
+          "width": 90,
+          "height": 46
+        }
+      ],
+      "buttons": [
+        {
+          "action": "log",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "sound-settings",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "table-details",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        },
+        {
+          "action": "copy",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "catalog",
+          "visible": false,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "action": "leave",
+          "visible": true,
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    "cards": [
+      {
+        "top": 18,
+        "bottom": 8
+      }
+    ],
+    "interaction": null,
+    "workspace": {
+      "collapsed": true
+    }
+  }
+]

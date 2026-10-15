@@ -1,0 +1,23 @@
+{
+  "before": "before-warm.json",
+  "after": "final.json",
+  "finalSourceHashes": {
+    "client/src/scene.ts": "1d60f4926d618e5aaf4de1ecd5ab01bf841982a5a48ff41581e8a77e705ea882",
+    "client/src/feedback.ts": "096572b24bec6050f1793e90f70b3117475399e4784e1f226c28a2f7106bc2a8",
+    "scripts/feedback-perf-profile.cjs": "f638750684019a2bb4e7205ed7818362e6de9a6e756d38be43f942051defba37"
+  },
+  "comparisons": [
+    {
+      "case": "desktop-6",
+      "drawCallsReductionPercent": 18.75501237613043,
+      "audioNodeReductionPercent": 78.125,
+      "mainThreadBusyReductionPercent": 45.64789370647495
+    },
+    {
+      "case": "portrait-10",
+      "drawCallsReductionPercent": 7.608640816552481,
+      "audioNodeReductionPercent": 78.125,
+      "mainThreadBusyReductionPercent": 49.03713070343616
+    }
+  ]
+}

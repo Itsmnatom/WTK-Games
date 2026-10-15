@@ -1,0 +1,145 @@
+{
+  "label": "before-warm",
+  "capturedAt": "2026-10-15T18:36:16.714Z",
+  "browser": "Chrome/151.0.7922.47",
+  "baselineSource": true,
+  "method": "Warmed isolated Vite source fixture, same events and scene dimensions; no rooms/matches. Audio enabled after gesture and warmed. CDP TaskDuration is renderer main-thread work, not OS CPU/GPU use. Mobile is desktop touch emulation.",
+  "cases": [
+    {
+      "config": {
+        "id": "desktop-6",
+        "width": 1440,
+        "height": 660,
+        "seats": 6,
+        "isMobile": false,
+        "hasTouch": false
+      },
+      "errors": [],
+      "phases": {
+        "idle": {
+          "durationMs": 1203.4000000059605,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0007420641515669019,
+          "heapDelta": 4360
+        },
+        "active": {
+          "durationMs": 6015.0999999940395,
+          "frames": 333,
+          "draws": 42243,
+          "audioNodes": 128,
+          "rafMs": 989.5000000670552,
+          "rendersPerSecond": 55.36067563304516,
+          "drawsPerFrame": 126.85585585585585,
+          "renderIntervalP50": 19.700000002980232,
+          "renderIntervalP95": 20.600000001490116,
+          "mainThreadBusyRatio": 0.20703662449522603,
+          "heapDelta": 4019380
+        },
+        "settled": {
+          "durationMs": 1007.7000000029802,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0005567133075301702,
+          "heapDelta": 1528
+        },
+        "hidden": {
+          "durationMs": 812.8999999985099,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0007503998031751969,
+          "heapDelta": 1528
+        }
+      },
+      "accepted": 21,
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER (0x000021C4) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "visibility": "hidden"
+    },
+    {
+      "config": {
+        "id": "portrait-10",
+        "width": 390,
+        "height": 500,
+        "seats": 10,
+        "isMobile": true,
+        "hasTouch": true
+      },
+      "errors": [],
+      "phases": {
+        "idle": {
+          "durationMs": 1214.2000000029802,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0008128809092388986,
+          "heapDelta": 4348
+        },
+        "active": {
+          "durationMs": 6008.70000000298,
+          "frames": 319,
+          "draws": 40009,
+          "audioNodes": 128,
+          "rafMs": 795.0999998524785,
+          "rendersPerSecond": 53.08968662103979,
+          "drawsPerFrame": 125.42006269592477,
+          "renderIntervalP50": 19.899999998509884,
+          "renderIntervalP95": 20.899999998509884,
+          "mainThreadBusyRatio": 0.1784788723017405,
+          "heapDelta": 5101236
+        },
+        "settled": {
+          "durationMs": 1016.6000000014901,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0008449734408802933,
+          "heapDelta": 1528
+        },
+        "hidden": {
+          "durationMs": 811.3999999985099,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0008072467340415025,
+          "heapDelta": 1528
+        }
+      },
+      "accepted": 21,
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER (0x000021C4) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "visibility": "hidden"
+    }
+  ]
+}

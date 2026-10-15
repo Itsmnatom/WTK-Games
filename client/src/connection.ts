@@ -13,7 +13,7 @@ export class GameConnection {
   private client=new Client(import.meta.env.DEV ? 'ws://localhost:3001' : `${location.protocol==='https:'?'wss:':'ws:'}//${location.host}`);
   constructor(private name:string){}
   static saved():SavedSession|null {try{const s=JSON.parse(localStorage.getItem('wtk.session')||'null');return s?.token&&s?.roomId?s:null;}catch{return null;}}
-  async connect(action:string,roomId:string,mode:string,sandbox=false,playerId='',ruleset='STANDARD'):Promise<void> {
+  async connect(action:string,roomId:string,mode:string,sandbox=false,playerId='',ruleset='EXPERIMENTAL'):Promise<void> {
     this.onStatus('กำลังเชื่อมต่อ');
     try {
       let room:Room;

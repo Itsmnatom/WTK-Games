@@ -1,5 +1,7 @@
 # HD-2D courtyard graphics
 
+For the subsequent VFX/SFX upgrade and isolated before/after measurements, see [feedback upgrade](feedback-upgrade.md). The validation notes below describe the original HD-2D implementation.
+
 User-confirmed visual direction: pixel characters standing on bases, a wood war table with bronze fittings and a cloth campaign map, warm lantern light against cool moonlight, compact effects for ordinary cards and larger effects for hero skills and match-ending moments. Camera stays fixed during play.
 
 ## Implementation

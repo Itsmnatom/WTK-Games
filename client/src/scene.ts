@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { CARD_BY_ID, HEROES, HERO_BY_ID, FACTIONS, canonicalHero } from '../../shared/catalog';
 import { courtyardTextures } from './scene-textures';
+import { VFX, INK, type InkFamily } from './vfx';
 import type { RoomSnapshot } from '../../shared/protocol';
 
 export interface SceneLayout {
@@ -9,7 +10,26 @@ export interface SceneLayout {
   table: { left: number; top: number; width: number; height: number };
   center: { x: number; y: number };
 }
-type Effect = { group: THREE.Group; timeline: gsap.core.Timeline; cleanup?:()=>void };
+type Effect = { group: THREE.Group; timeline: gsap.core.Timeline; priority:number; cleanup?:()=>void };
+
+const CARD_FAMILIES:Record<string,InkFamily>={SLASH:'attack',DODGE:'defend',PEACH:'heal',WINE:'wine',THUNDER_ATTACK:'thunder',STEAL:'steal',SABOTAGE:'break',EX_NIHILO:'draw',DUEL:'duel',BARBARIAN_INVASION:'invasion',ARROW_BARRAGE:'arrows',PEACH_GARDEN:'garden',IRON_CHAIN:'chain',FIRE_ATTACK:'fire',NEGATE:'negate',BUMPER_HARVEST:'harvest',BORROWED_SWORD:'steal',LIGHTNING:'thunder',ACEDIA:'delayed',STARVATION:'delayed'};
+const GROUP_CARDS=new Set(['ARROW_BARRAGE','BARBARIAN_INVASION','PEACH_GARDEN','BUMPER_HARVEST']);
+export const INK_STYLE_BY_CARD:Readonly<Record<string,{family:InkFamily;group:boolean}>>=Object.freeze(Object.fromEntries(Object.values(CARD_BY_ID).map(card=>[card.id,{family:card.kind==='EQUIPMENT'?'equip':CARD_FAMILIES[card.id],group:GROUP_CARDS.has(card.id)}])));
+
+const PIXEL_GLYPHS:Record<string,string[]>={
+      heal:['00011000','00011000','11111111','11111111','00011000','00011000'],
+      chain:['01110000','11011000','10001100','11011011','01101101','00011011','00001110'],
+      steal:['0011100','0100010','0000010','0001110','0011000','0110000','1100000'],
+      break:['1000001','0100010','0010100','0001000','0010100','0100010','1000001'],
+      draw:['11111000','10001000','10111111','10100001','11100101','00100001','00111111'],
+      delayed:['1111111','0100010','0010100','0001000','0011100','0111110','1111111'],
+      duel:['11000011','01100110','00111100','00011000','00111100','01011010','10000001'],
+      arrows:['0101010','1111111','0101010','0101010','0101010','0101010','0101010'],
+      banner:['1111100','1010110','1111100','1000000','1000000','1000000','1000000'],
+      harvest:['0010000','1010100','0111000','1010100','0111000','0010000','0010000'],
+      negate:['0011100','0100010','1001011','1010101','1101001','0100010','0011100'],
+      shield:['1111111','1000001','1001001','1001001','0101010','0011100','0001000']
+    };
 
 /** Presentation only: public snapshots and events never mutate game state. */
 export class CourtyardScene {
@@ -22,6 +42,8 @@ export class CourtyardScene {
   private table = new THREE.Group();
   private players = new Map<string, THREE.Group>();
   private heroEffects = new Map<string,Effect>();
+  private vfx: VFX | null = null;
+  private vfxLive = false;
   private heroAtlas: THREE.Texture | null = null;
   private surfaces = courtyardTextures();
   private cube = new THREE.BoxGeometry(1, 1, 1);
@@ -63,6 +85,7 @@ export class CourtyardScene {
       this.last = this.cadenceAt = 0;
       this.qualityFrames = this.qualityCost = this.qualityLate = this.heavyWindows = this.lightWindows = 0;
       for (const effect of [...this.effects]) this.release(effect);
+      this.vfx?.clear();
     } else { this.last = this.cadenceAt = 0; this.draw(); }
   };
 
@@ -92,6 +115,7 @@ export class CourtyardScene {
       this.scene.add(moon);
       const lantern = new THREE.PointLight('#ffbf75', 54, 26, 1.8);
       lantern.position.set(0, 5, -3); this.scene.add(lantern);
+      this.vfx=new VFX(this.world,this.mobile);this.vfx.setQuality(this.qualityTier);this.vfx.onSpawn=()=>this.draw();
       this.build(); this.resize.observe(host);
       document.addEventListener('visibilitychange', this.onVisibility);
       this.fit();
@@ -140,6 +164,7 @@ export class CourtyardScene {
   private shadowChanged(): void { if (this.renderer?.shadowMap.enabled) this.renderer.shadowMap.needsUpdate = true; }
   private applyQuality(): void {
     if (!this.renderer) return;
+    this.vfx?.setQuality(this.qualityTier);
     const ratio = Math.min(devicePixelRatio || 1, this.qualityTier === 2 ? .75 : this.qualityTier === 1 || this.mobile ? 1 : 1.25);
     if (this.renderer.getPixelRatio() !== ratio) this.renderer.setPixelRatio(ratio);
     const shadows = !this.mobile && this.qualityTier === 0;
@@ -306,7 +331,7 @@ export class CourtyardScene {
   }
   layout(): SceneLayout { return this.geometry; }
   setViewPlayerId(id: string): void { if (id === this.viewer) return; this.viewer = id; this.fit(); }
-  setEffectsReduced(reduced: boolean): void { if(this.reduced === reduced)return; this.reduced = reduced; for (const effect of [...this.effects]) this.release(effect); this.draw(); }
+  setEffectsReduced(reduced: boolean): void { if(this.reduced === reduced)return; this.reduced = reduced; for (const effect of [...this.effects]) this.release(effect);if(reduced)this.vfx?.clear(); this.draw(); }
   private seatLayout(w: number, h: number): Record<string, { x: number; y: number }> {
     if (!this.state) return {};
     const order = this.state.turnOrder.filter(id => this.state!.players[id]);
@@ -384,7 +409,7 @@ export class CourtyardScene {
     const token=this.players.get(id);if(!token)return;
     const prior=this.heroEffects.get(id);if(prior)this.release(prior);
     if(this.reduced){this.restHero(id);return;}
-    const duration=action==='DEATH' ? .85 : .6,effect=this.effect(duration);if(!effect)return;
+    const duration=action==='DEATH' ? .85 : .6,effect=this.effect(duration,action==='DEATH'?2:1);if(!effect)return;
     const pose=token.userData.pose as THREE.Group;pose.position.set(0,0,0);pose.rotation.set(0,0,0);pose.scale.setScalar(1);
     this.heroEffects.set(id,effect);
     effect.cleanup=()=>{if(this.heroEffects.get(id)===effect){this.heroEffects.delete(id);this.restHero(id);}};
@@ -393,7 +418,7 @@ export class CourtyardScene {
       effect.timeline.to(pose.position,{y:-.65,duration:.6,ease:'power2.in'},0);
       effect.timeline.to(pose.scale,{x:.82,y:.82,z:.82,duration:.6},0);
     }else if(action==='HURT'){
-      effect.timeline.to(pose.position,{x:-.16,duration:.06},0).to(pose.position,{x:.13,duration:.07}).to(pose.position,{x:-.07,duration:.08}).to(pose.position,{x:0,duration:.14});
+      effect.timeline.to(pose.position,{x:-.16,duration:.06},0).to(pose.position,{x:.13,duration:.07},.06).to(pose.position,{x:-.07,duration:.08},.13).to(pose.position,{x:0,duration:.14},.21);
       effect.timeline.to(pose.rotation,{z:.1,duration:.1},0).to(pose.rotation,{z:0,duration:.2},.18);
     }else if(action==='ATTACK'){
       const direction=(this.geometry.seats[targetId||'']?.x||.5)>=(this.geometry.seats[id]?.x||.5)?1:-1;
@@ -404,31 +429,22 @@ export class CourtyardScene {
     }
   }
   private heroSignature(playerId:string,targets:string[]):void {
-    const hero=HERO_BY_ID[canonicalHero(this.state?.players[playerId]?.character)],source=this.origin(playerId),color=hero?FACTIONS[hero.faction].color:'#d8b775';
-    const effect=this.effect(1.05);if(!effect)return;
-    this.flash(source,color,2.2);
-    const halo=this.fxMesh(this.cachedGeometry('signature-seal',()=>new THREE.RingGeometry(.94,1.02,8)),color,.9);
-    halo.position.copy(source);halo.quaternion.copy(this.camera.quaternion);effect.group.add(halo);
-    effect.timeline.fromTo(halo.scale,{x:.55,y:.55,z:.55},{x:1.6,y:1.6,z:1.6,duration:.65,ease:'power2.out'},0);
-    effect.timeline.to(halo.rotation,{z:halo.rotation.z+.5,duration:.7},0);effect.timeline.to(halo.material,{opacity:0,duration:.3},.6);
+    const hero=HERO_BY_ID[canonicalHero(this.state?.players[playerId]?.character)],source=this.origin(playerId);
     const scholar=['ZHUGE_LIANG','SIMA_YI','GUO_JIA','HUANG_YUEYING'].includes(hero?.id||'');
-    const count=this.qualityTier===2?4:scholar?8:6;
-    for(let i=0;i<count;i++){
-      const angle=i/count*Math.PI*2,piece=this.fxMesh(this.boxGeometry(.08,scholar ? .08 : .22,.035),i%2?'#f2d7a2':color,.9);
-      piece.position.copy(source);piece.quaternion.copy(this.camera.quaternion);effect.group.add(piece);
-      effect.timeline.to(piece.position,{x:source.x+Math.cos(angle)*1.35,y:source.y+Math.sin(angle)*1.2,z:source.z,duration:.6,ease:'power2.out'},0);
-      effect.timeline.to(piece.material,{opacity:0,duration:.3},.55);
-    }
-    if(['HUA_TUO','LIU_BEI'].includes(hero?.id||''))this.ring(source,'#9bd6b0',1.1);
-    else if(['GUAN_YU','ZHANG_FEI','ZHAO_YUN','LV_BU','ZHANG_LIAO'].includes(hero?.id||''))this.slash(source,color,1.45);
-    else if(['ZHOU_YU','HUANG_GAI','GAN_NING'].includes(hero?.id||''))this.sparks(source,'#f5ae68',9,1.3,.65);
-    for(const target of targets)if(target!==playerId)this.trail(source,this.origin(target),color,.8,.42);
+    this.vfx?.sigil(source,INK.gold,scholar);
+    if(['GUAN_YU','ZHANG_FEI','ZHAO_YUN','LV_BU','ZHANG_LIAO'].includes(hero?.id||''))this.slash(source,INK.black,1.25);
+    for(const id of targets)if(id!==playerId)this.trail(source,this.origin(id),INK.gold,.65,.34);
   }
-  private effect(duration: number): Effect | null {
+  private effect(duration: number,priority=0): Effect | null {
     if (!this.renderer || this.disposed || document.hidden) return null;
-    const limit = this.mobile || this.width < 600 ? 9 : 18;
-    if (this.effects.size >= limit) this.release(this.effects.values().next().value!);
-    const effect: Effect = { group: new THREE.Group(), timeline: gsap.timeline() };
+    const limit = this.qualityTier===2?10:this.mobile || this.width < 600 ? 14 : 22;
+    if (this.effects.size >= limit){
+      let victim:Effect|undefined;
+      for(const candidate of this.effects)if(!victim||candidate.priority<victim.priority)victim=candidate;
+      if(!victim||victim.priority>priority)return null;
+      this.release(victim);
+    }
+    const effect: Effect = { group: new THREE.Group(), timeline: gsap.timeline(),priority };
     this.world.add(effect.group); this.effects.add(effect); effect.timeline.call(() => this.release(effect), [], duration); this.draw(); return effect;
   }
   private release(effect: Effect): void {
@@ -446,76 +462,31 @@ export class CourtyardScene {
     return new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }));
   }
   private ring(point: THREE.Vector3, color: string, size = .7, reduced = false): void {
+    if(!reduced&&this.vfx){this.vfx.ring(point,color,size);return;}
     const effect = this.effect(reduced ? .55 : .85); if (!effect) return;
     const ring = this.fxMesh(this.cachedGeometry(`ring:${size}`, () => new THREE.RingGeometry(size * .82, size, 8)), color, .85); ring.rotation.x = -Math.PI / 2; ring.position.copy(point); effect.group.add(ring);
     if (!reduced) effect.timeline.fromTo(ring.scale, { x: .5, y: .5, z: .5 }, { x: 1.8, y: 1.8, z: 1.8, duration: .65, ease: 'power2.out' }, 0);
     effect.timeline.to(ring.material, { opacity: 0, duration: .25 }, reduced ? .3 : .6);
   }
-  private flash(point:THREE.Vector3,color:string,size=1):void {
-    const effect=this.effect(.42);if(!effect)return;
-    const material=new THREE.MeshBasicMaterial({map:this.surfaces.glow,color,transparent:true,opacity:.7,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false});
-    const mesh=new THREE.Mesh(this.cachedGeometry('flash-plane',()=>new THREE.PlaneGeometry(2,2)),material);
-    mesh.position.copy(point);mesh.quaternion.copy(this.camera.quaternion);mesh.scale.setScalar(size);effect.group.add(mesh);
-    effect.timeline.fromTo(mesh.scale,{x:size*.6,y:size*.6,z:size*.6},{x:size,y:size,z:size,duration:.2},0);
-    effect.timeline.to(material,{opacity:0,duration:.3},.08);
-  }
+  private flash(point:THREE.Vector3,color:string,size=1):void {this.vfx?.flash(point,color,size);}
   private sparks(point: THREE.Vector3, color: string, count = 12, spread = 1, duration = .65): void {
-    const effect = this.effect(duration + .05); if (!effect) return;
-    const density = Math.min(count, this.qualityTier === 2 ? 4 : this.qualityTier === 1 || this.mobile || this.width < 600 ? 7 : 13);
-    for (let i = 0; i < density; i++) {
-      const angle = i / density * Math.PI * 2, spark = this.fxMesh(this.boxGeometry(.09, .09, .09), color); spark.position.copy(point); effect.group.add(spark);
-      effect.timeline.to(spark.position, { x: point.x + Math.sin(angle) * spread, y: point.y + .35 + (i % 3) * .22, z: point.z + Math.cos(angle) * spread, duration, ease: 'power2.out' }, 0);
-      effect.timeline.to(spark.scale, { x: .1, y: .1, z: .1, duration: duration * .55 }, duration * .4);
-      effect.timeline.to(spark.material, { opacity: 0, duration: duration * .5 }, duration * .5);
-    }
+    this.vfx?.sparks(point,color,count,spread,duration);
   }
   private trail(from: THREE.Vector3, to: THREE.Vector3, color: string, arc = .8, duration = .38): void {
-    const effect = this.effect(duration + .4); if (!effect) return;
-    const mid = from.clone().lerp(to, .5); mid.y += arc;
-    const curve = new THREE.QuadraticBezierCurve3(from, mid, to), geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(24)); geometry.setDrawRange(0, 1);
-    const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: .95, depthWrite: false }); effect.group.add(new THREE.Line(geometry, material));
-    const head = this.fxMesh(this.boxGeometry(.14, .14, .14), color); head.position.copy(from); effect.group.add(head);
-    const progress = { value: 0 };
-    effect.timeline.to(progress, { value: 1, duration, ease: 'power2.in', onUpdate: () => { geometry.setDrawRange(0, Math.max(2, Math.ceil(progress.value * 25))); head.position.copy(curve.getPoint(progress.value)); } }, 0);
-    effect.timeline.to(material, { opacity: 0, duration: .3 }, duration); effect.timeline.to(head.scale, { x: 0, y: 0, z: 0, duration: .18 }, duration);
+    this.vfx?.trail(from,to,color,arc,duration);
   }
   private slash(point: THREE.Vector3,color='#f2e4bb',scale=1): void {
-    const effect = this.effect(.48); if (!effect) return;
-    const arc = this.fxMesh(this.cachedGeometry('slash', () => new THREE.RingGeometry(.48, .67, 9, 1, .15, Math.PI * 1.45)), color); arc.position.copy(point); arc.quaternion.copy(this.camera.quaternion);arc.scale.setScalar(scale); effect.group.add(arc);
-    effect.timeline.fromTo(arc.rotation, { z: -.65 }, { z: .55, duration: .22, ease: 'power3.out' }, 0); effect.timeline.to(arc.material, { opacity: 0, duration: .2 }, .23);
-    const echo=this.fxMesh(this.cachedGeometry('slash-echo',()=>new THREE.RingGeometry(.67,.73,12,1,.1,Math.PI*1.15)),color,.45);
-    echo.position.copy(point);echo.quaternion.copy(this.camera.quaternion);echo.scale.setScalar(scale);effect.group.add(echo);
-    effect.timeline.to(echo.rotation,{z:echo.rotation.z+.55,duration:.32},0);effect.timeline.to(echo.material,{opacity:0,duration:.28},.1);
+    this.vfx?.slash(point,color,scale);
   }
   private thunder(point: THREE.Vector3): void {
-    const effect = this.effect(.6); if (!effect) return;
-    for (const [offset, color] of [[0, '#d3f9ff'], [.55, '#64b6d4']] as [number, string][]) {
-      const geometry = this.cachedGeometry(`thunder:${offset}`, () => {
-        const points = [new THREE.Vector3(offset, 3, 0), new THREE.Vector3(.23, 2.2, 0), new THREE.Vector3(-.26, 1.55, 0), new THREE.Vector3(.12, .8, 0), new THREE.Vector3()];
-        return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 18, offset ? .035 : .065, 4, false);
-      });
-      const bolt = this.fxMesh(geometry, color); bolt.position.copy(point);
-      effect.group.add(bolt); effect.timeline.to(bolt.material, { opacity: 0, duration: .3 }, .13);
-    }
-    this.flash(point,'#85d9ff',1.2);this.sparks(point, '#b6f3ff', 13, .95, .5); this.ring(point, '#88cbd5', .7);
+    this.vfx?.thunder(point);
   }
   private fire(point: THREE.Vector3): void {
-    const effect = this.effect(.8); if (!effect) return;
-    const count = this.qualityTier === 2 ? 3 : this.mobile || this.qualityTier === 1 ? 4 : 7;
-    for (let i = 0; i < count; i++) {
-      const angle = i / count * Math.PI * 2;
-      const flame = this.fxMesh(this.boxGeometry(.24, .65, .24), i % 2 ? '#ffd08b' : '#ef8a45', .9);
-      flame.position.copy(point).add(new THREE.Vector3(Math.sin(angle) * .35, .18, Math.cos(angle) * .35));
-      effect.group.add(flame);
-      effect.timeline.fromTo(flame.scale, { x: .6, y: .25, z: .6 }, { x: .4, y: 1.5 + i % 2, z: .4, duration: .55, ease: 'power2.out' }, 0);
-      effect.timeline.to(flame.position, { y: point.y + .8, duration: .55 }, 0);
-      effect.timeline.to(flame.material, { opacity: 0, duration: .35 }, .3);
-    }
-    this.flash(point,'#ff9960',1.2);this.sparks(point, '#ffbb64', 13, 1.05, .65); this.ring(point, '#ed8559', .85);
+    this.vfx?.fire(point);
   }
   private damageLabel(point: THREE.Vector3, damage: number, targetId?: string): void {
     if (!Number.isFinite(damage) || damage <= 0) return;
-    const effect = this.effect(.95); if (!effect) return;
+    const effect = this.effect(.95,3); if (!effect) return;
     const value = Math.min(99, Math.round(damage));
     let texture = this.damageTextures.get(value);
     if (!texture) {
@@ -531,17 +502,29 @@ export class CourtyardScene {
     const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false });
     const anchor = targetId ? this.geometry.seats[targetId] : null;
     const labelPoint = anchor ? this.atScreen(Math.max(.04,Math.min(.96,anchor.x + (anchor.x >= .5 ? -1 : 1)*(this.host.clientWidth<900?62:90)/this.host.clientWidth)), anchor.y + .04, 1.8) : point;
-    const label = new THREE.Sprite(material); this.sharedGeometries.add(label.geometry); label.position.copy(labelPoint); label.scale.set(1.25, .75, 1); effect.group.add(label);
+    const label = new THREE.Sprite(material);label.renderOrder=30; this.sharedGeometries.add(label.geometry); label.position.copy(labelPoint); label.scale.set(1.25, .75, 1); effect.group.add(label);
     if (!this.reduced) effect.timeline.to(label.position, { y: label.position.y + .55, duration: .75, ease: 'power2.out' }, 0);
     effect.timeline.to(material, { opacity: 0, duration: .2 }, .72);
   }
-  private shield(point: THREE.Vector3, color = '#9acfd3'): void {
-    const effect = this.effect(.68); if (!effect) return;
-    const outline = this.fxMesh(this.cachedGeometry('shield', () => new THREE.RingGeometry(.56, .63, 6)), color, .95); outline.position.copy(point); outline.quaternion.copy(this.camera.quaternion); effect.group.add(outline);
-    effect.timeline.fromTo(outline.scale, { x: .7, y: .7, z: .7 }, { x: 1.35, y: 1.35, z: 1.35, duration: .35 }, 0); effect.timeline.to(outline.material, { opacity: 0, duration: .28 }, .35); this.sparks(point, color, 7, .5, .45);
+  private shield(point:THREE.Vector3,color:string=INK.gold):void {this.vfx?.shield(point,color);}
+  /** Small cached pixel silhouettes distinguish tactics without covering the table. */
+  private glyph(point:THREE.Vector3,kind:string,color:string):void {
+    const rows=PIXEL_GLYPHS[kind];if(!rows)return;
+    const effect=this.effect(.6);if(!effect)return;
+    const geometry=this.cachedGeometry('glyph:'+kind,()=>{
+      const vertices:number[]=[],indices:number[]=[],step=.075;
+      rows.forEach((row,y)=>[...row].forEach((pixel,x)=>{if(pixel!=='1')return;const n=vertices.length/3,l=(x-row.length/2)*step,t=(rows.length/2-y)*step;
+        vertices.push(l,t,0,l+step,t,0,l+step,t-step,0,l,t-step,0);indices.push(n,n+1,n+2,n,n+2,n+3);
+      }));
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);return g;
+    });
+    const icon=this.fxMesh(geometry,kind==='heal'?INK.heal:INK.red,.85);icon.position.copy(point);icon.position.y+=.55;icon.quaternion.copy(this.camera.quaternion);effect.group.add(icon);
+    effect.timeline.fromTo(icon.scale,{x:.6,y:.6,z:.6},{x:1,y:1,z:1,duration:.16,ease:'back.out(1.5)'},0);
+    effect.timeline.to(icon.position,{y:icon.position.y+.22,duration:.55},0);effect.timeline.to(icon.material,{opacity:0,duration:.2},.35);
   }
+  private heal(point:THREE.Vector3):void {this.vfx?.heal(point);}
   private flyingCard(data: any): void {
-    const source = this.origin(data.playerId), center = this.atScreen(this.geometry.center.x, this.geometry.center.y, 1.85), effect = this.effect(1.05); if (!effect) return;
+    const source = this.origin(data.playerId), center = this.atScreen(this.geometry.center.x, this.geometry.center.y, 1.85), effect = this.effect(.85,1); if (!effect) return;
     const group = new THREE.Group(); group.position.copy(source); effect.group.add(group);
     const landingShadow=this.surface(effect.group,1.15,1.5,this.surfaces.contact,center.x,1.57,center.z,true,0);
     effect.timeline.to(landingShadow.material,{opacity:.65,duration:.18},.35);effect.timeline.to(landingShadow.material,{opacity:0,duration:.25},.75);
@@ -559,42 +542,51 @@ export class CourtyardScene {
     const face = new THREE.Mesh(geometry, material); face.rotation.x = -Math.PI / 2; face.position.y = .03; group.add(face); group.rotation.y = -.5;
     effect.timeline.to(group.position, { x: center.x, y: center.y, z: center.z, duration: .48, ease: 'power2.out' }, 0); effect.timeline.to(group.rotation, { y: .06, duration: .48 }, 0);
     effect.timeline.fromTo(group.scale, { x: .65, y: .65, z: .65 }, { x: 1.1, y: 1.1, z: 1.1, duration: .48 }, 0); effect.timeline.to(group.scale, { x: .95, y: .95, z: .95, duration: .12 }, .48);
-    effect.timeline.to(material, { opacity: 0, duration: .25 }, .75); effect.timeline.to(body.material, { opacity: 0, duration: .25 }, .75);
+    effect.timeline.to(material, { opacity: 0, duration: .2 }, .62); effect.timeline.to(body.material, { opacity: 0, duration: .2 }, .62);
   }
-  /** Receive only accepted events; actual impacts stay per victim. */
-  event(type: string, data: any): void {
-    if (!data || !this.renderer || this.disposed || document.hidden) return;
-    const name = String(data.cardName || data.skillId || '');
-    const defensivePlay = type === 'card_played' && (name === 'DODGE' || name === 'NEGATE');
-    const targetId = defensivePlay ? data.playerId : data.targetId || data.targetPlayerId || data.playerId, target = this.origin(targetId);
+  /** Public accepted events only. Casts never fabricate hits or delay responses. */
+  event(type:string,data:any):void {
+    if(!data||!this.renderer||this.disposed||document.hidden)return;
+    const name=String(data.cardName||data.skillId||''),defensive=type==='card_played'&&['DODGE','NEGATE'].includes(name);
+    const targetId=defensive?data.playerId:data.targetId||data.targetPlayerId||data.playerId,target=this.origin(targetId);
     if(type==='damage_log')this.animateHero(targetId,'HURT');
     else if(type==='death')this.animateHero(targetId,'DEATH');
     else if(type==='card_played')this.animateHero(data.playerId,['SLASH','THUNDER_ATTACK','DUEL','FIRE_ATTACK'].includes(name)||data.kind==='SKILL'?'ATTACK':'READY',data.targetId||data.targetIds?.[0]);
-    if (this.reduced) { this.ring(target, type === 'damage_log' ? '#e59471' : ['PEACH', 'PEACH_GARDEN'].includes(name) ? '#9cdbc1' : '#e6c282', .65, true); if(type === 'damage_log')this.damageLabel(target, Number(data.damage), targetId); return; }
-    if (type === 'damage_log') {
-      if (data.damageType === 'THUNDER') this.thunder(target);
-      else if (data.damageType === 'FIRE') this.fire(target);
-      else { this.slash(target);this.flash(target,'#ffe0a5',.65); this.sparks(target, '#d7b176', 8, .7, .4); }
-      if(Number(data.hp)<=0){this.ring(target,'#d6a35c',1.2);this.flash(target,'#f2bf73',1.65);}
-      this.damageLabel(target, Number(data.damage), targetId); return;
-    }
-    if (type === 'judgement_result') { this.shield(target, data.isSuccess ? '#abd9b4' : '#d29b76'); return; }
-    if (['death', 'dying', 'victory', 'acquire', 'turn', 'prompt'].includes(type)) {
-      this.ring(target, type === 'victory' ? '#f5d391' : type === 'acquire' ? '#a4cbbc' : '#dd8e74', type === 'victory' ? 1.65 : .75);
-      if (['death', 'dying', 'victory'].includes(type)) this.sparks(target, type === 'victory' ? '#ecc983' : '#c79471', 12, type==='victory'?2.2:.8, .6);
-      if(type==='victory'){this.flash(target,'#ffe6a0',2.5);this.ring(target,'#a2c4b3',1.1);}
+    if(this.reduced){
+      this.ring(target,type==='damage_log'?INK.red:['PEACH','PEACH_GARDEN'].includes(name)?INK.heal:INK.gold,.65,true);
+      if(type==='damage_log')this.damageLabel(target,Number(data.damage),targetId);
       return;
     }
-    if (type !== 'card_played') return;
-    if (data.kind !== 'SKILL') this.flyingCard(data);
-    const source = this.origin(data.playerId), targetIds: string[] = data.targetIds?.length ? data.targetIds : data.targetId ? [data.targetId] : [], targets = targetIds.length ? targetIds.map(id => this.origin(id)) : [source];
-    if (name === 'NEGATE') { this.ring(source, '#b39dda', 1); this.shield(source, '#c6b1e5'); return; }
-    if (name === 'DODGE' || data.kind === 'RESPONSE' && !['SLASH', 'THUNDER_ATTACK', 'PEACH', 'WINE'].includes(name)) { this.shield(source); return; }
-    if (['PEACH', 'PEACH_GARDEN', 'WINE'].includes(name)) { for (const point of targets) this.ring(point, '#a5daba', .8); return; }
-    if (data.kind === 'SKILL') { this.heroSignature(data.playerId,targetIds);return; }
-    const fire = name === 'FIRE_ATTACK', thunder = name === 'THUNDER_ATTACK' || name === 'LIGHTNING', color = fire ? '#ffb15f' : thunder ? '#89d7e5' : name === 'SLASH' ? '#e4d3ab' : '#adb8df';
-    for (const point of targets) if (point.distanceTo(source) > .1) this.trail(source, point, color, fire ? 1.4 : .65);
-    if (fire) this.sparks(source, '#df9e61', 9, .65, .5); else if (thunder) this.ring(source, '#86bdce', .6); else if (CARD_BY_ID[name]?.kind === 'EQUIPMENT') this.shield(source, '#d3ba83'); else if (name !== 'SLASH') this.ring(source, '#b9bbd6', .65);
+    if(type==='damage_log'){
+      this.vfx?.impact(target,String(data.damageType||'NORMAL'));
+      this.damageLabel(target,Number(data.damage),targetId);return;
+    }
+    if(type==='judgement_result'){this.vfx?.shield(target,data.isSuccess?INK.gold:INK.red);return;}
+    if(type==='victory'){this.vfx?.victory(new THREE.Vector3(1.35,2,0));return;}
+    if(type==='death'){this.vfx?.death(target);return;}
+    if(type==='dying'){this.vfx?.dying(target);return;}
+    if(['acquire','turn','prompt'].includes(type)){this.vfx?.ping(target,INK.gold);return;}
+    if(type!=='card_played')return;
+    const source=this.origin(data.playerId),targetIds:string[]=data.targetIds?.length?data.targetIds:data.targetId?[data.targetId]:[];
+    if(data.kind==='SKILL'){
+      this.heroSignature(data.playerId,targetIds);
+      if(['QINGNANG','PLAN_SUPPLY','JIJIU'].includes(data.skillId))for(const point of targetIds.length?targetIds.map(id=>this.origin(id)):[source])this.heal(point);
+      return;
+    }
+    this.flyingCard(data);
+    const style=INK_STYLE_BY_CARD[name];if(!style)return;
+    // Group cards own exactly one central cast. Real impacts arrive per victim.
+    const castPoint=style.group?new THREE.Vector3(1.35,1.95,0):source;
+    this.vfx?.cast(castPoint,style.family,style.group);
+    if(style.group){this.trail(source,castPoint,INK.gold,.65,.3);return;}
+    if(name==='NEGATE'){this.vfx?.negate(source);return;}
+    if(name==='DODGE'){this.shield(source);return;}
+    const points=targetIds.length?targetIds.map(id=>this.origin(id)):[source];
+    if(name==='PEACH'||name==='WINE'&&data.kind==='RESPONSE'){for(const point of points)this.heal(point);return;}
+    if(name==='WINE'){this.glyph(source,'banner',INK.gold);return;}
+    for(const point of points)if(point.distanceTo(source)>.1)this.trail(source,point,INK.gold,.7,.34);
+    const glyph=name==='IRON_CHAIN'?'chain':name==='STEAL'||name==='BORROWED_SWORD'?'steal':name==='SABOTAGE'?'break':name==='DUEL'?'duel':name==='EX_NIHILO'?'draw':CARD_BY_ID[name]?.kind==='DELAYED'?'delayed':style.family==='equip'?'shield':'';
+    if(glyph)for(const point of points)this.glyph(point,glyph,INK.red);
   }
   private draw(): void {
     this.dirty = true;
@@ -603,22 +595,26 @@ export class CourtyardScene {
   private loop = (now: number): void => {
     this.frame = 0; if (this.disposed || document.hidden || !this.renderer) return;
     const interval = 1000 / 60, elapsed = now - this.last;
+    const live=this.vfx?.isLive(now)??false;
+    if(this.vfxLive&&!live)this.dirty=true;this.vfxLive=live;
     if (!this.last || elapsed >= interval - .5) {
-      const animating = this.effects.size > 0;
+      const animating = this.effects.size > 0||live;
       if (this.dirty || animating) {
         this.dirty = false;
         this.last = !this.last || elapsed < interval ? now : now - elapsed % interval;
+        this.vfx?.update(now);
         const start = performance.now(); this.renderer.render(this.scene, this.camera); const cost = performance.now() - start;
         if (animating) { const cadence = this.cadenceAt ? now - this.cadenceAt : 0; this.cadenceAt = now; this.sampleQuality(cost, cadence, now); }
         else this.cadenceAt = 0;
       }
     }
-    if (this.dirty || this.effects.size) { if (!this.frame) this.frame = requestAnimationFrame(this.loop); }
+    if (this.dirty || this.effects.size||live) { if (!this.frame) this.frame = requestAnimationFrame(this.loop); }
     else this.last = this.cadenceAt = 0;
   };
   dispose(): void {
     if (this.disposed) return; this.disposed = true; cancelAnimationFrame(this.frame); this.resize.disconnect(); document.removeEventListener('visibilitychange', this.onVisibility);
     for (const effect of [...this.effects]) this.release(effect);
+    this.vfx?.dispose();this.vfx=null;
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
     this.scene.traverse(object => { if (object instanceof THREE.InstancedMesh) object.dispose(); const mesh = object as THREE.Mesh; if (mesh.geometry) geometries.add(mesh.geometry); if (mesh.material) for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) materials.add(material); });
     geometries.add(this.cube); for (const geometry of this.sharedGeometries) geometries.add(geometry); for (const material of this.materials.values()) materials.add(material);

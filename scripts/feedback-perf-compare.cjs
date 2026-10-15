@@ -1,0 +1,18 @@
+'use strict';
+const fs=require('fs'),path=require('path'),crypto=require('crypto');
+const directory=path.resolve(__dirname,'../artifacts/performance/feedback');
+const before=JSON.parse(fs.readFileSync(path.join(directory,'before-warm.json'),'utf8'));
+const after=JSON.parse(fs.readFileSync(path.join(directory,'final.json'),'utf8'));
+const rows=[],comparisons=[];
+for(const a of before.cases){
+  const b=after.cases.find(item=>item.config.id===a.config.id);
+  if(!b||JSON.stringify(a.config)!==JSON.stringify(b.config)||a.renderer!==b.renderer||before.browser!==after.browser)throw Error('Capture environments differ');
+  if(a.errors.length||b.errors.length)throw Error('Capture has browser errors');
+  const x=a.phases.active,y=b.phases.active;
+  const comparison={case:a.config.id,drawCallsReductionPercent:(1-y.drawsPerFrame/x.drawsPerFrame)*100,audioNodeReductionPercent:(1-y.audioNodes/x.audioNodes)*100,mainThreadBusyReductionPercent:(1-y.mainThreadBusyRatio/x.mainThreadBusyRatio)*100};comparisons.push(comparison);
+  rows.push(`| ${a.config.id} | ${x.drawsPerFrame.toFixed(2)} / ${y.drawsPerFrame.toFixed(2)} | ${x.audioNodes} / ${y.audioNodes} | ${(x.mainThreadBusyRatio*100).toFixed(2)}% / ${(y.mainThreadBusyRatio*100).toFixed(2)}% | ${x.rendersPerSecond.toFixed(2)} / ${y.rendersPerSecond.toFixed(2)} | ${x.renderIntervalP95.toFixed(2)} / ${y.renderIntervalP95.toFixed(2)} |`);
+}
+const hashes=Object.fromEntries(['client/src/scene.ts','client/src/feedback.ts','scripts/feedback-perf-profile.cjs'].map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync(path.resolve(__dirname,'..',file))).digest('hex')]));
+fs.writeFileSync(path.join(directory,'comparison.json'),JSON.stringify({before:'before-warm.json',after:'final.json',finalSourceHashes:hashes,comparisons},null,2));
+const text=`# Isolated feedback benchmark\n\nValues are **before / after**, from [warmed baseline](before-warm.json) and [final capture](final.json).\n\n| Case | Draw calls/frame | Audio nodes created | Renderer main-thread busy | Renders/s over 6-second window | Render interval p95 (ms) |\n| --- | ---: | ---: | ---: | ---: | ---: |\n${rows.join('\n')}\n\nBoth captures use ${after.browser} and ${after.cases[0].renderer}. Portrait uses desktop GPU touch emulation. They replay the same synthetic public-shaped events with visual/audio warmup, without a room, WebSocket or match. The baseline rejects Tuxi: 21 accepted events; the final version accepts all 22.\n\nBoth versions record **zero rendered frames** during idle, settled and hidden phases. Final audio state while hidden is suspended. All ten expanded/strategy skill probes are accepted. Final settled effects and audio voices are zero; reduced effects settle to zero. Disposal leaves zero active effects, voices, pooled spark clouds and cached cues. Cached PCM is 1,921,048 bytes (about 1.83 MiB).\n\nThe upgraded capture submits 8–19% fewer draw calls per frame and creates 78% fewer audio nodes in this workload. Renderer main-thread work was lower in the final capture; single-run timing and heap deltas are sensitive to host load and GC and do not establish stable CPU or memory percentages. The active window includes gaps and settling; renders/s is not sustained animation FPS. No 60 FPS guarantee is made. GPU utilization and audio-thread CPU were not measured.\n\nThese are presentation measurements, not game correctness tests or human listening tests. Initial exploratory and intermediate captures remain alongside these files. See [implementation and reproduction notes](../../../docs/feedback-upgrade.md).\n`;
+fs.writeFileSync(path.join(directory,'comparison.md'),text);console.log(text);

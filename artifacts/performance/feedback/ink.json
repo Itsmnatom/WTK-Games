@@ -1,0 +1,231 @@
+{
+  "label": "ink",
+  "capturedAt": "2026-10-15T20:32:16.402Z",
+  "browser": "Chrome/151.0.7922.47",
+  "baselineSource": null,
+  "method": "Warmed isolated Vite source fixture, same events and scene dimensions; no rooms/matches. Audio enabled after gesture and warmed. CDP TaskDuration is renderer main-thread work, not OS CPU/GPU use. Mobile is desktop touch emulation.",
+  "cases": [
+    {
+      "config": {
+        "id": "desktop-6",
+        "width": 1440,
+        "height": 660,
+        "seats": 6,
+        "isMobile": false,
+        "hasTouch": false
+      },
+      "errors": [],
+      "phases": {
+        "idle": {
+          "durationMs": 1202.7999999970198,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0005695044895257082,
+          "heapDelta": 4360
+        },
+        "active": {
+          "durationMs": 6007.399999991059,
+          "frames": 327,
+          "draws": 27690,
+          "audioNodes": 28,
+          "rafMs": 637.5999998897314,
+          "rendersPerSecond": 54.432866131851824,
+          "drawsPerFrame": 84.6788990825688,
+          "renderIntervalP50": 19.899999991059303,
+          "renderIntervalP95": 23.19999998807907,
+          "mainThreadBusyRatio": 0.13956686753025396,
+          "heapDelta": 1353904
+        },
+        "settled": {
+          "durationMs": 1008.7000000029802,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0009437890353895838,
+          "heapDelta": 1528
+        },
+        "hidden": {
+          "durationMs": 814,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0005749385749387408,
+          "heapDelta": 1528
+        }
+      },
+      "resources": {
+        "effects": 0,
+        "pooledSparks": 0,
+        "voices": 0,
+        "audioCues": 26,
+        "audioBytes": 2035136
+      },
+      "accepted": 22,
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER (0x000021C4) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "visibility": "hidden",
+      "hiddenAudioState": "suspended",
+      "skillAcceptance": {
+        "TUXI": true,
+        "YIJI": true,
+        "TIANDU": true,
+        "JIZHI": true,
+        "QINGNANG": true,
+        "LIULI": true,
+        "JIJIU": true,
+        "PLAN_MUSTER": true,
+        "PLAN_OFFENSIVE": true,
+        "PLAN_SUPPLY": true
+      },
+      "ink": {
+        "styles": 41,
+        "castCalls": 41,
+        "groupCasts": [
+          "invasion",
+          "arrows",
+          "garden",
+          "harvest"
+        ],
+        "invalidStyles": [],
+        "damageLabels": 6,
+        "settled": {
+          "effects": 0,
+          "particlesLive": false
+        }
+      },
+      "reducedSettled": 0,
+      "disposed": {
+        "effects": 0,
+        "voices": 0,
+        "pooledSparks": 0,
+        "audioCues": 0
+      }
+    },
+    {
+      "config": {
+        "id": "portrait-10",
+        "width": 390,
+        "height": 500,
+        "seats": 10,
+        "isMobile": true,
+        "hasTouch": true
+      },
+      "errors": [],
+      "phases": {
+        "idle": {
+          "durationMs": 1215,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0013111111111112571,
+          "heapDelta": 4360
+        },
+        "active": {
+          "durationMs": 6017.79999999702,
+          "frames": 327,
+          "draws": 35526,
+          "audioNodes": 28,
+          "rafMs": 499.69999957084656,
+          "rendersPerSecond": 54.33879490846521,
+          "drawsPerFrame": 108.64220183486239,
+          "renderIntervalP50": 19.900000005960464,
+          "renderIntervalP95": 20.399999991059303,
+          "mainThreadBusyRatio": 0.10865299611158953,
+          "heapDelta": 3088864
+        },
+        "settled": {
+          "durationMs": 1001.1999999880791,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0004954055133898897,
+          "heapDelta": 1528
+        },
+        "hidden": {
+          "durationMs": 818.2999999970198,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.000900647684226655,
+          "heapDelta": 1528
+        }
+      },
+      "resources": {
+        "effects": 0,
+        "pooledSparks": 0,
+        "voices": 0,
+        "audioCues": 26,
+        "audioBytes": 2027184
+      },
+      "accepted": 22,
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER (0x000021C4) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "visibility": "hidden",
+      "hiddenAudioState": "suspended",
+      "skillAcceptance": {
+        "TUXI": true,
+        "YIJI": true,
+        "TIANDU": true,
+        "JIZHI": true,
+        "QINGNANG": true,
+        "LIULI": true,
+        "JIJIU": true,
+        "PLAN_MUSTER": true,
+        "PLAN_OFFENSIVE": true,
+        "PLAN_SUPPLY": true
+      },
+      "ink": {
+        "styles": 41,
+        "castCalls": 41,
+        "groupCasts": [
+          "invasion",
+          "arrows",
+          "garden",
+          "harvest"
+        ],
+        "invalidStyles": [],
+        "damageLabels": 10,
+        "settled": {
+          "effects": 0,
+          "particlesLive": false
+        }
+      },
+      "reducedSettled": 0,
+      "disposed": {
+        "effects": 0,
+        "voices": 0,
+        "pooledSparks": 0,
+        "audioCues": 0
+      }
+    }
+  ]
+}

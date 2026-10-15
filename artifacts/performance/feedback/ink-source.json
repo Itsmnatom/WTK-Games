@@ -1,0 +1,7 @@
+{
+  "client/src/vfx.ts": "73ee04ebafa037b86a488ecae0af753aa474627ef632c78a90d725f17a0d3b65",
+  "client/src/scene.ts": "c4858efc0f8a9e6f695d1691f30d681ad91f2fd36514536a138d851793d5f534",
+  "client/src/main.ts": "d73d044bfe71ad14f0a843a6bb2dd9b64788f32d54652ec889bd2511bf811d79",
+  "client/src/feedback.ts": "5a3abf8496622c3657bf5c742d82be0ac4db14948ab2b493ce0d6244479ba759",
+  "client/src/immersive.css": "4ca9c831128d32dd2060ac2fe9854f372f924dfadc214830d81d2684d5217532"
+}

@@ -1,0 +1,199 @@
+{
+  "label": "final",
+  "capturedAt": "2026-10-15T18:40:32.596Z",
+  "browser": "Chrome/151.0.7922.47",
+  "baselineSource": null,
+  "method": "Warmed isolated Vite source fixture, same events and scene dimensions; no rooms/matches. Audio enabled after gesture and warmed. CDP TaskDuration is renderer main-thread work, not OS CPU/GPU use. Mobile is desktop touch emulation.",
+  "cases": [
+    {
+      "config": {
+        "id": "desktop-6",
+        "width": 1440,
+        "height": 660,
+        "seats": 6,
+        "isMobile": false,
+        "hasTouch": false
+      },
+      "errors": [],
+      "phases": {
+        "idle": {
+          "durationMs": 1204.2999999970198,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0007157684962233907,
+          "heapDelta": 4360
+        },
+        "active": {
+          "durationMs": 6014,
+          "frames": 328,
+          "draws": 33805,
+          "audioNodes": 28,
+          "rafMs": 523.1999996080995,
+          "rendersPerSecond": 54.53940804788826,
+          "drawsPerFrame": 103.0640243902439,
+          "renderIntervalP50": 19.899999998509884,
+          "renderIntervalP95": 20.600000001490116,
+          "mainThreadBusyRatio": 0.11252876621217157,
+          "heapDelta": 1413960
+        },
+        "settled": {
+          "durationMs": 1015.8000000044703,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0005207718054714469,
+          "heapDelta": 1528
+        },
+        "hidden": {
+          "durationMs": 811.6999999955297,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0006135271652120613,
+          "heapDelta": 1516
+        }
+      },
+      "resources": {
+        "effects": 0,
+        "pooledSparks": 4,
+        "voices": 0,
+        "audioCues": 26,
+        "audioBytes": 1921048
+      },
+      "accepted": 22,
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER (0x000021C4) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "visibility": "hidden",
+      "hiddenAudioState": "suspended",
+      "skillAcceptance": {
+        "TUXI": true,
+        "YIJI": true,
+        "TIANDU": true,
+        "JIZHI": true,
+        "QINGNANG": true,
+        "LIULI": true,
+        "JIJIU": true,
+        "PLAN_MUSTER": true,
+        "PLAN_OFFENSIVE": true,
+        "PLAN_SUPPLY": true
+      },
+      "reducedSettled": 0,
+      "disposed": {
+        "effects": 0,
+        "voices": 0,
+        "pooledSparks": 0,
+        "audioCues": 0
+      }
+    },
+    {
+      "config": {
+        "id": "portrait-10",
+        "width": 390,
+        "height": 500,
+        "seats": 10,
+        "isMobile": true,
+        "hasTouch": true
+      },
+      "errors": [],
+      "phases": {
+        "idle": {
+          "durationMs": 1203,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0004896093100581468,
+          "heapDelta": 3912
+        },
+        "active": {
+          "durationMs": 6014.9000000059605,
+          "frames": 326,
+          "draws": 37776,
+          "audioNodes": 28,
+          "rafMs": 421,
+          "rendersPerSecond": 54.198739796119135,
+          "drawsPerFrame": 115.87730061349693,
+          "renderIntervalP50": 19.899999998509884,
+          "renderIntervalP95": 20.399999998509884,
+          "mainThreadBusyRatio": 0.09095795441311709,
+          "heapDelta": 4223988
+        },
+        "settled": {
+          "durationMs": 1007.5,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0005657568238215201,
+          "heapDelta": 1504
+        },
+        "hidden": {
+          "durationMs": 807,
+          "frames": 0,
+          "draws": 0,
+          "audioNodes": 0,
+          "rafMs": 0,
+          "rendersPerSecond": 0,
+          "drawsPerFrame": 0,
+          "renderIntervalP50": null,
+          "renderIntervalP95": null,
+          "mainThreadBusyRatio": 0.0009045848822799223,
+          "heapDelta": 1504
+        }
+      },
+      "resources": {
+        "effects": 0,
+        "pooledSparks": 3,
+        "voices": 0,
+        "audioCues": 26,
+        "audioBytes": 1921048
+      },
+      "accepted": 22,
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER (0x000021C4) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "visibility": "hidden",
+      "hiddenAudioState": "suspended",
+      "skillAcceptance": {
+        "TUXI": true,
+        "YIJI": true,
+        "TIANDU": true,
+        "JIZHI": true,
+        "QINGNANG": true,
+        "LIULI": true,
+        "JIJIU": true,
+        "PLAN_MUSTER": true,
+        "PLAN_OFFENSIVE": true,
+        "PLAN_SUPPLY": true
+      },
+      "reducedSettled": 0,
+      "disposed": {
+        "effects": 0,
+        "voices": 0,
+        "pooledSparks": 0,
+        "audioCues": 0
+      }
+    }
+  ]
+}

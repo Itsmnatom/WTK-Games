@@ -3,7 +3,8 @@ import type { GameCard, RoomSnapshot } from '../../shared/protocol';
 
 export type SoundCue = 'card' | 'slash' | 'fire-cast' | 'thunder-cast' | 'spell' | 'equipment'
   | 'defend' | 'negate' | 'heal' | 'impact' | 'fire-hit' | 'thunder-hit' | 'acquire'
-  | 'skill' | 'judgment-good' | 'judgment-bad' | 'dying' | 'death' | 'victory' | 'prompt' | 'turn';
+  | 'skill' | 'judgment-good' | 'judgment-bad' | 'dying' | 'death' | 'victory' | 'prompt' | 'turn'
+  | 'chain' | 'break' | 'steal' | 'volley' | 'duel';
 export interface FeedbackSettings { volume: number; muted: boolean; unlocked: boolean }
 export interface AcceptedPlay {
   key: string; playerId: string; cardName: string; card?: GameCard; skillId?: string;
@@ -14,7 +15,8 @@ export interface FeedbackCallbacks {
   onCue?: (cue: SoundCue, data: Record<string, unknown>) => void;
   onSettings?: (settings: FeedbackSettings) => void;
 }
-const SKILLS = new Set(['ZHIHENG','RENDE','KUROU','LIJIAN','FANJIAN','HUJIA','JIJIANG','JIANXIONG','FANKUI','GUICAI','GUANXING','LUOSHEN','BIYUE','YINGZI','WUSHENG','LONGDAN','QINGGUO']);
+const SKILLS = new Set(['ZHIHENG','RENDE','KUROU','LIJIAN','FANJIAN','HUJIA','JIJIANG','JIANXIONG','FANKUI','GUICAI','GUANXING','LUOSHEN','BIYUE','YINGZI','WUSHENG','LONGDAN','QINGGUO','TUXI','YIJI','TIANDU','JIZHI','QINGNANG','LIULI','JIJIU','PLAN_MUSTER','PLAN_OFFENSIVE','PLAN_SUPPLY']);
+const SOUND_CUES: SoundCue[] = ['card','slash','fire-cast','thunder-cast','spell','equipment','defend','negate','heal','impact','fire-hit','thunder-hit','acquire','skill','judgment-good','judgment-bad','dying','death','victory','prompt','turn','chain','break','steal','volley','duel'];
 const LEGACY_SKILLS: Record<string, string> = {
   'สกิล Zhiheng (ผลัดการ์ด)': 'ZHIHENG', 'สกิล Rende (ปันสุข)': 'RENDE', 'สกิล Ku Rou (โบยตนเอง)': 'KUROU',
 };
@@ -61,7 +63,16 @@ export class TableFeedback {
   private lastImpact = -Infinity;
   private lastExplainedAcquisition = -Infinity;
   private importantLayer = false;
-  private onVisibility = () => { if (document.hidden) this.stopVoices(); };
+  private buffers = new Map<SoundCue,AudioBuffer>();
+  private baking: OfflineAudioContext | null = null;
+  private bakingBus: GainNode | null = null;
+  private warming = false;
+  private soundSequence = 0;
+  private resumeOnVisible = false;
+  private onVisibility = () => {
+    if(document.hidden){this.resumeOnVisible=this.context?.state==='running';this.stopVoices();void this.context?.suspend().catch(()=>{});}
+    else if(this.context&&this.resumeOnVisible){this.resumeOnVisible=false;void this.context.resume().then(()=>this.warmSounds()).catch(()=>{});}
+  };
 
   constructor(private callbacks: FeedbackCallbacks = {}) {
     try {
@@ -106,6 +117,7 @@ export class TableFeedback {
       return context.resume().then(() => {
         if (this.disposed || this.context !== context) return;
         this.settings.unlocked = context.state === 'running'; this.notifySettings();
+        void this.warmSounds();
       }).catch(() => { if (!this.disposed) { this.settings.unlocked = false; this.notifySettings(); } });
     } catch { this.settings.unlocked = false; this.notifySettings(); return Promise.resolve(); }
   }
@@ -149,6 +161,7 @@ export class TableFeedback {
       this.callbacks.onPlay?.(play);
       const cue = skillId ? 'skill' : cardName === 'SLASH' ? 'slash' : cardName === 'THUNDER_ATTACK' ? 'thunder-cast'
         : cardName === 'FIRE_ATTACK' ? 'fire-cast' : cardName === 'DODGE' ? 'defend' : cardName === 'NEGATE' ? 'negate'
+        : cardName==='IRON_CHAIN'?'chain':cardName==='SABOTAGE'?'break':['STEAL','BORROWED_SWORD'].includes(cardName)?'steal':['ARROW_BARRAGE','BARBARIAN_INVASION'].includes(cardName)?'volley':cardName==='DUEL'?'duel'
         : ['PEACH','PEACH_GARDEN'].includes(cardName) || cardName === 'WINE' && play.kind === 'RESPONSE' ? 'heal' : CARD_BY_ID[cardName]?.kind === 'EQUIPMENT' ? 'equipment'
         : CARD_BY_ID[cardName]?.kind === 'KIT' || CARD_BY_ID[cardName]?.kind === 'DELAYED' ? 'spell' : 'card';
       if (cue === 'heal' || cue === 'skill') this.lastExplainedAcquisition = Date.now();
@@ -213,44 +226,99 @@ export class TableFeedback {
       if (this.voices.size <= 24) break;
       if (!voice.important) { try { voice.source.stop(); } catch {} this.releaseVoice(voice); }
     }
-    try { this.sound(cue); } catch {
+    try {
+      const buffer=this.buffers.get(cue);
+      if(buffer)this.playBuffer(buffer,cue);else this.sound(cue);
+    } catch {
       // Audio device/lifecycle failures must not interrupt accepted visual feedback.
       this.stopVoices(); this.settings.unlocked = false; this.notifySettings();
     }
   }
+  /** Bake one cue at a time; playback reuses PCM rather than rebuilding filters. */
+  private async warmSounds():Promise<void> {
+    if(this.warming||this.buffers.size===SOUND_CUES.length||typeof OfflineAudioContext==='undefined')return;
+    this.warming=true;
+    try{
+      for(const cue of SOUND_CUES){
+        if(this.disposed||!this.context||document.hidden)return;
+        if(this.buffers.has(cue))continue;
+        const context=new OfflineAudioContext(2,Math.ceil(24000*1.2),24000);
+        const bus=context.createGain();bus.connect(context.destination);
+        // Short room reflections are baked, with no live convolution graph.
+        if(['slash','equipment','chain','duel','heal','skill','spell','victory'].includes(cue))for(const [time,level] of [[.075,.13],[.14,.065]]){
+          const delay=context.createDelay(.2),wet=context.createGain();delay.delayTime.value=time;wet.gain.value=level;bus.connect(delay);delay.connect(wet);wet.connect(context.destination);
+        }
+        this.baking=context;
+        this.bakingBus=bus;
+        try{this.sound(cue);}finally{this.baking=null;this.bakingBus=null;}
+        const rendered=await context.startRendering();
+        if(this.disposed)return;
+        let end=rendered.length-1;
+        const channels=[rendered.getChannelData(0),rendered.getChannelData(1)];
+        while(end>0&&Math.abs(channels[0][end])<.00002&&Math.abs(channels[1][end])<.00002)end--;
+        const buffer=this.context!.createBuffer(2,Math.min(rendered.length,end+120),24000);
+        channels.forEach((channel,index)=>buffer.copyToChannel(channel.subarray(0,buffer.length),index));
+        this.buffers.set(cue,buffer);
+      }
+    }catch{ /* Live synthesis remains available if offline audio is unsupported. */ }
+    finally{this.baking=null;this.bakingBus=null;this.warming=false;}
+  }
+  private playBuffer(buffer:AudioBuffer,cue:SoundCue):void {
+    const context=this.context,output=this.compressor;if(!context||!output)return;
+    // A cue is one voice after baking. Reserve capacity for prompts and impacts.
+    const important=this.importantLayer||cue==='prompt'||cue==='turn';
+    if(this.voices.size>=12){
+      const victim=[...this.voices].find(voice=>!voice.important)||(important?this.voices.values().next().value:undefined);
+      if(!important||!victim)return;
+      try{victim.source.stop();}catch{}this.releaseVoice(victim);
+    }
+    const source=context.createBufferSource(),gain=context.createGain();source.buffer=buffer;
+    source.playbackRate.value=['turn','prompt','judgment-good','judgment-bad'].includes(cue)?1:[.985,1,1.015][this.soundSequence++%3];
+    gain.gain.value=!important&&this.voices.size>4?.65:1;
+    source.connect(gain);gain.connect(output);
+    const voice:Voice={source,nodes:[gain],important};this.voices.add(voice);
+    source.onended=()=>this.releaseVoice(voice);source.start();
+  }
   private sound(cue: SoundCue): void {
-    const n = (frequency: number, duration: number, gain: number, delay = 0, pan = 0) => this.layer('noise', frequency, duration, gain, delay, pan);
+    const n = (frequency: number, duration: number, gain: number, delay = 0, pan = 0, end?:number) => this.layer('noise', frequency, duration, gain, delay, pan,end);
     const t = (frequency: number, end: number, duration: number, gain: number, delay = 0, waveform: OscillatorType = 'sine') => this.layer(waveform, frequency, duration, gain, delay, 0, end);
     const body = (weight = 1) => { t(132, 72, 0.26, 0.16 * weight, 0.012, 'triangle'); t(66, 42, 0.34, 0.12 * weight, 0.03); };
     switch (cue) {
       case 'card': case 'acquire': n(3100, 0.085, cue === 'acquire' ? 0.028 : 0.05); n(1300, 0.14, 0.025, 0.028); break;
-      case 'slash': n(1700, 0.19, 0.075); t(880, 570, 0.16, 0.026, 0.045, 'triangle'); n(4500, 0.045, 0.05, 0.11); break;
+      case 'slash': n(950, 0.09, 0.025);n(900, 0.18, 0.065,.025,-.3,5200); t(1100, 510, 0.18, 0.03, 0.045, 'triangle'); n(6200, 0.028, 0.04, 0.12,.3);t(2340,2300,.24,.014,.08);t(3510,3480,.18,.008,.08); break;
       case 'equipment': n(3700, 0.045, 0.045); t(310, 300, 0.23, 0.075, 0, 'triangle'); t(810, 790, 0.25, 0.032, 0.015); t(1420, 1380, 0.18, 0.017, 0.022); break;
-      case 'impact': n(2400, 0.035, 0.085); body(); n(430, 0.18, 0.045, 0.065); break;
-      case 'fire-cast': n(680, 0.36, 0.065); n(3200, 0.15, 0.04, 0.05, -0.25); t(150, 90, 0.27, 0.035, 0.04, 'triangle'); break;
-      case 'fire-hit': n(2600, 0.042, 0.075); body(0.85); n(480, 0.38, 0.075, 0.035); n(4200, 0.12, 0.025, 0.20, 0.25); break;
+      case 'chain': for(let i=0;i<3;i++){n(3200,.035,.032,i*.065,i%2?.2:-.2);t(720+i*90,690+i*90,.16,.025,i*.065,'triangle');}break;
+      case 'break': n(2800,.025,.07);t(220,80,.2,.055,.015,'triangle');n(5100,.08,.035,.06,-.25);n(3700,.12,.022,.12,.25);break;
+      case 'steal': n(1700,.17,.045,0,-.25);n(3900,.06,.025,.13,.25);t(530,340,.2,.023,.035,'triangle');break;
+      case 'volley': for(let i=0;i<3;i++)n(2800+i*450,.13,.03,i*.04,(i-1)*.3);t(120,65,.25,.04,.06,'triangle');break;
+      case 'duel': n(4300,.035,.045);t(920,820,.2,.027,0,'triangle');n(3100,.035,.05,.12);t(640,510,.24,.03,.13,'triangle');break;
+      case 'impact': n(2800, 0.025, 0.075); body();t(185,95,.15,.04,.008,'triangle'); n(430, 0.22, 0.04, 0.065);n(5200,.08,.018,.10,.25); break;
+      case 'fire-cast': n(680, 0.36, 0.065,0,0,2400); n(3200, 0.15, 0.04, 0.05, -0.25); t(150, 90, 0.27, 0.035, 0.04, 'triangle');n(5300,.018,.025,.12,.3);n(4100,.022,.019,.23,-.2); break;
+      case 'fire-hit': n(2600, 0.032, 0.065); body(0.85); n(480, 0.45, 0.07, 0.035); n(4200, 0.12, 0.025, 0.20, 0.25);n(5800,.07,.018,.31,-.3); break;
       case 'thunder-cast': n(4500, 0.065, 0.065); t(220, 74, 0.28, 0.07, 0.035, 'triangle'); n(1500, 0.18, 0.04, 0.09); break;
-      case 'thunder-hit': n(4100, 0.036, 0.10); body(1.1); n(330, 0.56, 0.058, 0.055); n(2200, 0.10, 0.027, 0.17, -0.3); n(1600, 0.15, 0.018, 0.30, 0.3); break;
+      case 'thunder-hit': n(5100, 0.026, 0.085); body(1.1); n(330, 0.60, 0.058, 0.055); n(2200, 0.10, 0.027, 0.17, -0.3); n(1600, 0.18, 0.018, 0.30, 0.3);t(48,34,.5,.045,.07); break;
       case 'negate': n(620, 0.18, 0.045); n(3400, 0.055, 0.07, 0.21); t(140, 54, 0.27, 0.09, 0.23, 'triangle'); break;
       case 'defend': n(2500, 0.115, 0.048); t(640, 530, 0.17, 0.03, 0.027, 'triangle'); break;
-      case 'heal': n(5100, 0.20, 0.018); t(1330, 1300, 0.36, 0.03); t(2180, 2150, 0.26, 0.014, 0.035); break;
+      case 'heal': n(5100, 0.20, 0.014); t(660, 658, 0.45, 0.025); t(1320, 1315, 0.36, 0.022,.045);t(1980,1975,.3,.012,.09); break;
       case 'judgment-good': n(1900, 0.045, 0.045); t(930, 905, 0.20, 0.023, 0.035); break;
       case 'judgment-bad': n(1400, 0.045, 0.055); t(190, 110, 0.22, 0.065, 0.025, 'triangle'); break;
       case 'dying': t(110, 46, 0.60, 0.14, 0, 'triangle'); n(450, 0.48, 0.035, 0.035); break;
       case 'death': n(780, 0.065, 0.055); t(96, 40, 0.62, 0.16, 0.016, 'triangle'); n(240, 0.40, 0.035, 0.06); break;
       case 'victory': n(2500, 0.06, 0.055); t(170, 90, 0.72, 0.13, 0.018, 'triangle'); t(530, 515, 0.9, 0.042, 0.05); t(1230, 1180, 0.67, 0.026, 0.075); n(3200, 0.48, 0.023, 0.20, 0.25); break;
       case 'turn': case 'prompt': n(1800, 0.055, 0.026); t(460, 410, 0.11, 0.019, 0.015); break;
-      case 'spell': case 'skill': n(1100, 0.23, 0.044); t(230, 120, 0.25, 0.06, 0.028, 'triangle'); n(4700, 0.12, 0.02, 0.10, -0.2); break;
+      case 'skill': n(900,.12,.035);t(180,65,.42,.075,.04,'triangle');n(3700,.07,.035,.1,-.25);t(740,700,.55,.022,.14);n(1600,.3,.018,.2,.25);break;
+      case 'spell': n(1100, 0.23, 0.044); t(230, 120, 0.25, 0.06, 0.028, 'triangle'); n(4700, 0.12, 0.02, 0.10, -0.2); break;
     }
   }
   private layer(kind: OscillatorType | 'noise', frequency: number, duration: number, amplitude: number, delay: number, pan: number, endFrequency?: number): void {
-    const context = this.context, output = this.compressor;
-    if (!context || !output || this.voices.size >= 32) return;
+    const context = this.baking||this.context, output = this.bakingBus||this.baking?.destination||this.compressor;
+    if (!context || !output || !this.baking&&this.voices.size >= 32) return;
     const when = context.currentTime + delay, gain = context.createGain(), nodes: AudioNode[] = [gain];
     const source = kind === 'noise' ? context.createBufferSource() : context.createOscillator();
     if (kind === 'noise') {
       (source as AudioBufferSourceNode).buffer = this.noise;
       const filter = context.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = frequency; filter.Q.value = 0.7;
+      if(endFrequency){filter.frequency.setValueAtTime(frequency,when);filter.frequency.exponentialRampToValueAtTime(Math.max(20,endFrequency),when+duration);}
       source.connect(filter); filter.connect(gain); nodes.push(filter);
     } else {
       const oscillator = source as OscillatorNode; oscillator.type = kind;
@@ -264,8 +332,10 @@ export class TableFeedback {
     gain.gain.setValueAtTime(0.0001, when);
     gain.gain.linearRampToValueAtTime(amplitude, when + Math.min(0.008, duration / 4));
     gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
-    const voice: Voice = { source, nodes, important: this.importantLayer }; this.voices.add(voice);
-    source.onended = () => this.releaseVoice(voice);
+    if(!this.baking){
+      const voice: Voice = { source, nodes, important: this.importantLayer }; this.voices.add(voice);
+      source.onended = () => this.releaseVoice(voice);
+    }
     source.start(when); source.stop(when + duration + 0.015);
   }
   private releaseVoice(voice: Voice): void {
@@ -280,7 +350,7 @@ export class TableFeedback {
     this.stopVoices(); this.eventKeys.clear(); this.playKeys.clear(); this.observation = null;
     this.master?.disconnect(); this.compressor?.disconnect();
     if (this.context) { this.context.onstatechange = null; void this.context.close().catch(() => {}); }
-    this.context = null; this.master = null; this.compressor = null; this.noise = null;
+    this.context = null; this.master = null; this.compressor = null; this.noise = null;this.buffers.clear();
     this.settings.unlocked = false;
   }
 }

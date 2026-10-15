@@ -1,10 +1,10 @@
-# Experimental gameplay: strategy plans and 19 heroes
+# Main gameplay: strategy plans and 19 heroes
 
 Implemented on `feat/pixel-kingdoms` after the user's design confirmations. This is a separate selectable ruleset, not a replacement for Standard. No claim of measured balance or gameplay correctness is made from compilation alone.
 
 ## Entering the mode
 
-Choose **ทดลอง · 19 ขุนพล** under the lobby's room rules before creating a bot or online room. The room owns its ruleset; joining players inherit it. Standard retains the original 13-character draft pool and does not enable plans. Experimental adds Zhang Liao, Guo Jia, Huang Yueying, Gan Ning, Da Qiao and Hua Tuo. The catalog can inspect all 19 heroes.
+Every new bot or online room uses strategy plans and all 19 heroes. The Standard option has been removed; a stale client requesting STANDARD still creates a strategy room. The internal EXPERIMENTAL wire identifier is retained for compatibility. The catalog can inspect all 19 heroes.
 
 After all heroes are selected, Experimental enters a separate 30-second strategy draft. Everyone chooses from the same three plans; duplicates are allowed. Choices remain private until all living players have chosen. Bots select immediately. Timeout assigns Muster. All choices are revealed together, and initial hands/turns then begin.
 
@@ -49,4 +49,4 @@ New art: [six-hero atlas](../public/art/heroes-experimental-atlas.png), [built-i
 
 The promise/negotiation system was removed at the user's request. No offers, accept/decline handlers, promise history, breach tracking or bot negotiation remain in the current runtime. The three strategy plans, 19-character experimental roster, public-information bot decisions and spectator channel remain.
 
-The lobby shortcut is now **เล่นโหมดแผนกลยุทธ์**. `/lobby?ruleset=EXPERIMENTAL` preselects the experimental ruleset for both bot and online creation. Standard tables explain that plans are available in Experimental. Choose a plan after hero drafting; its status and activation button appear above the table. Supply remains a draw-phase prompt.
+The lobby shortcut is **เล่นโหมดแผนกลยุทธ์**. No ruleset selection or URL parameter is needed. Choose a plan after hero drafting; its status and activation button appear above the table. Supply remains a draw-phase prompt.
